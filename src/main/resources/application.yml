@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: car-maintenance-platform
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/car_maintenance_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+#    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-minimum-32-characters}
+    expiration: 86400000 # 24 hours
+  
+  file:
+    upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+  
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:3001
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+#    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

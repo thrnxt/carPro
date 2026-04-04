@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html{
+    background-color: #222222;
+  }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    min-height: 100vh;
+  }
+
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+  }
+}
+
+@layer components {
+  /* Автомобильная тема - темные цвета, металлические акценты */
+  .auto-card {
+    @apply bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl shadow-xl;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .auto-card:hover {
+    @apply border-slate-600;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+  }
+
+  .auto-button-primary {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+  }
+
+  .auto-button-primary:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+    transform: translateY(-1px);
+  }
+
+  .auto-button-secondary {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    box-shadow: 0 4px 15px rgba(71, 85, 105, 0.3);
+  }
+
+  .auto-button-secondary:hover {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    box-shadow: 0 6px 20px rgba(71, 85, 105, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .auto-button-success {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+  }
+
+  .auto-button-success:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.6);
+    transform: translateY(-1px);
+  }
+
+  .auto-button-danger {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+  }
+
+  .auto-button-danger:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+    transform: translateY(-1px);
+  }
+
+  .auto-input {
+    @apply w-full px-4 py-3 rounded-lg border bg-slate-800 border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all;
+  }
+
+  .auto-select {
+    @apply w-full px-4 py-3 rounded-lg border bg-slate-800 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all;
+  }
+
+  .auto-textarea {
+    @apply w-full px-4 py-3 rounded-lg border bg-slate-800 border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all resize-none;
+  }
+
+  .auto-nav {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-bottom: 2px solid rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+
+  .auto-nav-link {
+    @apply px-3 py-2 rounded-lg text-slate-300 font-medium transition-all duration-200 relative;
+    margin: 0 2px;
+  }
+
+  .auto-nav-link:hover {
+    @apply text-white;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
+  }
+
+  .auto-nav-link.active {
+    @apply text-white;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%);
+    border-bottom: 2px solid #dc2626;
+  }
+
+  /* Скрытие скроллбара для навигации */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .auto-badge {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+  }
+
+  .auto-badge-success {
+    @apply auto-badge bg-emerald-900/50 text-emerald-300 border border-emerald-700/50;
+  }
+
+  .auto-badge-warning {
+    @apply auto-badge bg-amber-900/50 text-amber-300 border border-amber-700/50;
+  }
+
+  .auto-badge-danger {
+    @apply auto-badge bg-red-900/50 text-red-300 border border-red-700/50;
+  }
+
+  .auto-badge-info {
+    @apply auto-badge bg-blue-900/50 text-blue-300 border border-blue-700/50;
+  }
+
+  /* Сервисный центр - более светлая тема */
+  .service-card {
+    @apply bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-lg;
+  }
+
+  .service-card:hover {
+    @apply border-blue-300 shadow-xl;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+  }
+
+  .service-button {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+  }
+
+  .service-button:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+    transform: translateY(-1px);
+  }
+}
+
+/* Скроллбар в стиле авто */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
