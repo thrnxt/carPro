@@ -6,7 +6,7 @@ export function cx(...values: Array<string | false | null | undefined>) {
 }
 
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('page-shell space-y-8', className)}>{children}</div>
+  return <div className={cx('page-shell', className)}>{children}</div>
 }
 
 export function PageHeader({
@@ -99,7 +99,7 @@ export function StatCard({
   label,
   value,
   meta,
-  tone = 'text-orange-300',
+  tone = 'text-[#ff9b82]',
 }: {
   icon?: IconType
   label: ReactNode
@@ -209,6 +209,16 @@ export function SegmentedControl<T extends string>({
 
 export function FilterBar({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cx('glass-panel p-4 sm:p-5', className)}>{children}</div>
+}
+
+export function SectionGrid({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return <div className={cx('grid gap-6 md:grid-cols-2 xl:grid-cols-3', className)}>{children}</div>
 }
 
 export function Badge({

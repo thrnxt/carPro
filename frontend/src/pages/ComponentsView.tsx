@@ -1,8 +1,21 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../api/client'
-import { useState } from 'react'
-import { FaWrench, FaStopCircle, FaCog, FaCar, FaBolt, FaPlug, FaCarSide, FaCircle, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa'
+import { useEffect, useState } from 'react'
+import {
+  FaWrench,
+  FaStopCircle,
+  FaCog,
+  FaCar,
+  FaBolt,
+  FaPlug,
+  FaCarSide,
+  FaCircle,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaChevronDown,
+  FaChevronRight,
+} from 'react-icons/fa'
 
 interface Component {
   id: number
@@ -17,11 +30,13 @@ interface Component {
   lastReplacementDate?: string
 }
 
+type StatusFilter = 'CRITICAL' | 'WARNING' | 'NORMAL' | 'EXCELLENT'
+
 export default function ComponentsView() {
   const { id } = useParams()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [activeStatusFilter, setActiveStatusFilter] = useState<StatusFilter | null>(null)
 
   const { data: components, isLoading, error } = useQuery({
     queryKey: ['car-components', id],
@@ -67,20 +82,6 @@ export default function ComponentsView() {
     )
   }
 
-  // Группировка по категориям и подкатегориям
-  const groupedComponents = components?.reduce((acc: any, comp: Component) => {
-    if (!acc[comp.category]) {
-      acc[comp.category] = {}
-    }
-    const subcat = comp.subcategory || 'Без подкатегории'
-    if (!acc[comp.category][subcat]) {
-      acc[comp.category][subcat] = []
-    }
-    acc[comp.category][subcat].push(comp)
-    return acc
-  }, {})
-
-  const categories = Object.keys(groupedComponents || {})
   const categoryIcons: Record<string, any> = {
     'Двигатель': FaWrench,
     'Тормоза': FaStopCircle,
@@ -90,6 +91,18 @@ export default function ComponentsView() {
     'Электрика': FaPlug,
     'Кузов': FaCarSide,
     'Колеса': FaCircle,
+  }
+
+  const getStatusKey = (wearLevel: number): StatusFilter => {
+    if (wearLevel >= 90) return 'CRITICAL'
+    if (wearLevel >= 70) return 'WARNING'
+    if (wearLevel >= 50) return 'NORMAL'
+    return 'EXCELLENT'
+  }
+
+  const matchesStatusFilter = (component: Component, filter: StatusFilter | null) => {
+    if (!filter) return true
+    return getStatusKey(component.wearLevel) === filter
   }
 
   const getStatusColor = (wearLevel: number) => {
@@ -106,11 +119,138 @@ export default function ComponentsView() {
     return 'Отлично'
   }
 
+  const getFilterLabel = (filter: StatusFilter | null) => {
+    if (filter === 'CRITICAL') return 'Критический износ'
+    if (filter === 'WARNING') return 'Требует внимания'
+    if (filter === 'NORMAL') return 'Норма'
+    if (filter === 'EXCELLENT') return 'Отлично'
+    return 'Все детали'
+  }
+
   const getStatusTextColor = (wearLevel: number) => {
     if (wearLevel >= 90) return 'text-red-400'
     if (wearLevel >= 70) return 'text-orange-400'
     if (wearLevel >= 50) return 'text-yellow-400'
     return 'text-emerald-400'
+  }
+
+  const groupedComponents = components?.reduce((acc: Record<string, Record<string, Component[]>>, comp: Component) => {
+    if (!acc[comp.category]) {
+      acc[comp.category] = {}
+    }
+    const subcat = comp.subcategory || 'Без подкатегории'
+    if (!acc[comp.category][subcat]) {
+      acc[comp.category][subcat] = []
+    }
+    acc[comp.category][subcat].push(comp)
+    return acc
+  }, {})
+
+  const filteredGroupedComponents = Object.entries(groupedComponents || {}).reduce(
+    (acc: Record<string, Record<string, Component[]>>, [category, subcategories]) => {
+      const filteredSubcategories = Object.entries(subcategories as Record<string, Component[]>).reduce(
+        (subAcc: Record<string, Component[]>, [subcategory, subComponents]) => {
+          const filteredComponents = (subComponents as Component[]).filter((component: Component) =>
+            matchesStatusFilter(component, activeStatusFilter)
+          )
+
+          if (filteredComponents.length > 0) {
+            subAcc[subcategory] = filteredComponents
+          }
+
+          return subAcc
+        },
+        {}
+      )
+
+      if (Object.keys(filteredSubcategories).length > 0) {
+        acc[category] = filteredSubcategories
+      }
+
+      return acc
+    },
+    {}
+  )
+
+  const categories = Object.keys(filteredGroupedComponents)
+
+  useEffect(() => {
+    if (selectedCategory && !categories.includes(selectedCategory)) {
+      setSelectedCategory(null)
+      setSelectedSubcategory(null)
+    }
+  }, [categories, selectedCategory])
+
+  useEffect(() => {
+    if (!selectedCategory || !selectedSubcategory) {
+      return
+    }
+
+    const availableSubcategories = Object.keys(filteredGroupedComponents[selectedCategory] || {})
+    if (!availableSubcategories.includes(selectedSubcategory)) {
+      setSelectedSubcategory(null)
+    }
+  }, [filteredGroupedComponents, selectedCategory, selectedSubcategory])
+
+  const statusCards: Array<{
+    key: StatusFilter
+    label: string
+    count: number
+    countClassName: string
+    activeClassName: string
+    activeStyle: {
+      borderColor: string
+      boxShadow: string
+    }
+  }> = [
+    {
+      key: 'CRITICAL',
+      label: 'Критический износ',
+      count: components?.filter((component: Component) => getStatusKey(component.wearLevel) === 'CRITICAL').length || 0,
+      countClassName: 'text-red-400',
+      activeClassName: 'bg-red-500/10',
+      activeStyle: {
+        borderColor: 'rgb(239 68 68 / 1)',
+        boxShadow: '0 0 0 1px rgba(239, 68, 68, 0.22)',
+      },
+    },
+    {
+      key: 'WARNING',
+      label: 'Требует внимания',
+      count: components?.filter((component: Component) => getStatusKey(component.wearLevel) === 'WARNING').length || 0,
+      countClassName: 'text-orange-400',
+      activeClassName: 'bg-orange-500/10',
+      activeStyle: {
+        borderColor: 'rgb(249 115 22 / 1)',
+        boxShadow: '0 0 0 1px rgba(249, 115, 22, 0.22)',
+      },
+    },
+    {
+      key: 'NORMAL',
+      label: 'Норма',
+      count: components?.filter((component: Component) => getStatusKey(component.wearLevel) === 'NORMAL').length || 0,
+      countClassName: 'text-yellow-400',
+      activeClassName: 'bg-yellow-500/10',
+      activeStyle: {
+        borderColor: 'rgb(234 179 8 / 1)',
+        boxShadow: '0 0 0 1px rgba(234, 179, 8, 0.22)',
+      },
+    },
+    {
+      key: 'EXCELLENT',
+      label: 'Отлично',
+      count: components?.filter((component: Component) => getStatusKey(component.wearLevel) === 'EXCELLENT').length || 0,
+      countClassName: 'text-emerald-400',
+      activeClassName: 'bg-emerald-500/10',
+      activeStyle: {
+        borderColor: 'rgb(16 185 129 / 1)',
+        boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.22)',
+      },
+    },
+  ]
+
+  const handleStatusCardClick = (status: StatusFilter) => {
+    setActiveStatusFilter((currentStatus) => (currentStatus === status ? null : status))
   }
 
   return (
@@ -120,59 +260,75 @@ export default function ComponentsView() {
         <p className="text-slate-400">Полный список всех компонентов и их состояние</p>
       </div>
 
-      {/* Фильтры */}
-      <div className="auto-card p-4 mb-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Статус:</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="auto-select"
-            >
-              <option value="ALL">Все</option>
-              <option value="CRITICAL">Критический износ (≥90%)</option>
-              <option value="WARNING">Требует внимания (70-89%)</option>
-              <option value="NORMAL">Норма (&lt;70%)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Статистика */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="auto-card p-4 border-l-4 border-red-500">
-          <div className="text-3xl font-bold text-red-400 mb-1">
-            {components?.filter((c: Component) => c.wearLevel >= 90).length || 0}
+        {statusCards.map((card) => {
+          const isActive = activeStatusFilter === card.key
+
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={() => handleStatusCardClick(card.key)}
+              className={`auto-card p-4 text-left border transition-all duration-200 ${
+                isActive
+                  ? card.activeClassName
+                  : 'border-slate-700/80 bg-slate-900/40 hover:border-slate-500/80'
+              }`}
+              style={isActive ? card.activeStyle : undefined}
+              aria-pressed={isActive}
+            >
+              <div className={`text-3xl font-bold mb-1 ${card.countClassName}`}>{card.count}</div>
+              <div className="text-sm font-medium text-slate-200">{card.label}</div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="auto-card p-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-slate-300">
+            Показаны: <span className="font-semibold text-white">{getFilterLabel(activeStatusFilter)}</span>
           </div>
-          <div className="text-sm text-slate-400">Критический износ</div>
-        </div>
-        <div className="auto-card p-4 border-l-4 border-orange-500">
-          <div className="text-3xl font-bold text-orange-400 mb-1">
-            {components?.filter((c: Component) => c.wearLevel >= 70 && c.wearLevel < 90).length || 0}
-          </div>
-          <div className="text-sm text-slate-400">Требует внимания</div>
-        </div>
-        <div className="auto-card p-4 border-l-4 border-yellow-500">
-          <div className="text-3xl font-bold text-yellow-400 mb-1">
-            {components?.filter((c: Component) => c.wearLevel >= 50 && c.wearLevel < 70).length || 0}
-          </div>
-          <div className="text-sm text-slate-400">Норма</div>
-        </div>
-        <div className="auto-card p-4 border-l-4 border-emerald-500">
-          <div className="text-3xl font-bold text-emerald-400 mb-1">
-            {components?.filter((c: Component) => c.wearLevel < 50).length || 0}
-          </div>
-          <div className="text-sm text-slate-400">Отлично</div>
+          {activeStatusFilter && (
+            <button
+              type="button"
+              onClick={() => setActiveStatusFilter(null)}
+              className="inline-flex items-center rounded-full border border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white"
+            >
+              Сбросить фильтр
+            </button>
+          )}
         </div>
       </div>
 
       {/* Категории */}
       <div className="space-y-6">
+        {categories.length === 0 && (
+          <div className="auto-card p-8 text-center">
+            <h2 className="text-xl font-semibold text-white mb-2">Под выбранный статус детали не найдены</h2>
+            <p className="text-slate-400 mb-4">
+              Попробуйте выбрать другой статус или сбросить текущий фильтр.
+            </p>
+            {activeStatusFilter && (
+              <button
+                type="button"
+                onClick={() => setActiveStatusFilter(null)}
+                className="auto-btn-secondary"
+              >
+                Показать все детали
+              </button>
+            )}
+          </div>
+        )}
+
         {categories.map((category) => (
           <div key={category} className="auto-card">
             <button
-              onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
+              onClick={() => {
+                setSelectedCategory(selectedCategory === category ? null : category)
+                setSelectedSubcategory(null)
+              }}
               className="w-full p-4 text-left flex items-center justify-between hover:bg-slate-800/50 transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -182,11 +338,11 @@ export default function ComponentsView() {
                 })()}
                 <h2 className="text-xl font-bold text-white">{category}</h2>
                 <span className="text-sm text-slate-400">
-                  ({Object.values(groupedComponents[category]).flat().length} деталей)
+                  ({Object.values(filteredGroupedComponents[category]).flat().length} деталей)
                 </span>
               </div>
               <span className="text-slate-400 text-xl">
-                {selectedCategory === category ? '▼' : '▶'}
+                {selectedCategory === category ? <FaChevronDown /> : <FaChevronRight />}
               </span>
             </button>
 
@@ -205,19 +361,13 @@ export default function ComponentsView() {
                         <span className="text-xs text-slate-400">({subComponents.length})</span>
                       </div>
                       <span className="text-slate-400 text-sm">
-                        {selectedSubcategory === subcategory ? '▼' : '▶'}
+                        {selectedSubcategory === subcategory ? <FaChevronDown /> : <FaChevronRight />}
                       </span>
                     </button>
 
                     {selectedSubcategory === subcategory && (
                       <div className="p-4 space-y-3">
                         {subComponents
-                          .filter((component: Component) => {
-                            if (filterStatus === 'CRITICAL') return component.wearLevel >= 90
-                            if (filterStatus === 'WARNING') return component.wearLevel >= 70 && component.wearLevel < 90
-                            if (filterStatus === 'NORMAL') return component.wearLevel < 70
-                            return true
-                          })
                           .map((component: Component) => (
                           <div
                             key={component.id}

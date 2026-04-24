@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import { LatLngExpression } from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
-import apiClient from '../api/client'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { LatLngExpression } from 'leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { FaMapMarkerAlt, FaSearch, FaStar } from 'react-icons/fa'
+import apiClient from '../api/client'
+import { Page, PageHeader, Section } from '../components/ui'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -16,9 +18,11 @@ L.Icon.Default.mergeOptions({
 
 function MapCenter({ center }: { center: LatLngExpression }) {
   const map = useMap()
+
   useEffect(() => {
     map.setView(center, map.getZoom())
   }, [map, center])
+
   return null
 }
 
@@ -27,26 +31,28 @@ export default function ServiceCenterMap() {
   const [radius, setRadius] = useState(10)
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation([position.coords.latitude, position.coords.longitude])
-        },
-        () => {
-          console.log('Геолокация недоступна, используется значение по умолчанию')
-        }
-      )
+    if (!navigator.geolocation) {
+      return
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude])
+      },
+      () => {
+        console.log('Геолокация недоступна, используется значение по умолчанию')
+      }
+    )
   }, [])
 
-  const { data: serviceCenters, isLoading } = useQuery({
+  const { data: serviceCenters = [], isLoading } = useQuery({
     queryKey: ['service-centers', 'nearby', userLocation, radius],
     queryFn: async () => {
-      const [lat, lng] = Array.isArray(userLocation) ? userLocation : [51.1694, 71.4491]
+      const [latitude, longitude] = Array.isArray(userLocation) ? userLocation : [51.1694, 71.4491]
       const response = await apiClient.get('/service-centers/nearby', {
         params: {
-          latitude: lat,
-          longitude: lng,
+          latitude,
+          longitude,
           radiusKm: radius,
         },
       })
@@ -54,112 +60,146 @@ export default function ServiceCenterMap() {
     },
   })
 
+  const locationLabel = useMemo(() => {
+    const [latitude, longitude] = Array.isArray(userLocation) ? userLocation : [51.1694, 71.4491]
+    return `${Number(latitude).toFixed(3)}, ${Number(longitude).toFixed(3)}`
+  }, [userLocation])
+
   return (
-    <div className="p-6 h-screen flex flex-col">
-      <div className="mb-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">🗺️ Карта сервисных центров</h1>
-          <p className="text-slate-400">Найдите ближайшие сервисы на карте</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-300">Радиус поиска:</span>
-            <select
-              value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              className="auto-select"
-            >
-              <option value="5">5 км</option>
-              <option value="10">10 км</option>
-              <option value="20">20 км</option>
-              <option value="50">50 км</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div className="flex-1 rounded-lg overflow-hidden shadow-lg border border-slate-700">
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center bg-slate-900">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-              <p className="mt-2 text-slate-400">Загрузка карты...</p>
-            </div>
-          </div>
-        ) : (
-          <MapContainer
-            center={userLocation}
-            zoom={13}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MapCenter center={userLocation} />
-            
-            <Marker position={userLocation}>
-              <Popup>
-                <div className="font-semibold">Ваше местоположение</div>
-              </Popup>
-            </Marker>
-
-            {serviceCenters?.map((center: any) => (
-              <Marker
-                key={center.id}
-                position={[Number(center.latitude), Number(center.longitude)]}
+    <Page>
+      <PageHeader
+        eyebrow="Nearby search"
+        title="Карта сервисных центров"
+        description="Локальный поиск и карта собраны в одном экране: радиус поиска, текущее положение и список найденных центров доступны без отдельного режима."
+        actions={
+          <div className="flex items-center gap-3 rounded-[1.3rem] border border-white/10 bg-white/5 px-4 py-3">
+            <FaSearch className="text-slate-400" />
+            <label className="flex items-center gap-3 text-sm text-slate-300">
+              <span>Радиус</span>
+              <select
+                value={radius}
+                onChange={(event) => setRadius(Number(event.target.value))}
+                className="auto-select min-w-[8rem] py-2"
               >
-                <Popup>
-                  <div className="min-w-[200px]">
-                    <h3 className="font-semibold text-lg mb-2">{center.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{center.address}</p>
-                    {center.rating && (
-                      <p className="text-sm mb-2">
-                        ⭐ {center.rating.toFixed(1)} ({center.reviewCount} отзывов)
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 mb-2">{center.phoneNumber}</p>
-                    <Link
-                      to={`/service-centers/${center.id}`}
-                      className="text-blue-600 hover:underline text-sm"
-                    >
-                      Подробнее →
-                    </Link>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        )}
-      </div>
+                <option value="5">5 км</option>
+                <option value="10">10 км</option>
+                <option value="20">20 км</option>
+                <option value="50">50 км</option>
+              </select>
+            </label>
+          </div>
+        }
+      />
 
-      {/* Список сервисных центров */}
-      {serviceCenters && serviceCenters.length > 0 && (
-        <div className="mt-4 auto-card p-4">
-          <h2 className="text-xl font-bold text-white mb-3">
-            Найдено сервисных центров: {serviceCenters.length}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <Section
+        title="Поиск на карте"
+        description={`Текущая точка поиска: ${locationLabel}. Найдено центров: ${serviceCenters.length}.`}
+      >
+        <div className="overflow-hidden rounded-[1.7rem] border border-white/10">
+          {isLoading ? (
+            <div className="flex min-h-[34rem] items-center justify-center bg-slate-950/50">
+              <div className="text-center">
+                <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+                <p className="mt-3 text-sm text-slate-400">Загрузка карты...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[34rem] w-full overflow-hidden rounded-[1.7rem]">
+              <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapCenter center={userLocation} />
+
+                <Marker position={userLocation}>
+                  <Popup>
+                    <div className="min-w-[200px]">
+                      <div className="text-sm font-semibold text-white">Ваше местоположение</div>
+                      <p className="mt-1 text-xs text-slate-400">{locationLabel}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+
+                {serviceCenters.map((center: any) => (
+                  <Marker
+                    key={center.id}
+                    position={[Number(center.latitude), Number(center.longitude)]}
+                  >
+                    <Popup>
+                      <div className="min-w-[220px]">
+                        <h3 className="text-base font-semibold text-white">{center.name}</h3>
+                        <p className="mt-2 text-sm text-slate-400">{center.address}</p>
+                        {center.rating && (
+                          <p className="mt-2 flex items-center gap-2 text-sm text-amber-300">
+                            <FaStar />
+                            {center.rating.toFixed(1)} ({center.reviewCount} отзывов)
+                          </p>
+                        )}
+                        {center.phoneNumber && (
+                          <p className="mt-2 text-sm text-slate-300">{center.phoneNumber}</p>
+                        )}
+                        <Link
+                          to={`/service-centers/${center.id}`}
+                          className="mt-3 inline-flex text-sm font-semibold text-[#ff9b82] transition-colors hover:text-[#ffb29f]"
+                        >
+                          Открыть карточку
+                        </Link>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          )}
+        </div>
+      </Section>
+
+      <Section title="Найденные сервисные центры" description="Список синхронизирован с картой и подходит для быстрого выбора по рейтингу и адресу.">
+        {serviceCenters.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {serviceCenters.map((center: any) => (
-              <div key={center.id} className="auto-card p-4 hover:scale-105 transition-transform">
-                <h3 className="font-semibold text-lg text-white mb-2">{center.name}</h3>
-                <p className="text-sm text-slate-400 mb-2">{center.address}</p>
+              <div key={center.id} className="auto-card p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{center.name}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">{center.address}</p>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#ff9b82]">
+                    <FaMapMarkerAlt />
+                  </div>
+                </div>
+
                 {center.rating && (
-                  <p className="text-sm mb-2 text-amber-400">
-                    ⭐ {center.rating.toFixed(1)} ({center.reviewCount} отзывов)
-                  </p>
+                  <div className="mt-4 flex items-center gap-2 text-sm text-amber-300">
+                    <FaStar />
+                    <span>
+                      {center.rating.toFixed(1)} ({center.reviewCount} отзывов)
+                    </span>
+                  </div>
                 )}
-                <Link
-                  to={`/service-centers/${center.id}`}
-                  className="text-red-400 hover:text-red-300 font-medium text-sm"
-                >
-                  Подробнее →
-                </Link>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link to={`/service-centers/${center.id}`} className="auto-button-primary">
+                    Открыть
+                  </Link>
+                  {center.phoneNumber && (
+                    <a href={`tel:${center.phoneNumber}`} className="auto-button-secondary">
+                      Позвонить
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/5 p-10 text-center">
+            <FaMapMarkerAlt className="mx-auto text-5xl text-[#ff9b82]/70" />
+            <p className="mt-4 text-lg font-semibold text-white">Ничего не найдено в выбранном радиусе</p>
+            <p className="mt-2 text-sm text-slate-400">Увеличьте радиус поиска или измените текущую точку.</p>
+          </div>
+        )}
+      </Section>
+    </Page>
   )
 }

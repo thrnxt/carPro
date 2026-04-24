@@ -1,135 +1,238 @@
-import { useEffect, useState } from 'react'
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
-import { 
-  FaHome, 
-  FaCar, 
-  FaWrench, 
-  FaCalendar, 
-  FaCalendarAlt, 
-  FaClipboardList, 
-  FaBell, 
-  FaComments,
-  FaShieldAlt,
-  FaChartBar,
-  FaUsers,
-  FaStar,
-  FaCog,
+import { useEffect, useMemo, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  FaBars,
+  FaBell,
+  FaBookOpen,
+  FaCalendar,
+  FaCalendarAlt,
+  FaCar,
   FaCarSide,
+  FaChartBar,
+  FaClipboardList,
+  FaCog,
+  FaComments,
   FaFileInvoiceDollar,
-  FaTools
+  FaHome,
+  FaShieldAlt,
+  FaStar,
+  FaTimes,
+  FaTools,
+  FaUsers,
+  FaWrench,
 } from 'react-icons/fa'
+import { useAuthStore } from '../store/authStore'
+import { resolveFileUrl } from '../utils/resolveFileUrl'
+
+type NavItem = {
+  path: string
+  label: string
+  icon: typeof FaHome
+  description: string
+}
+
+const userNavItems: NavItem[] = [
+  { path: '/', label: 'Главная', icon: FaHome, description: 'Обзор аккаунта' },
+  { path: '/garage', label: 'Гараж', icon: FaCar, description: 'Автомобили и VIN' },
+  { path: '/service-centers', label: 'Сервисы', icon: FaWrench, description: 'Поиск партнеров' },
+  { path: '/bookings', label: 'Записи', icon: FaCalendar, description: 'Активные визиты' },
+  { path: '/my-documents', label: 'Документы', icon: FaFileInvoiceDollar, description: 'Операции и счета' },
+  { path: '/maintenance-calendar', label: 'Календарь', icon: FaCalendarAlt, description: 'План обслуживания' },
+  { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList, description: 'Архив работ' },
+  { path: '/notifications', label: 'Уведомления', icon: FaBell, description: 'Напоминания и статус' },
+  { path: '/educational-content', label: 'Знания', icon: FaBookOpen, description: 'Гайды и квизы' },
+  { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации' },
+]
+
+const serviceCenterNavItems: NavItem[] = [
+  { path: '/', label: 'Обзор', icon: FaChartBar, description: 'KPI и расписание' },
+  { path: '/service-center/bookings', label: 'Записи', icon: FaClipboardList, description: 'Поток клиентов' },
+  { path: '/service-center/clients', label: 'Клиенты', icon: FaUsers, description: 'База и статусы' },
+  { path: '/service-center/operations', label: 'Операции', icon: FaTools, description: 'Работы и фото' },
+  { path: '/service-center/invoices', label: 'Счета', icon: FaFileInvoiceDollar, description: 'Выставление счетов' },
+  { path: '/service-center/reviews', label: 'Отзывы', icon: FaStar, description: 'Рейтинг сервиса' },
+  { path: '/service-center/settings', label: 'Настройки', icon: FaCog, description: 'Профиль сервиса' },
+]
+
+const aliasTitles = [
+  { test: (pathname: string) => pathname.startsWith('/cars/'), title: 'Карточка автомобиля', group: 'Автопарк' },
+  { test: (pathname: string) => pathname.startsWith('/service-centers/'), title: 'Карточка сервиса', group: 'Сервисы' },
+  { test: (pathname: string) => pathname.startsWith('/quizzes/'), title: 'Квиз', group: 'Знания' },
+]
+
+function isPathActive(pathname: string, itemPath: string) {
+  if (itemPath === '/') {
+    return pathname === '/'
+  }
+
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`)
+}
+
+function getFallbackSection(pathname: string) {
+  for (const alias of aliasTitles) {
+    if (alias.test(pathname)) {
+      return alias
+    }
+  }
+
+  return {
+    title: 'Workspace',
+    group: 'Кабинет',
+  }
+}
+
+function NavigationList({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: NavItem[]
+  pathname: string
+  onNavigate?: () => void
+}) {
+  return (
+    <nav className="space-y-2">
+      {items.map((item) => {
+        const IconComponent = item.icon
+        const isActive = isPathActive(pathname, item.path)
+
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            onClick={onNavigate}
+            className={`app-nav-link ${isActive ? 'app-nav-link-active' : ''}`}
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-base text-white/90">
+              <IconComponent />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{item.label}</p>
+              <p className="truncate text-xs text-slate-400">{item.description}</p>
+            </div>
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const avatarSrc = user?.avatarUrl
-    ? user.avatarUrl.startsWith('http://') || user.avatarUrl.startsWith('https://')
-      ? user.avatarUrl
-      : user.avatarUrl.startsWith('/')
-        ? `/api${user.avatarUrl}`
-        : `/api/${user.avatarUrl}`
-    : null
+  const avatarSrc = resolveFileUrl(user?.avatarUrl)
+  const isServiceCenter = user?.role === 'SERVICE_CENTER'
+  const isAdmin = user?.role === 'ADMIN'
+  const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
 
   useEffect(() => {
     setAvatarLoadFailed(false)
   }, [avatarSrc])
+
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileMenuOpen])
+
+  const currentSection = useMemo(() => {
+    const activeItem = navItems.find((item) => isPathActive(location.pathname, item.path))
+    if (activeItem) {
+      return {
+        title: activeItem.label,
+        group: isServiceCenter ? 'Сервис' : 'Кабинет',
+      }
+    }
+
+    if (isAdmin && location.pathname === '/admin') {
+      return {
+        title: 'Администрирование',
+        group: 'Контроль',
+      }
+    }
+
+    return getFallbackSection(location.pathname)
+  }, [isAdmin, isServiceCenter, location.pathname, navItems])
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const isServiceCenter = user?.role === 'SERVICE_CENTER'
-  const isAdmin = user?.role === 'ADMIN'
-
-  // Навигация для обычных пользователей
-  const userNavItems = [
-    { path: '/', label: 'Главная', icon: FaHome },
-    { path: '/garage', label: 'Мой гараж', icon: FaCar },
-    { path: '/service-centers', label: 'Сервисы', icon: FaWrench },
-    { path: '/bookings', label: 'Мои записи', icon: FaCalendar },
-    { path: '/my-documents', label: 'Счета и операции', icon: FaFileInvoiceDollar },
-    { path: '/maintenance-calendar', label: 'Календарь', icon: FaCalendarAlt },
-    { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList },
-    { path: '/notifications', label: 'Уведомления', icon: FaBell },
-    { path: '/chat', label: 'Чат', icon: FaComments },
-  ]
-
-  // Навигация для сервисных центров
-  const serviceCenterNavItems = [
-    { path: '/', label: 'Панель управления', icon: FaChartBar },
-    { path: '/service-center/bookings', label: 'Записи клиентов', icon: FaClipboardList },
-    { path: '/service-center/clients', label: 'Клиенты', icon: FaUsers },
-    { path: '/service-center/operations', label: 'Операции', icon: FaTools },
-    { path: '/service-center/invoices', label: 'Счета', icon: FaFileInvoiceDollar },
-    { path: '/service-center/reviews', label: 'Отзывы', icon: FaStar },
-    { path: '/service-center/settings', label: 'Настройки', icon: FaCog },
-  ]
-
-  const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
+  const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.trim() || 'AS'
+  const roleLabel = isServiceCenter ? 'Сервисный центр' : isAdmin ? 'Администратор' : 'Кабинет владельца'
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
-      <nav className="auto-nav sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Логотип и навигация */}
-            <div className="flex items-center flex-1 min-w-0">
-              <Link to="/" className="flex items-center space-x-2 group flex-shrink-0 mr-4 lg:mr-8">
-                <FaCarSide className="text-2xl text-red-500 group-hover:text-red-400 transition-colors" />
-                <span className="text-xl font-bold text-white group-hover:text-red-400 transition-colors whitespace-nowrap">
-                  AutoService
-                </span>
-              </Link>
-              {/* Навигационные ссылки с горизонтальным скроллом */}
-              <div className="hidden lg:flex items-center space-x-1 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center space-x-1">
-                  {navItems.map((item) => {
-                    const isActive = location.pathname === item.path || 
-                      (item.path !== '/' && location.pathname.startsWith(item.path))
-                    const IconComponent = item.icon
-                    return (
-                      <Link style={{display:"flex", alignItems:"center"}}
-                        key={item.path}
-                        to={item.path}
-                        className={`auto-nav-link whitespace-nowrap ${isActive ? 'active' : ''}`}
-                      >
-                        <IconComponent className="mr-1.5 text-base" />
-                        <span className="hidden xl:inline">{item.label}</span>
-                        <span className="xl:hidden">{item.label.split(' ')[0]}</span>
-                      </Link>
-                    )
-                  })}
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      className={`auto-nav-link whitespace-nowrap ${location.pathname === '/admin' ? 'active' : ''}`}
-                    >
-                      <FaShieldAlt className="mr-1.5 text-base" />
-                      <span className="hidden xl:inline">Админ-панель</span>
-                      <span className="xl:hidden">Админ</span>
-                    </Link>
-                  )}
-                </div>
+    <div className="app-shell">
+      <aside className="app-sidebar hidden lg:block">
+        <div className="app-sidebar-panel">
+          <Link to="/" className="app-brand">
+            <div className="app-brand-mark">
+              <FaCarSide className="text-xl" />
+            </div>
+            <div>
+              <div className="app-brand-title">AutoService</div>
+              <div className="app-brand-subtitle">Operations workspace</div>
+            </div>
+          </Link>
+
+          <div className="app-sidebar-body space-y-6">
+            <div className="space-y-3">
+              <div className="app-sidebar-label">Navigation</div>
+              <NavigationList items={navItems} pathname={location.pathname} />
+            </div>
+
+            {isAdmin && (
+              <div className="space-y-3">
+                <div className="app-sidebar-label">Control</div>
+                <NavigationList
+                  items={[
+                    {
+                      path: '/admin',
+                      label: 'Админ-панель',
+                      icon: FaShieldAlt,
+                      description: 'Модерация и контроль',
+                    },
+                  ]}
+                  pathname={location.pathname}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      <div className="app-main">
+        <header className="app-topbar">
+          <div className="app-topbar-inner">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(true)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 lg:hidden"
+                aria-label="Открыть меню"
+              >
+                <FaBars />
+              </button>
+
+              <div className="min-w-0">
+                <p className="app-topbar-eyebrow">{currentSection.group}</p>
+                <p className="app-topbar-title truncate">{currentSection.title}</p>
               </div>
             </div>
-            
-            {/* Пользователь и выход */}
-            <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-medium text-white leading-tight">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  <p className="text-xs text-slate-400 leading-tight">
-                    {isServiceCenter ? 'Сервисный центр' : isAdmin ? 'Администратор' : 'Владелец'}
-                  </p>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                <div className="app-avatar h-10 w-10 rounded-xl text-sm">
                   {avatarSrc && !avatarLoadFailed ? (
                     <img
                       src={avatarSrc}
@@ -138,25 +241,94 @@ export default function Layout() {
                       onError={() => setAvatarLoadFailed(true)}
                     />
                   ) : (
-                    <span>
-                      {user?.firstName?.[0]}{user?.lastName?.[0]}
-                    </span>
+                    <span>{initials}</span>
                   )}
                 </div>
+                <div className="hidden text-right sm:block">
+                  <p className="text-sm font-semibold text-white">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-xs text-slate-400">{roleLabel}</p>
+                  <p className="hidden text-[11px] text-slate-500 xl:block">{user?.email}</p>
+                </div>
               </div>
-              <button
-                onClick={handleLogout}
-                className="px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all whitespace-nowrap"
-              >
+
+              <button type="button" onClick={handleLogout} className="auto-button-secondary px-4 py-2.5 text-sm">
                 Выйти
               </button>
             </div>
           </div>
+        </header>
+
+        <main className="app-content">
+          <div className="app-content-inner">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Закрыть меню"
+          />
+
+          <div className="relative h-full w-[88vw] max-w-sm border-r border-white/10 bg-[#08111d] p-4 shadow-[0_24px_60px_-24px_rgba(2,6,23,0.95)]">
+            <div className="flex items-center justify-between pb-4">
+              <Link to="/" className="app-brand">
+                <div className="app-brand-mark">
+                  <FaCarSide className="text-xl" />
+                </div>
+                <div>
+                  <div className="app-brand-title">AutoService</div>
+                  <div className="app-brand-subtitle">Operations workspace</div>
+                </div>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white"
+                aria-label="Закрыть меню"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="space-y-6 overflow-y-auto pb-6">
+              <div className="space-y-3">
+                <div className="app-sidebar-label">Navigation</div>
+                <NavigationList
+                  items={navItems}
+                  pathname={location.pathname}
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              </div>
+
+              {isAdmin && (
+                <div className="space-y-3">
+                  <div className="app-sidebar-label">Control</div>
+                  <NavigationList
+                    items={[
+                      {
+                        path: '/admin',
+                        label: 'Админ-панель',
+                        icon: FaShieldAlt,
+                        description: 'Модерация и контроль',
+                      },
+                    ]}
+                    pathname={location.pathname}
+                    onNavigate={() => setMobileMenuOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </nav>
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <Outlet />
-      </main>
+      )}
     </div>
   )
 }

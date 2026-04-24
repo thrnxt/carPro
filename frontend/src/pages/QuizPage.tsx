@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaRedoAlt } from 'react-icons/fa'
 import apiClient from '../api/client'
+import { EmptyState, Page, PageHeader, Section } from '../components/ui'
 
 export default function QuizPage() {
   const { id } = useParams()
@@ -29,10 +31,20 @@ export default function QuizPage() {
   const handleNext = () => {
     if (currentQuestionIndex < (quiz?.questions?.length || 0) - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
-    } else {
-      calculateScore()
-      setShowResults(true)
+      return
     }
+
+    let correct = 0
+    quiz?.questions?.forEach((question: any, index: number) => {
+      const selectedAnswerId = selectedAnswers[index]
+      const correctAnswer = question.answers.find((answer: any) => answer.isCorrect)
+      if (selectedAnswerId === correctAnswer?.id) {
+        correct += 1
+      }
+    })
+
+    setScore(correct)
+    setShowResults(true)
   }
 
   const handlePrevious = () => {
@@ -41,149 +53,146 @@ export default function QuizPage() {
     }
   }
 
-  const calculateScore = () => {
-    let correct = 0
-    quiz?.questions?.forEach((question: any, index: number) => {
-      const selectedAnswerId = selectedAnswers[index]
-      const correctAnswer = question.answers.find((a: any) => a.isCorrect)
-      if (selectedAnswerId === correctAnswer?.id) {
-        correct++
-      }
-    })
-    setScore(correct)
-  }
-
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка...</p>
+      <Page>
+        <div className="p-10 text-center">
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <p className="mt-3 text-sm text-slate-400">Загрузка квиза...</p>
         </div>
-      </div>
+      </Page>
     )
   }
 
   if (!quiz) {
     return (
-      <div className="p-6">
-        <div className="auto-card p-12 text-center">
-          <p className="text-white text-xl">Квиз не найден</p>
-        </div>
-      </div>
+      <Page>
+        <Section title="Квиз не найден" description="Проверьте ссылку или вернитесь в раздел материалов.">
+          <EmptyState
+            icon={FaCheckCircle}
+            title="Квиз не найден"
+            description="Запрошенный тест недоступен или был удален."
+          />
+        </Section>
+      </Page>
     )
   }
 
   const currentQuestion = quiz.questions?.[currentQuestionIndex]
   const totalQuestions = quiz.questions?.length || 0
-  const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0
 
   if (showResults) {
-    const percentage = Math.round((score / totalQuestions) * 100)
+    const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
+    const resultTitle =
+      percentage >= 80 ? 'Отличный результат' : percentage >= 60 ? 'Хороший результат' : 'Есть что улучшить'
+    const resultTone =
+      percentage >= 80 ? 'text-emerald-300' : percentage >= 60 ? 'text-amber-300' : 'text-rose-300'
+    const resultBar =
+      percentage >= 80 ? 'bg-emerald-500' : percentage >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+
     return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="auto-card p-8 text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Результаты квиза</h1>
-          <div className="text-6xl font-bold text-red-400 mb-4">
-            {score} / {totalQuestions}
-          </div>
-          <div className="text-2xl mb-6 text-white">
-            {percentage >= 80 ? '🎉 Отлично!' :
-             percentage >= 60 ? '👍 Хорошо!' :
-             '📚 Есть что улучшить'}
-          </div>
-          <div className="mb-6">
-            <div className="w-full bg-slate-700 rounded-full h-4">
-              <div
-                className={`h-4 rounded-full ${
-                  percentage >= 80 ? 'bg-emerald-500' :
-                  percentage >= 60 ? 'bg-yellow-500' :
-                  'bg-red-500'
-                }`}
-                style={{ width: `${percentage}%` }}
-              />
+      <Page className="max-w-4xl mx-auto">
+        <PageHeader
+          eyebrow="Knowledge"
+          title="Результаты квиза"
+          description="Проверка знаний оформлена как часть основного продукта, а не как отдельный учебный экран."
+        />
+
+        <Section title={resultTitle} description={`Вы ответили правильно на ${score} из ${totalQuestions} вопросов.`}>
+          <div className="mx-auto max-w-2xl rounded-[1.6rem] border border-white/10 bg-white/5 p-8 text-center">
+            <div className={`text-6xl font-extrabold tracking-[-0.08em] ${resultTone}`}>{percentage}%</div>
+            <p className="mt-4 text-lg font-semibold text-white">
+              {score} / {totalQuestions}
+            </p>
+            <div className="mt-6 h-4 overflow-hidden rounded-full bg-slate-800">
+              <div className={`h-4 rounded-full ${resultBar}`} style={{ width: `${percentage}%` }} />
             </div>
-            <p className="mt-2 text-slate-400">{percentage}% правильных ответов</p>
+            <p className="mt-3 text-sm text-slate-400">Итоговая точность ответов</p>
+
+            <button
+              onClick={() => {
+                setShowResults(false)
+                setCurrentQuestionIndex(0)
+                setSelectedAnswers({})
+                setScore(0)
+              }}
+              className="auto-button-primary mt-8"
+            >
+              <FaRedoAlt />
+              Пройти заново
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setShowResults(false)
-              setCurrentQuestionIndex(0)
-              setSelectedAnswers({})
-              setScore(0)
-            }}
-            className="auto-button-primary"
-          >
-            🔄 Пройти еще раз
-          </button>
-        </div>
-      </div>
+        </Section>
+      </Page>
     )
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="auto-card p-6">
-        <h1 className="text-2xl font-bold text-white mb-4">{quiz.title}</h1>
-        {quiz.description && (
-          <p className="text-slate-300 mb-6">{quiz.description}</p>
-        )}
+    <Page className="max-w-5xl mx-auto">
+      <PageHeader
+        eyebrow="Knowledge"
+        title={quiz.title}
+        description={quiz.description || 'Короткий тест для проверки понимания материалов и сценариев обслуживания.'}
+      />
 
-        {/* Прогресс */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-slate-400 mb-2">
-            <span>Вопрос {currentQuestionIndex + 1} из {totalQuestions}</span>
+      <Section title={`Вопрос ${currentQuestionIndex + 1} из ${totalQuestions}`} description="Выберите один ответ и двигайтесь по квизу последовательно.">
+        <div className="mb-8">
+          <div className="mb-2 flex items-center justify-between text-sm text-slate-400">
+            <span>Прогресс</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
-            <div
-              className="bg-red-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-2 rounded-full bg-[#ff6b4a] transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-        {/* Вопрос */}
         {currentQuestion && (
           <div>
-            <h2 className="text-xl font-semibold text-white mb-6">{currentQuestion.question}</h2>
-            
-            <div className="space-y-3 mb-6">
-              {currentQuestion.answers?.map((answer: any) => (
-                <button
-                  key={answer.id}
-                  onClick={() => handleAnswerSelect(answer.id)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                    selectedAnswers[currentQuestionIndex] === answer.id
-                      ? 'border-red-500 bg-red-900/30 text-white'
-                      : 'border-slate-600 bg-slate-800/50 text-white hover:border-slate-500'
-                  }`}
-                >
-                  {answer.answer}
-                </button>
-              ))}
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">{currentQuestion.question}</h2>
+
+            <div className="mt-6 space-y-3">
+              {currentQuestion.answers?.map((answer: any) => {
+                const isSelected = selectedAnswers[currentQuestionIndex] === answer.id
+
+                return (
+                  <button
+                    key={answer.id}
+                    onClick={() => handleAnswerSelect(answer.id)}
+                    className={`w-full rounded-[1.35rem] border p-4 text-left transition-all ${
+                      isSelected
+                        ? 'border-[#ff6b4a]/25 bg-[#ff6b4a]/12 text-white'
+                        : 'border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/8'
+                    }`}
+                  >
+                    {answer.answer}
+                  </button>
+                )
+              })}
             </div>
 
-            {/* Навигация */}
-            <div className="flex justify-between">
+            <div className="mt-8 flex flex-col justify-between gap-3 sm:flex-row">
               <button
                 onClick={handlePrevious}
                 disabled={currentQuestionIndex === 0}
-                className="auto-button-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="auto-button-secondary justify-center disabled:cursor-not-allowed disabled:opacity-50"
               >
-                ← Назад
+                <FaArrowLeft />
+                Назад
               </button>
+
               <button
                 onClick={handleNext}
                 disabled={!selectedAnswers[currentQuestionIndex]}
-                className="auto-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="auto-button-primary justify-center disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {currentQuestionIndex === totalQuestions - 1 ? 'Завершить' : 'Далее →'}
+                {currentQuestionIndex === totalQuestions - 1 ? 'Завершить квиз' : 'Следующий вопрос'}
+                <FaArrowRight />
               </button>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </Section>
+    </Page>
   )
 }

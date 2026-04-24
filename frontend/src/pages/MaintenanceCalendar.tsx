@@ -4,7 +4,21 @@ import { useNavigate } from 'react-router-dom'
 import apiClient from '../api/client'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths } from 'date-fns'
 import ru from 'date-fns/locale/ru'
-import { FaExclamationTriangle, FaCalendarAlt, FaWrench, FaCar, FaCheckCircle, FaClock, FaSearch, FaClipboardList, FaChevronLeft, FaChevronRight, FaBolt, FaTimes } from 'react-icons/fa'
+import {
+  FaExclamationTriangle,
+  FaCalendarAlt,
+  FaWrench,
+  FaCar,
+  FaCheckCircle,
+  FaClock,
+  FaSearch,
+  FaClipboardList,
+  FaChevronLeft,
+  FaChevronRight,
+  FaBolt,
+  FaTimes,
+  FaCircle,
+} from 'react-icons/fa'
 import { normalizeCollectionResponse } from '../utils/normalizeCollectionResponse'
 
 interface Booking {
@@ -148,7 +162,7 @@ export default function MaintenanceCalendar() {
     if (event.type === 'notification') return <FaExclamationTriangle className="inline text-xs" />
     if (event.type === 'booking') return <FaCalendarAlt className="inline text-xs" />
     if (event.type === 'maintenance') return <FaWrench className="inline text-xs" />
-    return '•'
+    return <FaCircle className="inline text-[8px]" />
   }
 
   return (

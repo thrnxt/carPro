@@ -9,7 +9,9 @@ import {
   FaCarSide, 
   FaCircle,
   FaExclamationTriangle,
-  FaCheck
+  FaCheck,
+  FaCheckCircle,
+  FaInfoCircle
 } from 'react-icons/fa'
 
 interface CarComponent {
@@ -80,10 +82,14 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
   // Получаем общий статус
   const allWear = components.map(c => c.wearLevel)
   const avgWear = allWear.length > 0 ? allWear.reduce((a, b) => a + b, 0) / allWear.length : 0
-  const overallStatus = avgWear >= 90 ? { text: 'Критическое', color: 'text-red-400', icon: '🔴' } :
-                       avgWear >= 70 ? { text: 'Требует внимания', color: 'text-orange-400', icon: '🟠' } :
-                       avgWear >= 50 ? { text: 'Нормальное', color: 'text-yellow-400', icon: '🟡' } :
-                       { text: 'Отличное', color: 'text-emerald-400', icon: '🟢' }
+  const overallStatus =
+    avgWear >= 90
+      ? { text: 'Критическое', color: 'text-red-400', Icon: FaExclamationTriangle }
+      : avgWear >= 70
+        ? { text: 'Требует внимания', color: 'text-orange-400', Icon: FaExclamationTriangle }
+        : avgWear >= 50
+          ? { text: 'Нормальное', color: 'text-yellow-400', Icon: FaInfoCircle }
+          : { text: 'Отличное', color: 'text-emerald-400', Icon: FaCheckCircle }
 
   return (
     <div className="auto-card p-6">
@@ -162,7 +168,7 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
           <div className="text-center">
             <div className="text-sm text-slate-300 mb-2 font-semibold uppercase tracking-wide">Общее состояние</div>
             <div className={`text-2xl font-bold ${overallStatus.color} flex items-center justify-center gap-2`}>
-              <span>{overallStatus.icon}</span>
+              <overallStatus.Icon className="text-xl" />
               <span>{overallStatus.text}</span>
             </div>
           </div>
@@ -195,7 +201,6 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
                   <div key={component.id} className="auto-card p-4 hover:scale-[1.02] transition-transform">
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-2">
-                        {component.icon && <span className="text-xl">{component.icon}</span>}
                         <span className="font-medium text-white">{component.name}</span>
                       </div>
                       <div className="flex items-center gap-2">

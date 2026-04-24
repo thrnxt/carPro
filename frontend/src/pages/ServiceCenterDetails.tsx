@@ -6,7 +6,19 @@ import toast from 'react-hot-toast'
 import { useState } from 'react'
 import { format } from 'date-fns'
 import ru from 'date-fns/locale/ru'
-import { FaStar, FaMapMarkerAlt, FaCalendarAlt, FaTimes, FaEdit, FaClock } from 'react-icons/fa'
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaEdit,
+  FaEnvelope,
+  FaGlobe,
+  FaInfoCircle,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaStar,
+  FaTimes,
+} from 'react-icons/fa'
+import { Page, PageHeader } from '../components/ui'
 
 export default function ServiceCenterDetails() {
   const { id } = useParams()
@@ -104,38 +116,43 @@ export default function ServiceCenterDetails() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <Page>
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
           <p className="mt-2 text-slate-400">Загрузка...</p>
         </div>
-      </div>
+      </Page>
     )
   }
 
   if (!serviceCenter) {
     return (
-      <div className="p-6">
+      <Page>
         <div className="auto-card p-12 text-center">
           <p className="text-white text-xl">Сервисный центр не найден</p>
         </div>
-      </div>
+      </Page>
     )
   }
 
   return (
-    <div className="p-6">
+    <Page>
+      <PageHeader
+        eyebrow="Marketplace"
+        title={serviceCenter.name}
+        description="Карточка сервиса объединяет публичную информацию, рейтинг, отзывы и быстрый переход к записи на обслуживание."
+      />
+
       <div className="auto-card p-6 mb-6">
-        <h1 className="text-4xl font-bold text-white mb-4">{serviceCenter.name}</h1>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <span>📋</span> Информация
+              <FaInfoCircle className="text-[#ff9b82]" />
+              Информация
             </h2>
             <div className="space-y-3">
               <div className="flex items-start gap-2">
-                <span className="text-slate-400 mt-1">📍</span>
+                <FaMapMarkerAlt className="mt-1 text-slate-400" />
                 <div>
                   <p className="text-white font-medium">{serviceCenter.address}</p>
                   <p className="text-slate-400 text-sm">{serviceCenter.city}, {serviceCenter.region}</p>
@@ -143,7 +160,7 @@ export default function ServiceCenterDetails() {
               </div>
               {serviceCenter.phoneNumber && (
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">📞</span>
+                  <FaPhone className="text-slate-400" />
                   <a href={`tel:${serviceCenter.phoneNumber}`} className="text-red-400 hover:text-red-300">
                     {serviceCenter.phoneNumber}
                   </a>
@@ -151,7 +168,7 @@ export default function ServiceCenterDetails() {
               )}
               {serviceCenter.email && (
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">✉️</span>
+                  <FaEnvelope className="text-slate-400" />
                   <a href={`mailto:${serviceCenter.email}`} className="text-white hover:text-red-400">
                     {serviceCenter.email}
                   </a>
@@ -159,7 +176,7 @@ export default function ServiceCenterDetails() {
               )}
               {serviceCenter.website && (
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400">🌐</span>
+                  <FaGlobe className="text-slate-400" />
                   <a href={serviceCenter.website} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">
                     {serviceCenter.website}
                   </a>
@@ -307,7 +324,17 @@ export default function ServiceCenterDetails() {
                 disabled={createBookingMutation.isPending}
                 className="auto-button-primary"
               >
-                {createBookingMutation.isPending ? '⏳ Создание...' : '✅ Создать запись'}
+                {createBookingMutation.isPending ? (
+                  <>
+                    <FaClock className="animate-spin" />
+                    Создание...
+                  </>
+                ) : (
+                  <>
+                    <FaCalendarAlt />
+                    Создать запись
+                  </>
+                )}
               </button>
               <button
                 type="button"
@@ -415,6 +442,6 @@ export default function ServiceCenterDetails() {
           )}
         </div>
       </div>
-    </div>
+    </Page>
   )
 }

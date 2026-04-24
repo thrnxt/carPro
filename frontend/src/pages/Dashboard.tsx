@@ -1,14 +1,10 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuthStore } from '../store/authStore'
-import apiClient from '../api/client'
 import { Link } from 'react-router-dom'
 import {
   FaBell,
   FaCalendarAlt,
   FaCar,
-  FaCarSide,
-  FaCheckCircle,
   FaClipboardList,
   FaClock,
   FaCog,
@@ -17,7 +13,22 @@ import {
   FaStar,
   FaTools,
   FaUsers,
+  FaWrench,
 } from 'react-icons/fa'
+import apiClient from '../api/client'
+import { useAuthStore } from '../store/authStore'
+import {
+  Badge,
+  EmptyState,
+  HeroCard,
+  KeyValue,
+  Page,
+  PageHeader,
+  Section,
+  SectionGrid,
+  StatCard,
+  Surface,
+} from '../components/ui'
 
 interface ServiceCenterProfile {
   id: number
@@ -29,6 +40,7 @@ interface ServiceCenterBooking {
   id: number
   bookingDateTime: string
   status: string
+  description?: string
   car?: {
     brand?: string
     model?: string
@@ -60,20 +72,46 @@ interface ServiceCenterOperation {
   }
 }
 
+function getBookingBadge(status: string) {
+  switch (status) {
+    case 'CONFIRMED':
+      return 'auto-badge-success'
+    case 'PENDING':
+      return 'auto-badge-warning'
+    case 'IN_PROGRESS':
+      return 'auto-badge-info'
+    case 'COMPLETED':
+      return 'auto-badge-success'
+    case 'CANCELLED':
+      return 'auto-badge-danger'
+    default:
+      return 'auto-badge'
+  }
+}
+
 export default function Dashboard() {
   const { user } = useAuthStore()
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
 
-  const { data: cars } = useQuery({
+  if (isServiceCenter) {
+    return <ServiceCenterDashboard />
+  }
+
+  return <ClientDashboard />
+}
+
+function ClientDashboard() {
+  const { user } = useAuthStore()
+
+  const { data: cars = [] } = useQuery({
     queryKey: ['cars'],
     queryFn: async () => {
       const response = await apiClient.get('/cars')
       return response.data
     },
-    enabled: !isServiceCenter,
   })
 
-  const { data: unreadCount } = useQuery({
+  const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: async () => {
       const response = await apiClient.get('/notifications/unread-count')
@@ -81,102 +119,154 @@ export default function Dashboard() {
     },
   })
 
-  if (isServiceCenter) {
-    return <ServiceCenterDashboard />
-  }
-
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Добро пожаловать, {user?.firstName}!</h1>
-        <p className="text-slate-400 text-lg">Управляйте своими автомобилями и обслуживанием</p>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Cabinet overview"
+        title={`Добро пожаловать, ${user?.firstName || 'пользователь'}`}
+        description="Следите за гаражом, обслуживанием, уведомлениями и ближайшими сервисными действиями в одном рабочем контуре."
+        actions={
+          <>
+            <Link to="/garage" className="auto-button-primary">
+              <FaPlus />
+              Добавить автомобиль
+            </Link>
+            <Link to="/service-centers" className="auto-button-secondary">
+              <FaWrench />
+              Найти сервис
+            </Link>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="auto-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-300">Автомобили</h2>
-            <FaCar className="text-3xl text-red-500" />
+      <SectionGrid className="xl:grid-cols-4">
+        <StatCard
+          icon={FaCar}
+          label="Автомобили"
+          value={cars.length}
+          meta="Подключены к вашему гаражу"
+          tone="text-[#ff9b82]"
+        />
+        <StatCard
+          icon={FaBell}
+          label="Уведомления"
+          value={unreadCount}
+          meta="Непрочитанные напоминания и обновления"
+          tone="text-sky-300"
+        />
+        <StatCard
+          icon={FaCalendarAlt}
+          label="Контур обслуживания"
+          value={cars.length > 0 ? 'Активен' : 'Пусто'}
+          meta={cars.length > 0 ? 'Можно работать с календарем, сервисами и документами' : 'Сначала добавьте автомобиль'}
+          tone="text-emerald-300"
+        />
+        <StatCard
+          icon={FaFileInvoiceDollar}
+          label="Документы"
+          value="Единый доступ"
+          meta="Операции, счета и история доступны из общего кабинета"
+          tone="text-violet-300"
+        />
+      </SectionGrid>
+
+      <HeroCard
+        eyebrow="Workspace"
+        title="Гараж, сервисы и документы в одном потоке"
+        description="Новый shell собран как рабочий кабинет: меньше учебной визуальности, больше операционной ясности и сканируемых поверхностей."
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <Link to="/bookings" className="auto-button-primary">
+              <FaCalendarAlt />
+              Мои записи
+            </Link>
+            <Link to="/my-documents" className="auto-button-secondary">
+              <FaFileInvoiceDollar />
+              Документы
+            </Link>
           </div>
-          <p className="text-4xl font-bold text-red-400 mb-2">{cars?.length || 0}</p>
-          <p className="text-sm text-slate-400">в гараже</p>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Surface>
+            <KeyValue label="Статус workspace" value="Онлайн" />
+            <KeyValue label="Контур данных" value={cars.length > 0 ? `${cars.length} авто` : 'Нет авто'} className="mt-3" />
+          </Surface>
+          <Surface>
+            <KeyValue label="Следующий шаг" value={cars.length > 0 ? 'Проверить сервисы' : 'Добавить VIN'} />
+            <KeyValue label="Уведомления" value={`${unreadCount} активных`} className="mt-3" />
+          </Surface>
+          <Surface>
+            <KeyValue label="Операции и счета" value="Доступны" />
+            <KeyValue label="История обслуживания" value="В кабинете" className="mt-3" />
+          </Surface>
         </div>
+      </HeroCard>
 
-        <div className="auto-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-300">Уведомления</h2>
-            <FaBell className="text-3xl text-amber-500" />
-          </div>
-          <p className="text-4xl font-bold text-amber-400 mb-2">{unreadCount || 0}</p>
-          <p className="text-sm text-slate-400">непрочитанных</p>
-        </div>
-
-        <div className="auto-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-300">Статус</h2>
-            <FaCheckCircle className="text-3xl text-emerald-500" />
-          </div>
-          <p className="text-xl font-bold text-emerald-400 mb-2">Активен</p>
-          <p className="text-sm text-slate-400">Все системы работают</p>
-        </div>
-      </div>
-
-      <div className="auto-card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Мои автомобили</h2>
-          <Link to="/garage" className="auto-button-primary text-sm flex items-center gap-2">
-            <FaPlus />
-            Добавить авто
+      <Section
+        title="Автомобили в гараже"
+        description="Карточки автомобиля стали спокойнее и плотнее: важные атрибуты видны сразу, без лишнего шума."
+        actions={
+          <Link to="/garage" className="auto-button-secondary">
+            Открыть гараж
           </Link>
-        </div>
-        {cars && cars.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        }
+      >
+        {cars.length > 0 ? (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {cars.map((car: any) => (
-              <Link
-                key={car.id}
-                to={`/cars/${car.id}`}
-                className="auto-card p-5 hover:scale-105 transition-transform cursor-pointer"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">
+              <Link key={car.id} to={`/cars/${car.id}`} className="auto-card p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-400">Автомобиль</p>
+                    <h3 className="truncate text-2xl font-bold tracking-[-0.05em] text-white">
                       {car.brand} {car.model}
                     </h3>
-                    <p className="text-slate-400 text-sm">{car.year} год</p>
+                    <p className="mt-1 text-sm text-slate-400">{car.year} год выпуска</p>
                   </div>
-                  <FaCarSide className="text-3xl text-red-500" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400">Пробег:</span>
-                    <span className="text-white font-semibold">{car.mileage?.toLocaleString()} км</span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#ff9b82]">
+                    <FaCar />
                   </div>
-                  {car.licensePlate && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">Номер:</span>
-                      <span className="text-red-400 font-mono font-bold">{car.licensePlate}</span>
-                    </div>
-                  )}
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-700">
-                  <span className="text-red-400 text-sm font-medium flex items-center gap-2">
-                    Подробнее <span>→</span>
-                  </span>
+
+                <div className="mt-6 grid gap-3 rounded-[1.35rem] border border-white/10 bg-white/5 p-4 text-sm">
+                  <KeyValue label="Пробег" value={`${car.mileage?.toLocaleString('ru-RU') || 0} км`} />
+                  <KeyValue
+                    label="Гос. номер"
+                    value={car.licensePlate ? <span className="font-mono text-[#ff9b82]">{car.licensePlate}</span> : 'Не указан'}
+                  />
+                  <KeyValue
+                    label="Последнее ТО"
+                    value={
+                      car.lastServiceDate
+                        ? new Date(car.lastServiceDate).toLocaleDateString('ru-RU')
+                        : 'Нет данных'
+                    }
+                  />
+                </div>
+
+                <div className="mt-5 flex items-center justify-between">
+                  <Badge tone="auto-badge-info">Карточка автомобиля</Badge>
+                  <span className="text-sm font-semibold text-slate-300">Открыть</span>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <FaCar className="text-6xl text-red-500 mx-auto mb-4 opacity-50" />
-            <p className="text-slate-400 text-lg mb-6">У вас пока нет автомобилей</p>
-            <Link to="/garage" className="auto-button-primary inline-block">
-              Добавить первый автомобиль
-            </Link>
-          </div>
+          <EmptyState
+            icon={FaCar}
+            title="Гараж пока пуст"
+            description="Добавьте первый автомобиль, чтобы открыть календарь обслуживания, сервисные записи и документы."
+            action={
+              <Link to="/garage" className="auto-button-primary">
+                <FaPlus />
+                Добавить автомобиль
+              </Link>
+            }
+          />
         )}
-      </div>
-    </div>
+      </Section>
+    </Page>
   )
 }
 
@@ -189,7 +279,7 @@ function ServiceCenterDashboard() {
     },
   })
 
-  const { data: bookings } = useQuery<ServiceCenterBooking[]>({
+  const { data: bookings = [] } = useQuery<ServiceCenterBooking[]>({
     queryKey: ['service-center-bookings', serviceCenter?.id],
     queryFn: async () => {
       const response = await apiClient.get(`/bookings/service-center/${serviceCenter?.id}`)
@@ -198,7 +288,7 @@ function ServiceCenterDashboard() {
     enabled: !!serviceCenter?.id,
   })
 
-  const { data: clients } = useQuery<ServiceCenterClient[]>({
+  const { data: clients = [] } = useQuery<ServiceCenterClient[]>({
     queryKey: ['service-center-clients', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/service-center-clients/my')
@@ -207,7 +297,7 @@ function ServiceCenterDashboard() {
     enabled: !!serviceCenter?.id,
   })
 
-  const { data: operations } = useQuery<ServiceCenterOperation[]>({
+  const { data: operations = [] } = useQuery<ServiceCenterOperation[]>({
     queryKey: ['service-center-operations', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/maintenance-records/service-center/my')
@@ -216,167 +306,200 @@ function ServiceCenterDashboard() {
     enabled: !!serviceCenter?.id,
   })
 
-  const bookingsList = bookings || []
-  const operationsList = operations || []
-
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const tomorrowStart = new Date(todayStart)
   tomorrowStart.setDate(tomorrowStart.getDate() + 1)
 
-  const todayBookings = bookingsList.filter((booking) => {
+  const todayBookings = bookings.filter((booking) => {
     const bookingDate = new Date(booking.bookingDateTime)
     return bookingDate >= todayStart && bookingDate < tomorrowStart
   })
 
-  const pendingBookings = bookingsList.filter((booking) => booking.status === 'PENDING')
+  const pendingBookings = bookings.filter((booking) => booking.status === 'PENDING')
 
   const upcomingBookings = useMemo(
     () =>
-      bookingsList
+      bookings
         .filter((booking) => new Date(booking.bookingDateTime) >= now)
         .sort(
           (a, b) =>
             new Date(a.bookingDateTime).getTime() - new Date(b.bookingDateTime).getTime()
         )
         .slice(0, 5),
-    [bookingsList, now]
+    [bookings, now]
   )
 
   const recentOperations = useMemo(
     () =>
-      operationsList
+      operations
         .slice()
         .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
         .slice(0, 5),
-    [operationsList]
+    [operations]
   )
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Панель управления сервисом</h1>
-        <p className="text-slate-400 text-lg">Клиенты, записи и выполненные операции</p>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Service operations"
+        title={serviceCenter?.name || 'Панель сервисного центра'}
+        description="Роль сервисного центра собрана как B2B workspace: записи, клиенты, операции, счета и рейтинг сканируются без визуального шума."
+        actions={
+          <>
+            <Link to="/service-center/operations" className="auto-button-primary">
+              <FaTools />
+              Новая операция
+            </Link>
+            <Link to="/service-center/invoices" className="auto-button-secondary">
+              <FaFileInvoiceDollar />
+              Счета
+            </Link>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="service-card p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">Записи сегодня</h2>
-            <FaCalendarAlt className="text-xl text-blue-600" />
+      <SectionGrid className="xl:grid-cols-5">
+        <StatCard
+          icon={FaCalendarAlt}
+          label="Записи сегодня"
+          value={todayBookings.length}
+          meta="Задачи текущего дня"
+          tone="text-[#ff9b82]"
+        />
+        <StatCard
+          icon={FaClock}
+          label="Ожидают"
+          value={pendingBookings.length}
+          meta="Неподтвержденные визиты"
+          tone="text-amber-300"
+        />
+        <StatCard
+          icon={FaUsers}
+          label="Клиенты"
+          value={clients.length}
+          meta="Контакты в базе сервиса"
+          tone="text-sky-300"
+        />
+        <StatCard
+          icon={FaTools}
+          label="Операции"
+          value={operations.length}
+          meta="Зафиксированные работы"
+          tone="text-emerald-300"
+        />
+        <StatCard
+          icon={FaStar}
+          label="Рейтинг"
+          value={serviceCenter?.rating ? serviceCenter.rating.toFixed(1) : '—'}
+          meta="Средняя оценка сервиса"
+          tone="text-yellow-300"
+        />
+      </SectionGrid>
+
+      <HeroCard
+        eyebrow="Dispatch"
+        title="Операционный контур сервиса"
+        description="Приоритеты дня, поток записей и выполненные операции собраны в одном экране без переключения между разрозненными модулями."
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <Link to="/service-center/bookings" className="auto-button-primary">
+              <FaClipboardList />
+              Записи
+            </Link>
+            <Link to="/service-center/clients" className="auto-button-secondary">
+              <FaUsers />
+              Клиенты
+            </Link>
+            <Link to="/service-center/settings" className="auto-button-secondary">
+              <FaCog />
+              Настройки
+            </Link>
           </div>
-          <p className="text-3xl font-bold text-blue-700">{todayBookings.length}</p>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Surface>
+            <KeyValue label="Сегодня" value={`${todayBookings.length} записей`} />
+            <KeyValue label="В ожидании" value={`${pendingBookings.length} визитов`} className="mt-3" />
+          </Surface>
+          <Surface>
+            <KeyValue label="Клиентская база" value={`${clients.length} клиентов`} />
+            <KeyValue label="Работы" value={`${operations.length} операций`} className="mt-3" />
+          </Surface>
+          <Surface>
+            <KeyValue label="Рейтинг" value={serviceCenter?.rating ? serviceCenter.rating.toFixed(1) : '—'} />
+            <KeyValue label="Контур" value="Активен" className="mt-3" />
+          </Surface>
         </div>
+      </HeroCard>
 
-        <div className="service-card p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">Ожидают</h2>
-            <FaClock className="text-xl text-amber-600" />
-          </div>
-          <p className="text-3xl font-bold text-amber-700">{pendingBookings.length}</p>
-        </div>
-
-        <div className="service-card p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">Клиенты</h2>
-            <FaUsers className="text-xl text-indigo-600" />
-          </div>
-          <p className="text-3xl font-bold text-indigo-700">{(clients || []).length}</p>
-        </div>
-
-        <div className="service-card p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">Операции</h2>
-            <FaTools className="text-xl text-emerald-600" />
-          </div>
-          <p className="text-3xl font-bold text-emerald-700">{operationsList.length}</p>
-        </div>
-
-        <div className="service-card p-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">Рейтинг</h2>
-            <FaStar className="text-xl text-yellow-600" />
-          </div>
-          <p className="text-3xl font-bold text-yellow-700">
-            {serviceCenter?.rating ? serviceCenter.rating.toFixed(1) : '—'}
-          </p>
-        </div>
-      </div>
-
-      <div className="service-card p-6">
-        <h2 className="text-2xl font-bold text-slate-800 mb-4">Быстрые действия</h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Link to="/service-center/bookings" className="service-button flex items-center justify-center gap-2">
-            <FaClipboardList />
-            Записи
-          </Link>
-          <Link to="/service-center/clients" className="service-button flex items-center justify-center gap-2">
-            <FaUsers />
-            Клиенты
-          </Link>
-          <Link to="/service-center/operations" className="service-button flex items-center justify-center gap-2">
-            <FaTools />
-            Операции
-          </Link>
-          <Link to="/service-center/invoices" className="service-button flex items-center justify-center gap-2">
-            <FaFileInvoiceDollar />
-            Счета
-          </Link>
-          <Link to="/service-center/settings" className="service-button flex items-center justify-center gap-2">
-            <FaCog />
-            Настройки
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="service-card p-6">
-          <h2 className="text-2xl font-bold text-slate-800 mb-4">Ближайшие записи</h2>
-          {upcomingBookings.length === 0 ? (
-            <p className="text-slate-600">Пока нет предстоящих записей</p>
-          ) : (
-            <div className="space-y-3">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Section title="Ближайшие записи" description="Самые актуальные визиты и клиенты на горизонте сервиса.">
+          {upcomingBookings.length > 0 ? (
+            <div className="space-y-4">
               {upcomingBookings.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-lg p-4 border border-blue-100">
-                  <p className="text-slate-900 font-semibold">
-                    {booking.car?.brand} {booking.car?.model}
-                    {booking.car?.licensePlate ? ` (${booking.car.licensePlate})` : ''}
-                  </p>
-                  <p className="text-slate-700 text-sm">
-                    Клиент: {booking.car?.owner?.firstName} {booking.car?.owner?.lastName}
-                  </p>
-                  <p className="text-slate-600 text-sm">
-                    {new Date(booking.bookingDateTime).toLocaleString('ru-RU')} • {booking.status}
-                  </p>
-                </div>
+                <Surface key={booking.id} className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-white">
+                        {booking.car?.brand} {booking.car?.model}
+                        {booking.car?.licensePlate ? ` (${booking.car.licensePlate})` : ''}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-400">
+                        Клиент: {booking.car?.owner?.firstName} {booking.car?.owner?.lastName}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-300">
+                        {new Date(booking.bookingDateTime).toLocaleString('ru-RU')}
+                      </p>
+                      {booking.description && (
+                        <p className="mt-3 text-sm leading-6 text-slate-400">{booking.description}</p>
+                      )}
+                    </div>
+                    <Badge tone={getBookingBadge(booking.status)}>{booking.status}</Badge>
+                  </div>
+                </Surface>
               ))}
             </div>
-          )}
-        </div>
-
-        <div className="service-card p-6">
-          <h2 className="text-2xl font-bold text-slate-800 mb-4">Последние операции</h2>
-          {recentOperations.length === 0 ? (
-            <p className="text-slate-600">Пока нет операций</p>
           ) : (
-            <div className="space-y-3">
+            <EmptyState
+              icon={FaCalendarAlt}
+              title="Нет предстоящих записей"
+              description="Когда клиенты начнут бронировать визиты, ближайшие записи появятся здесь."
+            />
+          )}
+        </Section>
+
+        <Section title="Последние операции" description="Свежие выполненные работы для быстрой проверки и контроля качества.">
+          {recentOperations.length > 0 ? (
+            <div className="space-y-4">
               {recentOperations.map((operation) => (
-                <div key={operation.id} className="bg-white rounded-lg p-4 border border-blue-100">
-                  <p className="text-slate-900 font-semibold">{operation.workType}</p>
-                  <p className="text-slate-700 text-sm">
-                    {operation.car?.brand} {operation.car?.model}
-                    {operation.car?.licensePlate ? ` (${operation.car.licensePlate})` : ''}
-                  </p>
-                  <p className="text-slate-700 text-sm">
-                    Клиент: {operation.car?.owner?.firstName} {operation.car?.owner?.lastName}
-                  </p>
-                  <p className="text-slate-600 text-sm">{operation.serviceDate}</p>
-                </div>
+                <Surface key={operation.id} className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{operation.workType}</h3>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {operation.car?.brand} {operation.car?.model}
+                        {operation.car?.licensePlate ? ` (${operation.car.licensePlate})` : ''}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        Клиент: {operation.car?.owner?.firstName} {operation.car?.owner?.lastName}
+                      </p>
+                    </div>
+                    <Badge tone="auto-badge-success">{operation.serviceDate}</Badge>
+                  </div>
+                </Surface>
               ))}
             </div>
+          ) : (
+            <EmptyState
+              icon={FaTools}
+              title="Операции пока не зафиксированы"
+              description="После создания сервисных работ последние операции появятся в этом блоке."
+            />
           )}
-        </div>
+        </Section>
       </div>
-    </div>
+    </Page>
   )
 }

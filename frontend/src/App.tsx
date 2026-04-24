@@ -162,7 +162,31 @@ function App() {
             />
           </Route>
         </Routes>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: 'rgba(8, 17, 29, 0.94)',
+              color: '#f8fafc',
+              border: '1px solid rgba(148, 163, 184, 0.14)',
+              borderRadius: '18px',
+              boxShadow: '0 28px 56px -28px rgba(2, 6, 23, 0.9)',
+            },
+            success: {
+              iconTheme: {
+                primary: '#34d399',
+                secondary: '#ffffff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#fb7185',
+                secondary: '#ffffff',
+              },
+            },
+          }}
+        />
       </BrowserRouter>
     </QueryClientProvider>
   )
