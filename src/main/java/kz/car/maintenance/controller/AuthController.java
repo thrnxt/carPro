@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import kz.car.maintenance.dto.AuthRequest;
 import kz.car.maintenance.dto.AuthResponse;
 import kz.car.maintenance.dto.RegisterRequest;
+import kz.car.maintenance.dto.UserProfileUpdateRequest;
 import kz.car.maintenance.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -30,5 +31,12 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<AuthResponse> me(Authentication authentication) {
         return ResponseEntity.ok(authService.getCurrentUser(authentication.getName()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<AuthResponse> updateMe(
+            @Valid @RequestBody UserProfileUpdateRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(authService.updateCurrentUser(authentication.getName(), request));
     }
 }

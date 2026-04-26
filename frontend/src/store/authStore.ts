@@ -8,22 +8,33 @@ interface User {
   email: string
   firstName: string
   lastName: string
+  phoneNumber?: string | null
   avatarUrl?: string | null
   role: string
+}
+
+type AuthUserPayload = Omit<User, 'id'> & {
+  id?: number
+  userId?: number
 }
 
 interface AuthState {
   token: string | null
   user: User | null
   isAuthenticated: boolean
-  setAuth: (token: string, user: User & { userId?: number }) => void
-  setUser: (user: User & { userId?: number }) => void
+  setAuth: (token: string, user: AuthUserPayload) => void
+  setUser: (user: AuthUserPayload) => void
   logout: () => void
 }
 
-const normalizeUser = (user: User & { userId?: number }): User => ({
-  ...user,
+const normalizeUser = (user: AuthUserPayload): User => ({
   id: user.id ?? user.userId ?? 0,
+  email: user.email,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  phoneNumber: user.phoneNumber ?? null,
+  avatarUrl: user.avatarUrl ?? null,
+  role: user.role,
 })
 
 export const useAuthStore = create<AuthState>()(

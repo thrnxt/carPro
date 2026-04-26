@@ -3,6 +3,7 @@ package kz.car.maintenance.service;
 import kz.car.maintenance.dto.AuthRequest;
 import kz.car.maintenance.dto.AuthResponse;
 import kz.car.maintenance.dto.RegisterRequest;
+import kz.car.maintenance.dto.UserProfileUpdateRequest;
 import kz.car.maintenance.exception.BadRequestException;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.security.JwtService;
@@ -67,15 +68,44 @@ public class AuthService {
         return buildAuthResponse(userService.findByEmail(email), null);
     }
 
+    @Transactional
+    public AuthResponse updateCurrentUser(String currentEmail, UserProfileUpdateRequest request) {
+        User user = userService.findByEmail(currentEmail);
+        String normalizedEmail = request.getEmail().trim();
+
+        if (userService.existsByEmailAndIdNot(normalizedEmail, user.getId())) {
+            throw new BadRequestException("Email already exists");
+        }
+
+        user.setEmail(normalizedEmail);
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        user.setPhoneNumber(normalizeOptionalField(request.getPhoneNumber()));
+        user.setAvatarUrl(normalizeOptionalField(request.getAvatarUrl()));
+
+        User updatedUser = userService.save(user);
+        return buildAuthResponse(updatedUser, jwtService.generateToken(updatedUser));
+    }
+
     private AuthResponse buildAuthResponse(User user, String token) {
         return AuthResponse.builder()
                 .token(token)
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .phoneNumber(user.getPhoneNumber())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .userId(user.getId())
                 .build();
+    }
+
+    private String normalizeOptionalField(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmedValue = value.trim();
+        return trimmedValue.isEmpty() ? null : trimmedValue;
     }
 }

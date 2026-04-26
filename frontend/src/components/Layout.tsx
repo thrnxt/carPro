@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -9,6 +10,7 @@ import {
   FaCar,
   FaCarSide,
   FaChartBar,
+  FaChevronRight,
   FaClipboardList,
   FaCog,
   FaComments,
@@ -21,6 +23,8 @@ import {
   FaUsers,
   FaWrench,
 } from 'react-icons/fa'
+import apiClient from '../api/client'
+import ProfileEditorModal from './ProfileEditorModal'
 import { useAuthStore } from '../store/authStore'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
 
@@ -60,6 +64,13 @@ const aliasTitles = [
   { test: (pathname: string) => pathname.startsWith('/quizzes/'), title: 'Квиз', group: 'Знания' },
 ]
 
+const roleLabels: Record<string, string> = {
+  USER: 'Кабинет владельца',
+  SERVICE_CENTER: 'Сервисный центр',
+  ADMIN: 'Администратор',
+  SUPPORT: 'Поддержка',
+}
+
 function isPathActive(pathname: string, itemPath: string) {
   if (itemPath === '/') {
     return pathname === '/'
@@ -85,16 +96,19 @@ function NavigationList({
   items,
   pathname,
   onNavigate,
+  getBadgeContent,
 }: {
   items: NavItem[]
   pathname: string
   onNavigate?: () => void
+  getBadgeContent?: (item: NavItem) => string | null
 }) {
   return (
     <nav className="space-y-2">
       {items.map((item) => {
         const IconComponent = item.icon
         const isActive = isPathActive(pathname, item.path)
+        const badgeContent = getBadgeContent?.(item)
 
         return (
           <Link
@@ -106,9 +120,16 @@ function NavigationList({
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-base text-white/90">
               <IconComponent />
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{item.label}</p>
-              <p className="truncate text-xs text-slate-400">{item.description}</p>
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{item.label}</p>
+                <p className="truncate text-xs text-slate-400">{item.description}</p>
+              </div>
+              {badgeContent && (
+                <span className="inline-flex min-w-[1.6rem] items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold leading-none text-white shadow-[0_10px_20px_-12px_rgba(239,68,68,0.95)]">
+                  {badgeContent}
+                </span>
+              )}
             </div>
           </Link>
         )
@@ -123,11 +144,22 @@ export default function Layout() {
   const location = useLocation()
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false)
 
   const avatarSrc = resolveFileUrl(user?.avatarUrl)
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const isAdmin = user?.role === 'ADMIN'
   const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
+  const shouldShowNotificationsBadge = Boolean(user && navItems.some((item) => item.path === '/notifications'))
+
+  const { data: unreadNotificationsCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: async () => {
+      const response = await apiClient.get('/notifications/unread-count')
+      return response.data
+    },
+    enabled: shouldShowNotificationsBadge,
+  })
 
   useEffect(() => {
     setAvatarLoadFailed(false)
@@ -138,11 +170,11 @@ export default function Layout() {
   }, [location.pathname])
 
   useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? 'hidden' : ''
+    document.body.style.overflow = mobileMenuOpen || profileEditorOpen ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
     }
-  }, [mobileMenuOpen])
+  }, [mobileMenuOpen, profileEditorOpen])
 
   const currentSection = useMemo(() => {
     const activeItem = navItems.find((item) => isPathActive(location.pathname, item.path))
@@ -169,7 +201,9 @@ export default function Layout() {
   }
 
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.trim() || 'AS'
-  const roleLabel = isServiceCenter ? 'Сервисный центр' : isAdmin ? 'Администратор' : 'Кабинет владельца'
+  const roleLabel = user?.role ? roleLabels[user.role] || 'Пользователь' : 'Пользователь'
+  const notificationsBadgeContent =
+    unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount > 0 ? String(unreadNotificationsCount) : null
 
   return (
     <div className="app-shell">
@@ -188,7 +222,11 @@ export default function Layout() {
           <div className="app-sidebar-body space-y-6">
             <div className="space-y-3">
               <div className="app-sidebar-label">Navigation</div>
-              <NavigationList items={navItems} pathname={location.pathname} />
+              <NavigationList
+                items={navItems}
+                pathname={location.pathname}
+                getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
+              />
             </div>
 
             {isAdmin && (
@@ -231,27 +269,40 @@ export default function Layout() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                <div className="app-avatar h-10 w-10 rounded-xl text-sm">
-                  {avatarSrc && !avatarLoadFailed ? (
-                    <img
-                      src={avatarSrc}
-                      alt={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Avatar'}
-                      className="h-full w-full object-cover"
-                      onError={() => setAvatarLoadFailed(true)}
-                    />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
+              <button
+                type="button"
+                onClick={() => setProfileEditorOpen(true)}
+                className="group flex min-w-0 items-center gap-3 rounded-[1.45rem] border border-white/10 bg-white/5 px-3 py-2 text-left transition-all duration-200 hover:border-white/20 hover:bg-white/[0.08]"
+              >
+                <div className="relative shrink-0">
+                  <div className="absolute -inset-1 rounded-[1.35rem] bg-gradient-to-br from-[#ff6b4a]/40 via-transparent to-sky-400/20 opacity-90 blur-sm transition-opacity duration-200 group-hover:opacity-100" />
+                  <div className="app-avatar relative h-11 w-11 rounded-[1.1rem] text-sm ring-1 ring-white/10">
+                    {avatarSrc && !avatarLoadFailed ? (
+                      <img
+                        src={avatarSrc}
+                        alt={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Avatar'}
+                        className="h-full w-full object-cover"
+                        onError={() => setAvatarLoadFailed(true)}
+                      />
+                    ) : (
+                      <span>{initials}</span>
+                    )}
+                  </div>
+                  <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#08111d] bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.16)]" />
                 </div>
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-semibold text-white">
+
+                <div className="hidden min-w-0 sm:block">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Профиль</p>
+                  <p className="truncate text-sm font-semibold text-white">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-slate-400">{roleLabel}</p>
-                  <p className="hidden text-[11px] text-slate-500 xl:block">{user?.email}</p>
+                  <p className="truncate text-xs text-slate-400">{roleLabel}</p>
+                  <p className="hidden text-[11px] text-[#ff9b82] xl:block">Нажмите, чтобы изменить данные</p>
                 </div>
-              </div>
+                <div className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-400 transition-all duration-200 group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white md:flex">
+                  <FaChevronRight className="text-xs" />
+                </div>
+              </button>
 
               <button type="button" onClick={handleLogout} className="auto-button-secondary px-4 py-2.5 text-sm">
                 Выйти
@@ -305,6 +356,7 @@ export default function Layout() {
                   items={navItems}
                   pathname={location.pathname}
                   onNavigate={() => setMobileMenuOpen(false)}
+                  getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
                 />
               </div>
 
@@ -329,6 +381,8 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      <ProfileEditorModal open={profileEditorOpen} onClose={() => setProfileEditorOpen(false)} />
     </div>
   )
 }
