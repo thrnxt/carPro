@@ -1,8 +1,10 @@
 package kz.car.maintenance.config;
 
+import kz.car.maintenance.model.EducationalContent;
 import kz.car.maintenance.model.ServiceCenter;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.model.VehicleCatalog;
+import kz.car.maintenance.repository.EducationalContentRepository;
 import kz.car.maintenance.repository.ServiceCenterRepository;
 import kz.car.maintenance.repository.UserRepository;
 import kz.car.maintenance.repository.VehicleCatalogRepository;
@@ -25,6 +27,7 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final ServiceCenterRepository serviceCenterRepository;
     private final VehicleCatalogRepository vehicleCatalogRepository;
+    private final EducationalContentRepository educationalContentRepository;
     private final PasswordEncoder passwordEncoder;
     
     @Bean
@@ -177,6 +180,32 @@ public class DataInitializer {
         });
     }
 
+    @Bean
+    @Transactional
+    public CommandLineRunner initEducationalContent() {
+        return args -> buildEducationalContentSeeds().forEach(seed -> {
+            if (educationalContentRepository.existsByTitle(seed.title())) {
+                return;
+            }
+
+            EducationalContent content = EducationalContent.builder()
+                    .title(seed.title())
+                    .content(seed.content())
+                    .type(seed.type())
+                    .videoUrl(seed.videoUrl())
+                    .imageUrl(seed.imageUrl())
+                    .category(seed.category())
+                    .provider(seed.provider())
+                    .difficulty(seed.difficulty())
+                    .durationMinutes(seed.durationMinutes())
+                    .sortOrder(seed.sortOrder())
+                    .status(EducationalContent.ContentStatus.PUBLISHED)
+                    .build();
+
+            educationalContentRepository.save(content);
+        });
+    }
+
     private List<VehicleCatalogSeed> buildVehicleCatalogSeeds() {
         List<VehiclePattern> patterns = List.of(
                 new VehiclePattern("Toyota", "Camry"),
@@ -219,6 +248,119 @@ public class DataInitializer {
 
     private String buildLicensePlate(int patternIndex, int seedIndex) {
         return String.format("%02dCAR%03d", patternIndex + 1, seedIndex);
+    }
+
+    private List<EducationalContentSeed> buildEducationalContentSeeds() {
+        return List.of(
+                new EducationalContentSeed(
+                        "Как грамотно обслуживать первый автомобиль",
+                        "Стартовый видеоурок по базовому уходу: что проверять регулярно, какие расходники контролировать и как не пропускать обязательное ТО.",
+                        EducationalContent.ContentType.VIDEO,
+                        "https://www.youtube.com/watch?v=brofphmC7GI",
+                        null,
+                        "Базовое обслуживание",
+                        "ChrisFix",
+                        "Начальный",
+                        18,
+                        10
+                ),
+                new EducationalContentSeed(
+                        "Как заменить моторное масло",
+                        "Пошаговый разбор процедуры замены масла: подбор типа масла, безопасный слив, замена фильтра и финальная проверка уровня.",
+                        EducationalContent.ContentType.VIDEO,
+                        "https://www.youtube.com/watch?v=O1hF25Cowv8",
+                        null,
+                        "Базовое обслуживание",
+                        "ChrisFix",
+                        "Начальный",
+                        18,
+                        20
+                ),
+                new EducationalContentSeed(
+                        "Ежемесячная проверка автомобиля",
+                        "Раз в месяц проверьте давление в шинах, уровень масла, охлаждающую жидкость, тормозную жидкость, состояние щеток и аккумулятора. Такой короткий ритуал заметно снижает риск внезапных поломок.",
+                        EducationalContent.ContentType.CHECKLIST,
+                        null,
+                        null,
+                        "Базовое обслуживание",
+                        "CarPro",
+                        "Начальный",
+                        5,
+                        30
+                ),
+                new EducationalContentSeed(
+                        "Как менять основные жидкости в автомобиле",
+                        "Обзор всех ключевых рабочих жидкостей: моторное масло, антифриз, тормозная и трансмиссионная жидкости. Материал полезен как для общего понимания, так и перед визитом в сервис.",
+                        EducationalContent.ContentType.VIDEO,
+                        "https://www.youtube.com/watch?v=t7JCh7PHoDc",
+                        null,
+                        "Жидкости и расходники",
+                        "ChrisFix",
+                        "Средний",
+                        36,
+                        40
+                ),
+                new EducationalContentSeed(
+                        "Как подготовиться к визиту в сервис",
+                        "Перед записью зафиксируйте симптомы, пробег, дату последнего обслуживания, текущие ошибки на панели и список вопросов мастеру. Это ускоряет диагностику и уменьшает риск лишних работ в счете.",
+                        EducationalContent.ContentType.ARTICLE,
+                        null,
+                        null,
+                        "Жидкости и расходники",
+                        "CarPro",
+                        "Начальный",
+                        6,
+                        50
+                ),
+                new EducationalContentSeed(
+                        "Как проверить и заменить аккумулятор",
+                        "Урок по базовой диагностике АКБ: признаки разряда, проверка напряжения, снятие старой батареи и правильная установка новой.",
+                        EducationalContent.ContentType.VIDEO,
+                        "https://www.youtube.com/watch?v=YC--MLNIbik",
+                        null,
+                        "Электрика и зима",
+                        "ChrisFix",
+                        "Начальный",
+                        14,
+                        60
+                ),
+                new EducationalContentSeed(
+                        "Признаки умирающего аккумулятора",
+                        "Если машина тяжело заводится, тускнеет свет, а напряжение падает после простоя, не откладывайте проверку АКБ. В холодный сезон такие признаки быстро переходят в полный отказ запуска.",
+                        EducationalContent.ContentType.ARTICLE,
+                        null,
+                        null,
+                        "Электрика и зима",
+                        "CarPro",
+                        "Начальный",
+                        4,
+                        70
+                ),
+                new EducationalContentSeed(
+                        "Подготовка автомобиля к зиме",
+                        "Чеклист перед холодами: аккумулятор, антифриз, давление в шинах, состояние щеток, омывающая жидкость и аварийный набор в багажнике.",
+                        EducationalContent.ContentType.CHECKLIST,
+                        null,
+                        null,
+                        "Электрика и зима",
+                        "CarPro",
+                        "Начальный",
+                        7,
+                        80
+                ),
+                new EducationalContentSeed(
+                        "Что проверить перед дальней поездкой",
+                        "Быстрый маршрутный чек-лист: шины, жидкости, тормоза, свет, документы, запаска и базовый комплект для непредвиденной остановки.",
+                        EducationalContent.ContentType.CHECKLIST,
+                        null,
+                        null,
+                        "Поездки и безопасность",
+                        "CarPro",
+                        "Начальный",
+                        6,
+                        90
+                )
+        );
     }
     
     private static class ServiceCenterData {
@@ -266,6 +408,20 @@ public class DataInitializer {
             String color,
             String licensePlate,
             Long mileage
+    ) {
+    }
+
+    private record EducationalContentSeed(
+            String title,
+            String content,
+            EducationalContent.ContentType type,
+            String videoUrl,
+            String imageUrl,
+            String category,
+            String provider,
+            String difficulty,
+            Integer durationMinutes,
+            Integer sortOrder
     ) {
     }
 }

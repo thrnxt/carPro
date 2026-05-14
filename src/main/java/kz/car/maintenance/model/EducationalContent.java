@@ -1,5 +1,7 @@
 package kz.car.maintenance.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +13,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "educational_content")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @Builder
 @NoArgsConstructor
@@ -37,12 +40,21 @@ public class EducationalContent {
     
     @Column(nullable = false)
     private String category; // Категория (например, "Обслуживание", "Зима", "Дальняя поездка")
+
+    private String provider; // Источник материала
+
+    private String difficulty; // Уровень сложности
+
+    private Integer durationMinutes; // Длительность в минутах
+
+    private Integer sortOrder; // Порядок показа в UI
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ContentStatus status;
     
     @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Quiz> quizzes; // Связанные квизы
     
     @Column(nullable = false, updatable = false)
@@ -56,6 +68,9 @@ public class EducationalContent {
         updatedAt = LocalDateTime.now();
         if (status == null) {
             status = ContentStatus.DRAFT;
+        }
+        if (sortOrder == null) {
+            sortOrder = 0;
         }
     }
     

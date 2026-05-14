@@ -8,7 +8,8 @@ import java.util.List;
 
 @Repository
 public interface EducationalContentRepository extends JpaRepository<EducationalContent, Long> {
-    List<EducationalContent> findByStatus(EducationalContent.ContentStatus status);
-    List<EducationalContent> findByCategoryAndStatus(String category, EducationalContent.ContentStatus status);
-    List<EducationalContent> findByTypeAndStatus(EducationalContent.ContentType type, EducationalContent.ContentStatus status);
+    List<EducationalContent> findByStatusOrderBySortOrderAscIdAsc(EducationalContent.ContentStatus status);
+    List<EducationalContent> findByCategoryAndStatusOrderBySortOrderAscIdAsc(String category, EducationalContent.ContentStatus status);
+    List<EducationalContent> findByTypeAndStatusOrderBySortOrderAscIdAsc(EducationalContent.ContentType type, EducationalContent.ContentStatus status);
+    boolean existsByTitle(String title);
 }

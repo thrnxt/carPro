@@ -20,18 +20,18 @@ public class EducationalContentService {
     }
     
     public List<EducationalContent> getPublishedContent() {
-        return educationalContentRepository.findByStatus(EducationalContent.ContentStatus.PUBLISHED);
+        return educationalContentRepository.findByStatusOrderBySortOrderAscIdAsc(EducationalContent.ContentStatus.PUBLISHED);
     }
     
     public List<EducationalContent> getContentByCategory(String category) {
-        return educationalContentRepository.findByCategoryAndStatus(
+        return educationalContentRepository.findByCategoryAndStatusOrderBySortOrderAscIdAsc(
                 category, 
                 EducationalContent.ContentStatus.PUBLISHED
         );
     }
     
     public List<EducationalContent> getContentByType(EducationalContent.ContentType type) {
-        return educationalContentRepository.findByTypeAndStatus(
+        return educationalContentRepository.findByTypeAndStatusOrderBySortOrderAscIdAsc(
                 type, 
                 EducationalContent.ContentStatus.PUBLISHED
         );
@@ -51,6 +51,10 @@ public class EducationalContentService {
         existing.setVideoUrl(content.getVideoUrl());
         existing.setImageUrl(content.getImageUrl());
         existing.setCategory(content.getCategory());
+        existing.setProvider(content.getProvider());
+        existing.setDifficulty(content.getDifficulty());
+        existing.setDurationMinutes(content.getDurationMinutes());
+        existing.setSortOrder(content.getSortOrder());
         existing.setStatus(content.getStatus());
         return educationalContentRepository.save(existing);
     }
