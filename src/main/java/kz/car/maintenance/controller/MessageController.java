@@ -1,6 +1,8 @@
 package kz.car.maintenance.controller;
 
+import kz.car.maintenance.dto.ChatContactDto;
 import kz.car.maintenance.dto.MessageCreateRequest;
+import kz.car.maintenance.dto.PagedResponse;
 import kz.car.maintenance.model.Message;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.service.MessageService;
@@ -36,6 +38,22 @@ public class MessageController {
             @AuthenticationPrincipal User user,
             @PathVariable Long userId) {
         return ResponseEntity.ok(messageService.getConversation(user.getId(), userId));
+    }
+
+    @GetMapping("/contacts")
+    public ResponseEntity<PagedResponse<ChatContactDto>> getChatContacts(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String query) {
+        return ResponseEntity.ok(messageService.getChatContacts(user.getId(), page, size, query));
+    }
+
+    @GetMapping("/contacts/{contactId}")
+    public ResponseEntity<ChatContactDto> getChatContact(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long contactId) {
+        return ResponseEntity.ok(messageService.getChatContact(user.getId(), contactId));
     }
     
     @GetMapping("/unread")

@@ -3,11 +3,15 @@ package kz.car.maintenance.service;
 import kz.car.maintenance.exception.BadRequestException;
 import kz.car.maintenance.exception.ForbiddenException;
 import kz.car.maintenance.exception.NotFoundException;
+import kz.car.maintenance.dto.ChatContactDto;
+import kz.car.maintenance.dto.PagedResponse;
 import kz.car.maintenance.model.Message;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.repository.MessageRepository;
 import kz.car.maintenance.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +71,7 @@ public class MessageService {
         return message;
     }
     
+    @Transactional
     public List<Message> getConversation(Long userId1, Long userId2) {
         // Проверяем существование пользователей
         if (!userRepository.existsById(userId1)) {
@@ -77,7 +82,54 @@ public class MessageService {
         }
         
         // Получаем беседу между двумя пользователями напрямую через query
-        return messageRepository.findConversationBetweenUsers(userId1, userId2);
+        List<Message> conversation = messageRepository.findConversationBetweenUsers(userId1, userId2);
+
+        conversation.stream()
+                .filter(message -> message.getReceiver().getId().equals(userId1) && message.getSender().getId().equals(userId2))
+                .filter(message -> !Boolean.TRUE.equals(message.getIsRead()))
+                .forEach(message -> message.setIsRead(true));
+
+        return conversation;
+    }
+
+    public PagedResponse<ChatContactDto> getChatContacts(Long currentUserId, int page, int size, String query) {
+        if (!userRepository.existsById(currentUserId)) {
+            throw new NotFoundException("User not found");
+        }
+
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 5);
+        PageRequest pageRequest = PageRequest.of(safePage, safeSize);
+        String normalizedQuery = query != null ? query.trim() : "";
+
+        Page<User> contactsPage = normalizedQuery.isEmpty()
+                ? userRepository.findRandomActiveChatContacts(currentUserId, pageRequest)
+                : userRepository.searchActiveChatContacts(currentUserId, User.UserStatus.ACTIVE, normalizedQuery, pageRequest);
+
+        return new PagedResponse<>(
+                contactsPage.getContent().stream().map(this::toChatContactDto).toList(),
+                contactsPage.getNumber(),
+                contactsPage.getSize(),
+                contactsPage.getTotalElements(),
+                contactsPage.getTotalPages(),
+                contactsPage.isFirst(),
+                contactsPage.isLast()
+        );
+    }
+
+    public ChatContactDto getChatContact(Long currentUserId, Long contactId) {
+        if (currentUserId.equals(contactId)) {
+            throw new BadRequestException("Cannot open chat with yourself");
+        }
+
+        User contact = userRepository.findById(contactId)
+                .orElseThrow(() -> new NotFoundException("Receiver not found"));
+
+        if (contact.getStatus() != User.UserStatus.ACTIVE) {
+            throw new NotFoundException("Receiver not found");
+        }
+
+        return toChatContactDto(contact);
     }
     
     public List<Message> getUnreadMessages(Long userId) {
@@ -97,5 +149,17 @@ public class MessageService {
         
         message.setIsRead(true);
         messageRepository.save(message);
+    }
+
+    private ChatContactDto toChatContactDto(User user) {
+        return new ChatContactDto(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getPhoneNumber(),
+                user.getAvatarUrl(),
+                user.getRole()
+        );
     }
 }
