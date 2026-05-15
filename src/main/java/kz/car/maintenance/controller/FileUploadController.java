@@ -2,6 +2,7 @@ package kz.car.maintenance.controller;
 
 import kz.car.maintenance.service.FileUploadService;
 import kz.car.maintenance.exception.BadRequestException;
+import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ public class FileUploadController {
     
     private final FileUploadService fileUploadService;
     
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("subdirectory") String subdirectory) {
