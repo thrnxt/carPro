@@ -53,6 +53,8 @@ FILE_UPLOAD_DIR=/app/uploads
 APP_CORS_ALLOWED_ORIGINS=https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
+`FILE_UPLOAD_DIR` можно оставить как указано выше для явной настройки. В коде также есть fallback на `RAILWAY_VOLUME_MOUNT_PATH`, который Railway выставляет автоматически для подключённого volume.
+
 Если почта нужна в проде, добавьте ещё:
 
 ```env
