@@ -26,6 +26,7 @@ import ServiceCenterClients from './pages/ServiceCenterClients'
 import ServiceCenterReviews from './pages/ServiceCenterReviews'
 import ServiceCenterSettings from './pages/ServiceCenterSettings'
 import ServiceCenterOperations from './pages/ServiceCenterOperations'
+import ServiceCenterOperationCreate from './pages/ServiceCenterOperationCreate'
 import ServiceCenterInvoices from './pages/ServiceCenterInvoices'
 import ClientDocuments from './pages/ClientDocuments'
 import Layout from './components/Layout'
@@ -125,6 +126,14 @@ function App() {
               element={
                 <RoleRoute allowedRoles={['SERVICE_CENTER']}>
                   <ServiceCenterClients />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="service-center/operations/new"
+              element={
+                <RoleRoute allowedRoles={['SERVICE_CENTER']}>
+                  <ServiceCenterOperationCreate />
                 </RoleRoute>
               }
             />

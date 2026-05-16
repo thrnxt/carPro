@@ -72,6 +72,11 @@ const roleLabels: Record<string, string> = {
   SUPPORT: 'Поддержка',
 }
 
+type ServiceCenterProfileChrome = {
+  name: string
+  logoUrl?: string | null
+}
+
 function isPathActive(pathname: string, itemPath: string) {
   if (itemPath === '/') {
     return pathname === '/'
@@ -146,12 +151,29 @@ export default function Layout() {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileEditorOpen, setProfileEditorOpen] = useState(false)
-
-  const avatarSrc = resolveFileUrl(user?.avatarUrl)
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const isAdmin = user?.role === 'ADMIN'
   const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
   const shouldShowNotificationsBadge = Boolean(user && navItems.some((item) => item.path === '/notifications'))
+  const { data: serviceCenterProfile } = useQuery<ServiceCenterProfileChrome>({
+    queryKey: ['service-center', 'my'],
+    queryFn: async () => {
+      const response = await apiClient.get('/service-centers/my')
+      return response.data
+    },
+    enabled: isServiceCenter,
+    refetchOnWindowFocus: false,
+  })
+
+  const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+  const profileTitle = isServiceCenter ? serviceCenterProfile?.name || fullName || 'Сервисный центр' : fullName || user?.email || 'Пользователь'
+  const initials = profileTitle
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'AS'
+  const avatarSrc = resolveFileUrl(isServiceCenter ? serviceCenterProfile?.logoUrl || user?.avatarUrl : user?.avatarUrl)
 
   const { data: unreadNotificationsCount = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -201,7 +223,6 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.trim() || 'AS'
   const roleLabel = user?.role ? roleLabels[user.role] || 'Пользователь' : 'Пользователь'
   const notificationsBadgeContent =
     unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount > 0 ? String(unreadNotificationsCount) : null
@@ -281,7 +302,7 @@ export default function Layout() {
                     {avatarSrc && !avatarLoadFailed ? (
                       <img
                         src={avatarSrc}
-                        alt={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Avatar'}
+                        alt={profileTitle}
                         className="h-full w-full object-cover"
                         onError={() => setAvatarLoadFailed(true)}
                       />
@@ -294,9 +315,7 @@ export default function Layout() {
 
                 <div className="hidden min-w-0 sm:block">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Профиль</p>
-                  <p className="truncate text-sm font-semibold text-white">
-                    {user?.firstName} {user?.lastName}
-                  </p>
+                  <p className="truncate text-sm font-semibold text-white">{profileTitle}</p>
                   <p className="truncate text-xs text-slate-400">{roleLabel}</p>
                   <p className="hidden text-[11px] text-[#ff9b82] xl:block">Нажмите, чтобы изменить данные</p>
                 </div>

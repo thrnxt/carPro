@@ -1,6 +1,7 @@
 package kz.car.maintenance.controller;
 
 import jakarta.validation.Valid;
+import kz.car.maintenance.dto.PagedResponse;
 import kz.car.maintenance.dto.MaintenanceRecordCreateRequest;
 import kz.car.maintenance.dto.ServiceOperationCreateRequest;
 import kz.car.maintenance.model.MaintenanceRecord;
@@ -9,8 +10,10 @@ import kz.car.maintenance.service.MaintenanceRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -63,6 +66,28 @@ public class MaintenanceRecordController {
     @GetMapping("/service-center/my")
     public ResponseEntity<List<MaintenanceRecord>> getMyServiceCenterOperations(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(maintenanceRecordService.getMyServiceCenterOperations(user.getId()));
+    }
+
+    @GetMapping("/service-center/my/search")
+    public ResponseEntity<PagedResponse<MaintenanceRecord>> searchMyServiceCenterOperations(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long clientId,
+            @RequestParam(required = false) MaintenanceRecord.RecordStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(maintenanceRecordService.searchMyServiceCenterOperations(
+                user.getId(),
+                page,
+                size,
+                query,
+                clientId,
+                status,
+                dateFrom,
+                dateTo
+        ));
     }
 
     @GetMapping("/service-center/my/client/{clientId}")

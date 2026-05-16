@@ -29,6 +29,7 @@ import {
   StatCard,
   Surface,
 } from '../components/ui'
+import ServiceOperationCard, { type ServiceOperationCardData } from '../components/ServiceOperationCard'
 
 interface ServiceCenterProfile {
   id: number
@@ -55,21 +56,6 @@ interface ServiceCenterBooking {
 
 interface ServiceCenterClient {
   clientId: number
-}
-
-interface ServiceCenterOperation {
-  id: number
-  serviceDate: string
-  workType: string
-  car?: {
-    brand?: string
-    model?: string
-    licensePlate?: string
-    owner?: {
-      firstName?: string
-      lastName?: string
-    }
-  }
 }
 
 function getBookingBadge(status: string) {
@@ -297,7 +283,7 @@ function ServiceCenterDashboard() {
     enabled: !!serviceCenter?.id,
   })
 
-  const { data: operations = [] } = useQuery<ServiceCenterOperation[]>({
+  const { data: operations = [] } = useQuery<ServiceOperationCardData[]>({
     queryKey: ['service-center-operations', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/maintenance-records/service-center/my')
@@ -347,7 +333,7 @@ function ServiceCenterDashboard() {
         description="Роль сервисного центра собрана как B2B workspace: записи, клиенты, операции, счета и рейтинг сканируются без визуального шума."
         actions={
           <>
-            <Link to="/service-center/operations" className="auto-button-primary">
+            <Link to="/service-center/operations/new" className="auto-button-primary">
               <FaTools />
               Новая операция
             </Link>
@@ -434,7 +420,7 @@ function ServiceCenterDashboard() {
         </div>
       </HeroCard>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <Section title="Ближайшие записи" description="Самые актуальные визиты и клиенты на горизонте сервиса.">
           {upcomingBookings.length > 0 ? (
             <div className="space-y-4">
@@ -474,21 +460,7 @@ function ServiceCenterDashboard() {
           {recentOperations.length > 0 ? (
             <div className="space-y-4">
               {recentOperations.map((operation) => (
-                <Surface key={operation.id} className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{operation.workType}</h3>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {operation.car?.brand} {operation.car?.model}
-                        {operation.car?.licensePlate ? ` (${operation.car.licensePlate})` : ''}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        Клиент: {operation.car?.owner?.firstName} {operation.car?.owner?.lastName}
-                      </p>
-                    </div>
-                    <Badge tone="auto-badge-success">{operation.serviceDate}</Badge>
-                  </div>
-                </Surface>
+                <ServiceOperationCard key={operation.id} operation={operation} className="h-full" />
               ))}
             </div>
           ) : (

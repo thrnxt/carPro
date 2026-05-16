@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { FaCamera, FaSave, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import apiClient from '../api/client'
@@ -17,6 +17,7 @@ type ProfileFormState = {
   lastName: string
   phoneNumber: string
   avatarUrl: string
+  organizationName: string
 }
 
 type ProfileUpdateResponse = {
@@ -31,6 +32,21 @@ type ProfileUpdateResponse = {
   id?: number
 }
 
+type ServiceCenterProfile = {
+  name: string
+  address: string
+  city?: string | null
+  region?: string | null
+  latitude: number
+  longitude: number
+  phoneNumber?: string | null
+  email?: string | null
+  website?: string | null
+  description?: string | null
+  licenseDocumentUrl?: string | null
+  logoUrl?: string | null
+}
+
 const roleLabels: Record<string, string> = {
   USER: 'Кабинет владельца',
   SERVICE_CENTER: 'Сервисный центр',
@@ -38,22 +54,56 @@ const roleLabels: Record<string, string> = {
   SUPPORT: 'Поддержка',
 }
 
-function createFormState(user: ReturnType<typeof useAuthStore.getState>['user']): ProfileFormState {
+function createFormState(
+  user: ReturnType<typeof useAuthStore.getState>['user'],
+  serviceCenterProfile?: ServiceCenterProfile
+): ProfileFormState {
+  const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+  const isServiceCenter = user?.role === 'SERVICE_CENTER'
+
   return {
-    email: user?.email || '',
+    email: isServiceCenter ? serviceCenterProfile?.email || user?.email || '' : user?.email || '',
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
-    phoneNumber: user?.phoneNumber || '',
-    avatarUrl: user?.avatarUrl || '',
+    phoneNumber: isServiceCenter ? serviceCenterProfile?.phoneNumber || user?.phoneNumber || '' : user?.phoneNumber || '',
+    avatarUrl: isServiceCenter ? serviceCenterProfile?.logoUrl || user?.avatarUrl || '' : user?.avatarUrl || '',
+    organizationName: isServiceCenter ? serviceCenterProfile?.name || fullName : '',
   }
+}
+
+function normalizeOptionalField(value: string) {
+  const trimmedValue = value.trim()
+  return trimmedValue ? trimmedValue : null
+}
+
+function buildInitials(label: string, fallback: string) {
+  const initials = label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
+
+  return initials || fallback
 }
 
 export default function ProfileEditorModal({ open, onClose }: ProfileEditorModalProps) {
   const { user, token, setAuth } = useAuthStore()
-  const [formData, setFormData] = useState<ProfileFormState>(() => createFormState(user))
+  const queryClient = useQueryClient()
+  const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const { data: serviceCenterProfile } = useQuery<ServiceCenterProfile>({
+    queryKey: ['service-center', 'my'],
+    queryFn: async () => {
+      const response = await apiClient.get('/service-centers/my')
+      return response.data
+    },
+    enabled: open && isServiceCenter,
+    refetchOnWindowFocus: false,
+  })
+  const [formData, setFormData] = useState<ProfileFormState>(() => createFormState(user, serviceCenterProfile))
 
   useEffect(() => {
     if (!open) {
@@ -71,8 +121,6 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
 
       return
     }
-
-    setFormData(createFormState(user))
     setSelectedAvatarFile(null)
     setAvatarPreviewUrl((currentValue) => {
       if (currentValue) {
@@ -84,7 +132,15 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [open, user])
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setFormData(createFormState(user, serviceCenterProfile))
+  }, [open, user, serviceCenterProfile])
 
   useEffect(() => {
     if (!open) {
@@ -125,6 +181,29 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
         avatarUrl = uploadResponse.data.url
       }
 
+      if (isServiceCenter) {
+        if (!serviceCenterProfile) {
+          throw new Error('Не удалось загрузить профиль сервисного центра')
+        }
+
+        await apiClient.put('/service-centers/my', {
+          name: formData.organizationName.trim(),
+          address: serviceCenterProfile.address,
+          city: serviceCenterProfile.city ?? null,
+          region: serviceCenterProfile.region ?? null,
+          latitude: serviceCenterProfile.latitude,
+          longitude: serviceCenterProfile.longitude,
+          phoneNumber: normalizeOptionalField(formData.phoneNumber),
+          email: normalizeOptionalField(formData.email),
+          website: serviceCenterProfile.website ?? null,
+          description: serviceCenterProfile.description ?? null,
+          licenseDocumentUrl: serviceCenterProfile.licenseDocumentUrl ?? null,
+          logoUrl: normalizeOptionalField(avatarUrl),
+        })
+
+        return null
+      }
+
       const response = await apiClient.put<ProfileUpdateResponse>('/auth/me', {
         email: formData.email.trim(),
         firstName: formData.firstName.trim(),
@@ -136,6 +215,18 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
       return response.data
     },
     onSuccess: (data) => {
+      if (isServiceCenter) {
+        queryClient.invalidateQueries({ queryKey: ['service-center', 'my'] })
+        toast.success('Профиль сервиса обновлён')
+        onClose()
+        return
+      }
+
+      if (!data) {
+        toast.error('Не удалось обновить данные профиля')
+        return
+      }
+
       const nextToken = data.token || token
       if (!nextToken) {
         toast.error('Не удалось обновить сессию после сохранения профиля')
@@ -148,7 +239,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
       onClose()
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Не удалось сохранить профиль')
+      toast.error(error.response?.data?.message || (isServiceCenter ? 'Не удалось сохранить профиль сервиса' : 'Не удалось сохранить профиль'))
     },
   })
 
@@ -156,9 +247,21 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
     return null
   }
 
-  const initials = `${formData.firstName?.[0] || ''}${formData.lastName?.[0] || ''}`.trim() || 'AU'
+  const profileName = isServiceCenter
+    ? formData.organizationName.trim() || roleLabels[user.role] || 'Сервисный центр'
+    : `${formData.firstName} ${formData.lastName}`.trim() || 'Профиль'
+  const initials = buildInitials(profileName, isServiceCenter ? 'SC' : 'AU')
   const resolvedAvatarUrl = avatarPreviewUrl || resolveFileUrl(formData.avatarUrl)
   const roleLabel = roleLabels[user.role] || 'Пользователь'
+  const introLabel = isServiceCenter ? 'Service profile' : 'Personal data'
+  const introTitle = isServiceCenter ? 'Что можно редактировать в профиле сервиса' : 'Что можно редактировать'
+  const introDescription = isServiceCenter
+    ? 'Быстрый редактор хранит название сервиса, контактный email, телефон и логотип. Адрес, описание и сайт остаются в настройках сервисного центра.'
+    : 'Имя и фамилия нужны для чатов, бронирований и уведомлений. Телефон и фотография используются как контактная карточка внутри кабинета.'
+  const sidebarDescription = isServiceCenter
+    ? 'Обновите название сервиса, контакты и логотип. Полная карточка компании с адресом и описанием редактируется отдельно.'
+    : 'Обновите личные данные и фото. Если измените email, сессия автоматически обновится.'
+  const avatarActionLabel = isServiceCenter ? 'Загрузить логотип' : 'Загрузить фото'
 
   const handleAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -202,7 +305,12 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
 
-    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+    if (isServiceCenter) {
+      if (!formData.organizationName.trim() || !formData.email.trim()) {
+        toast.error('Заполните название сервиса и email')
+        return
+      }
+    } else if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
       toast.error('Заполните имя, фамилию и email')
       return
     }
@@ -225,9 +333,11 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
         <div className="relative grid lg:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="border-b border-white/10 bg-white/[0.03] p-6 sm:p-8 lg:border-b-0 lg:border-r">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Profile</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-white">Редактирование профиля</h2>
+            <h2 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-white">
+              {isServiceCenter ? 'Профиль сервисного центра' : 'Редактирование профиля'}
+            </h2>
             <p className="mt-3 max-w-sm text-sm leading-6 text-slate-400">
-              Обновите личные данные и фото. Если измените email, сессия автоматически обновится.
+              {sidebarDescription}
             </p>
 
             <div className="mt-8 flex flex-col items-start">
@@ -237,7 +347,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
                   {resolvedAvatarUrl ? (
                     <img
                       src={resolvedAvatarUrl}
-                      alt={`${formData.firstName} ${formData.lastName}`.trim() || 'Avatar'}
+                      alt={profileName}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -248,7 +358,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute -bottom-2 -right-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-white shadow-[0_18px_36px_-20px_rgba(2,6,23,0.95)] transition-colors hover:bg-slate-900"
-                  aria-label="Загрузить новый аватар"
+                  aria-label={avatarActionLabel}
                 >
                   <FaCamera />
                 </button>
@@ -265,7 +375,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
               <div className="mt-5 flex flex-wrap gap-3">
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="auto-button-secondary px-4 py-2.5 text-sm">
                   <FaCamera />
-                  Загрузить фото
+                  {avatarActionLabel}
                 </button>
                 <button
                   type="button"
@@ -297,35 +407,49 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
             </button>
 
             <div className="pr-14">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Personal data</p>
-              <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-white">Что можно редактировать</h3>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{introLabel}</p>
+              <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-white">{introTitle}</h3>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-                Имя и фамилия нужны для чатов, бронирований и уведомлений. Телефон и фотография используются как
-                контактная карточка внутри кабинета.
+                {introDescription}
               </p>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Имя</label>
-                <input
-                  className="auto-input"
-                  value={formData.firstName}
-                  onChange={(event) => setFormData((currentValue) => ({ ...currentValue, firstName: event.target.value }))}
-                />
-              </div>
+              {isServiceCenter ? (
+                <div className="sm:col-span-2">
+                  <label className="mb-2 block text-sm text-slate-300">Название сервисного центра</label>
+                  <input
+                    className="auto-input"
+                    value={formData.organizationName}
+                    onChange={(event) =>
+                      setFormData((currentValue) => ({ ...currentValue, organizationName: event.target.value }))
+                    }
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="mb-2 block text-sm text-slate-300">Имя</label>
+                    <input
+                      className="auto-input"
+                      value={formData.firstName}
+                      onChange={(event) => setFormData((currentValue) => ({ ...currentValue, firstName: event.target.value }))}
+                    />
+                  </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Фамилия</label>
-                <input
-                  className="auto-input"
-                  value={formData.lastName}
-                  onChange={(event) => setFormData((currentValue) => ({ ...currentValue, lastName: event.target.value }))}
-                />
-              </div>
+                  <div>
+                    <label className="mb-2 block text-sm text-slate-300">Фамилия</label>
+                    <input
+                      className="auto-input"
+                      value={formData.lastName}
+                      onChange={(event) => setFormData((currentValue) => ({ ...currentValue, lastName: event.target.value }))}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm text-slate-300">Email</label>
+                <label className="mb-2 block text-sm text-slate-300">{isServiceCenter ? 'Контактный email' : 'Email'}</label>
                 <input
                   className="auto-input"
                   type="email"
@@ -346,7 +470,9 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-6">
-              <p className="text-sm text-slate-500">Изменения сохраняются сразу в профиль и в текущую сессию.</p>
+              <p className="text-sm text-slate-500">
+                {isServiceCenter ? 'Изменения сохраняются в карточку сервиса.' : 'Изменения сохраняются сразу в профиль и в текущую сессию.'}
+              </p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={onClose} className="auto-button-secondary px-4 py-2.5 text-sm">
                   Отмена

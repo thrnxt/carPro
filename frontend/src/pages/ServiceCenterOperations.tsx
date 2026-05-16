@@ -1,161 +1,150 @@
-import { useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
-  FaCamera,
-  FaCar,
+  FaCalendarAlt,
+  FaChevronLeft,
+  FaChevronRight,
   FaClipboardList,
+  FaExternalLinkAlt,
   FaPlus,
   FaTimes,
-  FaTools,
-  FaUser,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
-import { resolveFileUrl } from '../utils/resolveFileUrl'
-
-interface ServiceCenterProfile {
-  id: number
-  name: string
-}
+import ServiceOperationCard, { type ServiceOperationCardData } from '../components/ServiceOperationCard'
+import { Badge, EmptyState, Page, PageHeader, Section, cx } from '../components/ui'
 
 interface ServiceCenterClient {
   clientId: number
   firstName: string
   lastName: string
-  status: 'NEW' | 'REGULAR' | 'VIP' | 'BLOCKED'
 }
 
-interface Booking {
-  id: number
-  status: string
-  car?: {
-    id: number
-    brand?: string
-    model?: string
-    licensePlate?: string
-    mileage?: number
-    owner?: {
-      id?: number
-      firstName?: string
-      lastName?: string
-    }
+type PagedResponse<T> = {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  first: boolean
+  last: boolean
+}
+
+type OperationStatusFilter = '' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+type OperationFilters = {
+  clientId: string
+  status: OperationStatusFilter
+  dateFrom: string
+  dateTo: string
+}
+
+const DEFAULT_FILTERS: OperationFilters = {
+  clientId: '',
+  status: '',
+  dateFrom: '',
+  dateTo: '',
+}
+
+const STATUS_OPTIONS: Array<{ value: OperationStatusFilter; label: string }> = [
+  { value: '', label: 'Все статусы' },
+  { value: 'SCHEDULED', label: 'Запланировано' },
+  { value: 'IN_PROGRESS', label: 'В работе' },
+  { value: 'COMPLETED', label: 'Завершено' },
+  { value: 'CANCELLED', label: 'Отменено' },
+]
+
+const STATUS_BADGE_CLASSES: Record<Exclude<OperationStatusFilter, ''>, string> = {
+  SCHEDULED: 'auto-badge-warning',
+  IN_PROGRESS: 'auto-badge-info',
+  COMPLETED: 'auto-badge-success',
+  CANCELLED: 'auto-badge-danger',
+}
+
+const STATUS_LABELS: Record<Exclude<OperationStatusFilter, ''>, string> = {
+  SCHEDULED: 'Запланировано',
+  IN_PROGRESS: 'В работе',
+  COMPLETED: 'Завершено',
+  CANCELLED: 'Отменено',
+}
+
+function formatOperationDate(value: string) {
+  try {
+    return new Date(value).toLocaleDateString('ru-RU')
+  } catch {
+    return value
   }
 }
 
-interface CarSummary {
-  id: number
-  brand: string
-  model: string
-  licensePlate?: string
-  mileage?: number
+function getOwnerName(operation: ServiceOperationCardData) {
+  const owner = operation.car?.owner
+  return `${owner?.firstName || ''} ${owner?.lastName || ''}`.trim() || 'Клиент не указан'
 }
 
-interface ComponentSummary {
-  id: number
-  name: string
-  status: string
-  wearLevel: number
+function getCarTitle(operation: ServiceOperationCardData) {
+  const baseTitle = `${operation.car?.brand || ''} ${operation.car?.model || ''}`.trim()
+  return baseTitle ? `${baseTitle}${operation.car?.licensePlate ? ` (${operation.car.licensePlate})` : ''}` : 'Автомобиль не указан'
 }
 
-interface MaintenanceOperation {
-  id: number
-  workType: string
-  description?: string
-  serviceDate: string
-  mileageAtService: number
-  cost?: number
-  car?: {
-    id: number
-    brand?: string
-    model?: string
-    licensePlate?: string
-    owner?: {
-      id?: number
-      firstName?: string
-      lastName?: string
-    }
+function getTotalLabel(value?: number | null) {
+  return value != null ? `${value.toLocaleString('ru-RU')} ₸` : '—'
+}
+
+function OperationDetailsModal({
+  operation,
+  onClose,
+}: {
+  operation: ServiceOperationCardData | null
+  onClose: () => void
+}) {
+  if (!operation) {
+    return null
   }
-  photos?: Array<{
-    id: number
-    fileUrl: string
-    description?: string
-  }>
-  replacedComponents?: Array<{
-    id: number
-    carComponent?: {
-      id: number
-      name?: string
-    }
-    partNumber?: string
-    manufacturer?: string
-  }>
-}
 
-interface CandidateClient {
-  id: number
-  fullName: string
-  source: 'serviced' | 'booking'
-}
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+        onClick={onClose}
+        aria-label="Закрыть детали операции"
+      />
 
-interface CandidateCar {
-  id: number
-  title: string
-  mileage?: number
-}
+      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#08111d]/95 p-5 shadow-[0_44px_120px_-42px_rgba(2,6,23,0.96)] sm:p-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-5 top-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Закрыть окно"
+        >
+          <FaTimes />
+        </button>
 
-interface ReplacedPartFormRow {
-  componentId: string
-  partNumber: string
-  manufacturer: string
-}
+        <div className="pr-14">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Operation details</p>
+          <h2 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-white">Детали операции</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Операция #{operation.id} от {formatOperationDate(operation.serviceDate)}
+          </p>
+        </div>
 
-interface CreateOperationPayload {
-  carId: number
-  workType: string
-  description: string | null
-  serviceDate: string
-  mileageAtService: number
-  cost: number | null
-  replacedParts: Array<{
-    componentId: number
-    partNumber: string | null
-    manufacturer: string | null
-  }>
+        <div className="mt-6">
+          <ServiceOperationCard operation={operation} />
+        </div>
+      </div>
+    </div>
+  )
 }
-
-const CLIENT_STATUS_LABELS: Record<ServiceCenterClient['status'], string> = {
-  NEW: 'Новый',
-  REGULAR: 'Постоянный',
-  VIP: 'VIP',
-  BLOCKED: 'Заблокирован',
-}
-
-const BOOKING_READY_STATUSES = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'])
 
 export default function ServiceCenterOperations() {
-  const queryClient = useQueryClient()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [formData, setFormData] = useState({
-    clientId: '',
-    carId: '',
-    workType: '',
-    description: '',
-    serviceDate: new Date().toISOString().slice(0, 10),
-    mileageAtService: '',
-    cost: '',
-  })
-  const [replacedParts, setReplacedParts] = useState<ReplacedPartFormRow[]>([])
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(5)
+  const [draftFilters, setDraftFilters] = useState<OperationFilters>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<OperationFilters>(DEFAULT_FILTERS)
+  const [openedOperationId, setOpenedOperationId] = useState<number | null>(null)
 
-  const { data: serviceCenter } = useQuery<ServiceCenterProfile>({
-    queryKey: ['service-center', 'my'],
-    queryFn: async () => {
-      const response = await apiClient.get('/service-centers/my')
-      return response.data
-    },
-  })
-
-  const { data: clients } = useQuery<ServiceCenterClient[]>({
+  const { data: clients = [] } = useQuery<ServiceCenterClient[]>({
     queryKey: ['service-center-clients', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/service-center-clients/my')
@@ -163,560 +152,308 @@ export default function ServiceCenterOperations() {
     },
   })
 
-  const { data: bookings } = useQuery<Booking[]>({
-    queryKey: ['service-center-bookings', serviceCenter?.id],
+  const {
+    data: operationsPage,
+    isLoading,
+    isFetching,
+  } = useQuery<PagedResponse<ServiceOperationCardData>>({
+    queryKey: ['service-center-operations', 'search', page, pageSize, filters],
     queryFn: async () => {
-      const response = await apiClient.get(`/bookings/service-center/${serviceCenter?.id}`)
-      return response.data
-    },
-    enabled: !!serviceCenter?.id,
-  })
-
-  const availableClients = useMemo<CandidateClient[]>(() => {
-    const merged = new Map<number, CandidateClient>()
-
-    for (const client of clients || []) {
-      merged.set(client.clientId, {
-        id: client.clientId,
-        fullName: `${client.firstName} ${client.lastName}`.trim(),
-        source: 'serviced',
-      })
-    }
-
-    for (const booking of bookings || []) {
-      if (!BOOKING_READY_STATUSES.has(booking.status)) {
-        continue
-      }
-      const owner = booking.car?.owner
-      if (!owner?.id) {
-        continue
-      }
-      if (!merged.has(owner.id)) {
-        merged.set(owner.id, {
-          id: owner.id,
-          fullName: `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || `Клиент #${owner.id}`,
-          source: 'booking',
-        })
-      }
-    }
-
-    return Array.from(merged.values()).sort((a, b) => a.fullName.localeCompare(b.fullName, 'ru'))
-  }, [bookings, clients])
-
-  const selectedClientId = formData.clientId ? Number(formData.clientId) : null
-
-  const { data: servicedCars } = useQuery<CarSummary[]>({
-    queryKey: ['service-center-client-cars', selectedClientId],
-    queryFn: async () => {
-      const response = await apiClient.get(`/service-center-clients/${selectedClientId}/cars`)
-      return response.data
-    },
-    enabled: !!selectedClientId,
-  })
-
-  const candidateCars = useMemo<CandidateCar[]>(() => {
-    const list = new Map<number, CandidateCar>()
-
-    for (const car of servicedCars || []) {
-      list.set(car.id, {
-        id: car.id,
-        title: `${car.brand} ${car.model}${car.licensePlate ? ` (${car.licensePlate})` : ''}`,
-        mileage: car.mileage,
-      })
-    }
-
-    for (const booking of bookings || []) {
-      if (!BOOKING_READY_STATUSES.has(booking.status)) {
-        continue
-      }
-      const ownerId = booking.car?.owner?.id
-      const carId = booking.car?.id
-      if (!selectedClientId || !ownerId || ownerId !== selectedClientId || !carId) {
-        continue
-      }
-      if (!list.has(carId)) {
-        list.set(carId, {
-          id: carId,
-          title: `${booking.car?.brand || ''} ${booking.car?.model || ''}${
-            booking.car?.licensePlate ? ` (${booking.car.licensePlate})` : ''
-          }`.trim(),
-          mileage: booking.car?.mileage,
-        })
-      }
-    }
-
-    return Array.from(list.values())
-  }, [bookings, servicedCars, selectedClientId])
-
-  const selectedCarId = formData.carId ? Number(formData.carId) : null
-
-  const { data: carComponents } = useQuery<ComponentSummary[]>({
-    queryKey: ['service-center-client-car-components', selectedClientId, selectedCarId],
-    queryFn: async () => {
-      const response = await apiClient.get(
-        `/service-center-clients/${selectedClientId}/cars/${selectedCarId}/components`
-      )
-      return response.data
-    },
-    enabled: !!selectedClientId && !!selectedCarId,
-  })
-
-  const { data: operations, isLoading } = useQuery<MaintenanceOperation[]>({
-    queryKey: ['service-center-operations', 'my'],
-    queryFn: async () => {
-      const response = await apiClient.get('/maintenance-records/service-center/my')
-      return response.data
-    },
-  })
-
-  const addReplacedPartRow = () => {
-    setReplacedParts((prev) => [...prev, { componentId: '', partNumber: '', manufacturer: '' }])
-  }
-
-  const removeReplacedPartRow = (index: number) => {
-    setReplacedParts((prev) => prev.filter((_, rowIndex) => rowIndex !== index))
-  }
-
-  const updateReplacedPartRow = (
-    index: number,
-    field: keyof ReplacedPartFormRow,
-    value: string
-  ) => {
-    setReplacedParts((prev) =>
-      prev.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row))
-    )
-  }
-
-  const resetForm = () => {
-    setFormData({
-      clientId: '',
-      carId: '',
-      workType: '',
-      description: '',
-      serviceDate: new Date().toISOString().slice(0, 10),
-      mileageAtService: '',
-      cost: '',
-    })
-    setReplacedParts([])
-    setSelectedFiles([])
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const createOperationMutation = useMutation({
-    mutationFn: async (payload: CreateOperationPayload) => {
-      const uploadedPhotos = [] as Array<{ fileUrl: string; description: string }>
-
-      for (const file of selectedFiles) {
-        const uploadData = new FormData()
-        uploadData.append('file', file)
-        uploadData.append('subdirectory', 'maintenance')
-        const uploadResponse = await apiClient.post('/files/upload', uploadData)
-        uploadedPhotos.push({
-          fileUrl: uploadResponse.data.url,
-          description: file.name,
-        })
-      }
-
-      const response = await apiClient.post('/maintenance-records/service-center', {
-        ...payload,
-        photos: uploadedPhotos,
+      const response = await apiClient.get('/maintenance-records/service-center/my/search', {
+        params: {
+          page,
+          size: pageSize,
+          ...(filters.clientId ? { clientId: Number(filters.clientId) } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.dateFrom ? { dateFrom: filters.dateFrom } : {}),
+          ...(filters.dateTo ? { dateTo: filters.dateTo } : {}),
+        },
       })
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-center-operations', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['service-center-clients', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['service-center-client-car-components'] })
-      toast.success('Операция добавлена')
-      resetForm()
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Не удалось сохранить операцию')
-    },
+    placeholderData: (previousData) => previousData,
   })
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-
-    if (!formData.clientId || !formData.carId || !formData.workType || !formData.mileageAtService) {
-      toast.error('Заполните обязательные поля')
-      return
-    }
-
-    const normalizedCost = formData.cost.replace(/\s+/g, '').replace(',', '.')
-    if (normalizedCost && !/^\d+(\.\d{1,2})?$/.test(normalizedCost)) {
-      toast.error('Стоимость должна быть числом. Можно использовать точку или запятую')
-      return
-    }
-
-    const preparedReplacedParts = replacedParts
-      .map((row) => ({
-        componentId: row.componentId.trim(),
-        partNumber: row.partNumber.trim(),
-        manufacturer: row.manufacturer.trim(),
-      }))
-      .filter((row) => row.componentId || row.partNumber || row.manufacturer)
-
-    if (preparedReplacedParts.some((row) => !row.componentId)) {
-      toast.error('Укажите компонент для каждой добавленной заменённой детали')
-      return
-    }
-
-    if (preparedReplacedParts.some((row) => !/^\d+$/.test(row.componentId))) {
-      toast.error('Компонент должен быть выбран из списка или указан числовым ID')
-      return
-    }
-
-    const componentIds = preparedReplacedParts.map((row) => Number(row.componentId))
-    if (new Set(componentIds).size !== componentIds.length) {
-      toast.error('Один и тот же компонент нельзя добавить несколько раз в одной операции')
-      return
-    }
-
-    createOperationMutation.mutate({
-      carId: Number(formData.carId),
-      workType: formData.workType.trim(),
-      description: formData.description.trim() || null,
-      serviceDate: formData.serviceDate,
-      mileageAtService: Number(formData.mileageAtService),
-      cost: normalizedCost ? Number(normalizedCost) : null,
-      replacedParts: preparedReplacedParts.map((row) => ({
-        componentId: Number(row.componentId),
-        partNumber: row.partNumber || null,
-        manufacturer: row.manufacturer || null,
-      })),
-    })
-  }
-
-  const sortedOperations = useMemo(
-    () =>
-      (operations || [])
-        .slice()
-        .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime()),
-    [operations]
+  const openedOperation = useMemo(
+    () => operationsPage?.content.find((operation) => operation.id === openedOperationId) || null,
+    [openedOperationId, operationsPage]
   )
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка операций...</p>
-        </div>
-      </div>
-    )
+  const hasActiveFilters = useMemo(() => Object.values(filters).some((value) => value !== ''), [filters])
+
+  const pageStart = operationsPage && operationsPage.totalElements > 0 ? page * pageSize + 1 : 0
+  const pageEnd = operationsPage ? page * pageSize + operationsPage.content.length : 0
+
+  const handleApplyFilters = (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
+      toast.error('Начало периода не может быть позже конца периода')
+      return
+    }
+
+    setFilters(draftFilters)
+    setPage(0)
+    setOpenedOperationId(null)
+  }
+
+  const handleResetFilters = () => {
+    setDraftFilters(DEFAULT_FILTERS)
+    setFilters(DEFAULT_FILTERS)
+    setPage(0)
+    setOpenedOperationId(null)
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Операции</h1>
-        <p className="text-slate-400">
-          Добавление выполненных работ, замен деталей и подтверждающих фото
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Service operations"
+        title="Журнал операций"
+        description="Компактный реестр сервисных работ с поиском, фильтрами и постраничной навигацией. Создание вынесено в отдельный поток."
+        actions={
+          <Link to="/service-center/operations/new" className="auto-button-primary">
+            <FaPlus />
+            Создать операцию
+          </Link>
+        }
+      />
 
-      <form onSubmit={handleSubmit} className="auto-card p-6 space-y-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <FaPlus className="text-red-500" />
-          Новая операция
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Клиент *</label>
-            <select
-              value={formData.clientId}
-              onChange={(event) =>
-                setFormData((prev) => ({ ...prev, clientId: event.target.value, carId: '' }))
-              }
-              className="auto-select"
-              required
-            >
-              <option value="">Выберите клиента</option>
-              {availableClients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.fullName}
-                  {client.source === 'booking' ? ' (из записи)' : ''}
-                  {client.source === 'serviced'
-                    ? `, статус: ${CLIENT_STATUS_LABELS[(clients || []).find((item) => item.clientId === client.id)?.status || 'NEW']}`
-                    : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Автомобиль *</label>
-            <select
-              value={formData.carId}
-              onChange={(event) => setFormData((prev) => ({ ...prev, carId: event.target.value }))}
-              className="auto-select"
-              required
-              disabled={!formData.clientId}
-            >
-              <option value="">Выберите автомобиль</option>
-              {candidateCars.map((car) => (
-                <option key={car.id} value={car.id}>
-                  {car.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Тип работы *</label>
-            <input
-              value={formData.workType}
-              onChange={(event) => setFormData((prev) => ({ ...prev, workType: event.target.value }))}
-              className="auto-input"
-              placeholder="Например: Замена масла"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Дата *</label>
-            <input
-              type="date"
-              value={formData.serviceDate}
-              onChange={(event) => setFormData((prev) => ({ ...prev, serviceDate: event.target.value }))}
-              className="auto-input"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Пробег, км *</label>
-            <input
-              type="number"
-              min="0"
-              value={formData.mileageAtService}
-              onChange={(event) =>
-                setFormData((prev) => ({ ...prev, mileageAtService: event.target.value }))
-              }
-              className="auto-input"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-slate-300 mb-2">Стоимость, ₸</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={formData.cost}
-              onChange={(event) => setFormData((prev) => ({ ...prev, cost: event.target.value }))}
-              className="auto-input"
-              placeholder="Например: 89999.95"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm text-slate-300 mb-2">Описание</label>
-            <textarea
-              value={formData.description}
-              onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
-              className="auto-textarea"
-              rows={3}
-              placeholder="Что было сделано"
-            />
-          </div>
-        </div>
-
-        <div className="border-t border-slate-700 pt-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg text-white font-semibold flex items-center gap-2">
-              <FaTools className="text-red-500" />
-              Замененные детали
-            </h3>
-            <button type="button" className="auto-button-secondary text-sm" onClick={addReplacedPartRow}>
-              <FaPlus className="inline mr-1" />
-              Добавить деталь
-            </button>
-          </div>
-
-          {replacedParts.length === 0 ? (
-            <p className="text-slate-400 text-sm">Детали не добавлены</p>
-          ) : (
-            <div className="space-y-3">
-              {replacedParts.map((row, index) => (
-                <div key={`replaced-part-${index}`} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Компонент</label>
-                    {carComponents && carComponents.length > 0 ? (
-                      <select
-                        value={row.componentId}
-                        onChange={(event) =>
-                          updateReplacedPartRow(index, 'componentId', event.target.value)
-                        }
-                        className="auto-select"
-                      >
-                        <option value="">Выберите компонент</option>
-                        {carComponents.map((component) => (
-                          <option key={component.id} value={component.id}>
-                            {component.name} ({component.status}, {component.wearLevel}%)
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        value={row.componentId}
-                        onChange={(event) =>
-                          updateReplacedPartRow(index, 'componentId', event.target.value)
-                        }
-                        className="auto-input"
-                        placeholder="ID компонента"
-                      />
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Номер детали</label>
-                    <input
-                      value={row.partNumber}
-                      onChange={(event) => updateReplacedPartRow(index, 'partNumber', event.target.value)}
-                      className="auto-input"
-                      placeholder="Part number"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Производитель</label>
-                    <input
-                      value={row.manufacturer}
-                      onChange={(event) =>
-                        updateReplacedPartRow(index, 'manufacturer', event.target.value)
-                      }
-                      className="auto-input"
-                      placeholder="OEM"
-                    />
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      className="auto-button-danger text-sm"
-                      onClick={() => removeReplacedPartRow(index)}
-                    >
-                      <FaTimes className="inline mr-1" />
-                      Удалить
-                    </button>
-                  </div>
-                </div>
-              ))}
+      <Section
+        title="Операции"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="auto-badge-info">{operationsPage?.totalElements ?? 0} в журнале</Badge>
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <span>На странице</span>
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value))
+                  setPage(0)
+                }}
+                className="auto-select min-w-[5.5rem] py-2"
+              >
+                {[5, 10, 15, 20].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
-
-        <div className="border-t border-slate-700 pt-4">
-          <h3 className="text-lg text-white font-semibold flex items-center gap-2 mb-2">
-            <FaCamera className="text-red-500" />
-            Подтверждающие фото/документы
-          </h3>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
-            className="auto-input"
-          />
-          <p className="mt-2 text-xs text-slate-400">
-            Поддерживаются JPG, PNG, WEBP и PDF до 10 МБ
-          </p>
-          {selectedFiles.length > 0 && (
-            <ul className="mt-2 text-sm text-slate-300 space-y-1">
-              {selectedFiles.map((file) => (
-                <li key={`${file.name}-${file.size}`}>{file.name}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="pt-2">
-          <button type="submit" disabled={createOperationMutation.isPending} className="auto-button-primary">
-            {createOperationMutation.isPending ? 'Сохранение...' : 'Сохранить операцию'}
-          </button>
-        </div>
-      </form>
-
-      <div className="auto-card p-6">
-        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaClipboardList className="text-red-500" />
-          Последние операции
-        </h2>
-
-        {sortedOperations.length === 0 ? (
-          <p className="text-slate-400">Операций пока нет</p>
-        ) : (
-          <div className="space-y-4">
-            {sortedOperations.map((operation) => (
-              <div key={operation.id} className="border border-slate-700 rounded-lg p-4 bg-slate-900/40">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
-                  <div>
-                    <p className="text-white font-semibold text-lg">{operation.workType}</p>
-                    <p className="text-slate-300 text-sm mt-1">
-                      <FaUser className="inline mr-1" />
-                      {operation.car?.owner?.firstName} {operation.car?.owner?.lastName}
-                    </p>
-                    <p className="text-slate-300 text-sm">
-                      <FaCar className="inline mr-1" />
-                      {operation.car?.brand} {operation.car?.model}
-                      {operation.car?.licensePlate ? ` (${operation.car.licensePlate})` : ''}
-                    </p>
-                    <p className="text-slate-400 text-sm">Дата: {operation.serviceDate}</p>
-                    <p className="text-slate-400 text-sm">
-                      Пробег: {operation.mileageAtService?.toLocaleString('ru-RU')} км
-                    </p>
-                    {operation.cost != null && (
-                      <p className="text-emerald-400 text-sm">Сумма: {operation.cost.toLocaleString('ru-RU')} ₸</p>
-                    )}
-                    {operation.description && <p className="text-slate-300 mt-2">{operation.description}</p>}
-                  </div>
-
-                  <div className="text-sm text-slate-400">
-                    {operation.replacedComponents && operation.replacedComponents.length > 0 && (
-                      <div className="mb-2">
-                        <p className="text-slate-300 font-medium">Заменено:</p>
-                        <ul className="list-disc pl-5">
-                          {operation.replacedComponents.map((item) => (
-                            <li key={item.id}>
-                              {item.carComponent?.name || `Компонент #${item.carComponent?.id}`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {operation.photos && operation.photos.length > 0 && (
-                      <div>
-                        <p className="text-slate-300 font-medium">Файлы:</p>
-                        <ul className="space-y-1">
-                          {operation.photos.map((photo) => (
-                            <li key={photo.id}>
-                              <a
-                                href={resolveFileUrl(photo.fileUrl) || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-red-400 hover:text-red-300"
-                              >
-                                {photo.description || 'Открыть файл'}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+            {isFetching ? <span className="text-sm text-slate-400">Обновляем...</span> : null}
           </div>
+        }
+      >
+        {isLoading && !operationsPage ? (
+          <div className="py-12 text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#ff9b82]" />
+            <p className="mt-2 text-slate-400">Загрузка журнала операций...</p>
+          </div>
+        ) : !operationsPage || operationsPage.content.length === 0 ? (
+          <EmptyState
+            icon={FaClipboardList}
+            title={hasActiveFilters ? 'Операции по фильтрам не найдены' : 'Журнал пока пуст'}
+            description={
+              hasActiveFilters
+                ? 'Снимите часть ограничений или измените поисковый запрос.'
+                : 'Создайте первую операцию отдельно от журнала, чтобы история сервиса начала наполняться.'
+            }
+            action={
+              hasActiveFilters ? (
+                <button type="button" onClick={handleResetFilters} className="auto-button-secondary">
+                  Сбросить фильтры
+                </button>
+              ) : (
+                <Link to="/service-center/operations/new" className="auto-button-primary">
+                  <FaPlus />
+                  Создать операцию
+                </Link>
+              )
+            }
+          />
+        ) : (
+          <>
+            <div className="mb-6 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+              <form onSubmit={handleApplyFilters} className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto_auto] 2xl:items-end">
+                <div>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                    Клиент
+                  </label>
+                  <select
+                    value={draftFilters.clientId}
+                    onChange={(event) =>
+                      setDraftFilters((currentValue) => ({ ...currentValue, clientId: event.target.value }))
+                    }
+                    className="auto-select"
+                  >
+                    <option value="">Все клиенты</option>
+                    {clients.map((client) => (
+                      <option key={client.clientId} value={client.clientId}>
+                        {client.firstName} {client.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                    Статус
+                  </label>
+                  <select
+                    value={draftFilters.status}
+                    onChange={(event) =>
+                      setDraftFilters((currentValue) => ({
+                        ...currentValue,
+                        status: event.target.value as OperationStatusFilter,
+                      }))
+                    }
+                    className="auto-select"
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value || 'all'} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                    Дата от
+                  </label>
+                  <input
+                    type="date"
+                    value={draftFilters.dateFrom}
+                    onChange={(event) =>
+                      setDraftFilters((currentValue) => ({ ...currentValue, dateFrom: event.target.value }))
+                    }
+                    className="auto-input"
+                    aria-label="Дата от"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                    Дата до
+                  </label>
+                  <input
+                    type="date"
+                    value={draftFilters.dateTo}
+                    onChange={(event) =>
+                      setDraftFilters((currentValue) => ({ ...currentValue, dateTo: event.target.value }))
+                    }
+                    className="auto-input"
+                    aria-label="Дата до"
+                  />
+                </div>
+
+                <button type="button" onClick={handleResetFilters} className="auto-button-secondary 2xl:self-end">
+                  Сбросить
+                </button>
+                <button type="submit" className="auto-button-primary 2xl:self-end">
+                  Применить
+                </button>
+              </form>
+            </div>
+
+            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                      <th className="px-4 py-3 font-medium">Дата</th>
+                      <th className="px-4 py-3 font-medium">Операция</th>
+                      <th className="px-4 py-3 font-medium">Клиент</th>
+                      <th className="px-4 py-3 font-medium">Автомобиль</th>
+                      <th className="px-4 py-3 font-medium">Сумма</th>
+                      <th className="px-4 py-3 font-medium">Статус</th>
+                      <th className="px-4 py-3 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {operationsPage.content.map((operation) => {
+                      const status = operation.status as Exclude<OperationStatusFilter, ''> | undefined
+
+                      return (
+                        <tr
+                          key={operation.id}
+                          className={cx(
+                            'border-b border-white/10 align-top transition-colors last:border-b-0',
+                            openedOperationId === operation.id ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
+                          )}
+                        >
+                          <td className="px-4 py-4 text-slate-300">{formatOperationDate(operation.serviceDate)}</td>
+                          <td className="px-4 py-4">
+                            <p className="font-semibold text-white">{operation.workType}</p>
+                            <p className="mt-1 text-xs text-slate-400">#{operation.id}</p>
+                          </td>
+                          <td className="px-4 py-4 text-slate-300">{getOwnerName(operation)}</td>
+                          <td className="px-4 py-4 text-slate-300">{getCarTitle(operation)}</td>
+                          <td className="px-4 py-4 font-medium text-emerald-300">{getTotalLabel(operation.cost)}</td>
+                          <td className="px-4 py-4">
+                            {status ? <span className={STATUS_BADGE_CLASSES[status]}>{STATUS_LABELS[status]}</span> : '—'}
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setOpenedOperationId(operation.id)}
+                              className="auto-button-secondary px-3 py-2 text-sm"
+                            >
+                              <FaExternalLinkAlt />
+                              Открыть
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                <span>
+                  Показаны {pageStart}-{pageEnd} из {operationsPage.totalElements}
+                </span>
+                <span className="flex items-center gap-2">
+                  <FaCalendarAlt className="text-[#ff9b82]" />
+                  Страница {operationsPage.page + 1} из {Math.max(operationsPage.totalPages, 1)}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage((currentValue) => Math.max(currentValue - 1, 0))
+                    setOpenedOperationId(null)
+                  }}
+                  disabled={operationsPage.first}
+                  className="auto-button-secondary"
+                >
+                  <FaChevronLeft />
+                  Назад
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage((currentValue) => currentValue + 1)
+                    setOpenedOperationId(null)
+                  }}
+                  disabled={operationsPage.last}
+                  className="auto-button-secondary"
+                >
+                  Далее
+                  <FaChevronRight />
+                </button>
+              </div>
+            </div>
+          </>
         )}
-      </div>
-    </div>
+      </Section>
+
+      <OperationDetailsModal operation={openedOperation} onClose={() => setOpenedOperationId(null)} />
+    </Page>
   )
 }

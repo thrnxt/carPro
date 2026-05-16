@@ -1,19 +1,26 @@
 package kz.car.maintenance.service;
 
+import kz.car.maintenance.dto.PagedResponse;
+import kz.car.maintenance.dto.ServiceOperationCreateRequest;
 import kz.car.maintenance.exception.ForbiddenException;
 import kz.car.maintenance.exception.NotFoundException;
-import kz.car.maintenance.dto.ServiceOperationCreateRequest;
 import kz.car.maintenance.model.*;
 import kz.car.maintenance.repository.CarRepository;
 import kz.car.maintenance.repository.MaintenanceRecordRepository;
 import kz.car.maintenance.repository.ServiceCenterRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -224,6 +231,59 @@ public class MaintenanceRecordService {
     public List<MaintenanceRecord> getMyServiceCenterOperations(Long serviceCenterUserId) {
         ServiceCenter serviceCenter = getServiceCenterByUser(serviceCenterUserId);
         return maintenanceRecordRepository.findByServiceCenterOrderByServiceDateDesc(serviceCenter);
+    }
+
+    public PagedResponse<MaintenanceRecord> searchMyServiceCenterOperations(
+            Long serviceCenterUserId,
+            int page,
+            int size,
+            String query,
+            Long clientId,
+            MaintenanceRecord.RecordStatus status,
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
+        ServiceCenter serviceCenter = getServiceCenterByUser(serviceCenterUserId);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 25);
+        String normalizedQueryPattern = query != null && !query.trim().isEmpty()
+                ? "%" + query.trim().toLowerCase(Locale.ROOT) + "%"
+                : null;
+
+        Page<Long> idsPage = maintenanceRecordRepository.findOperationIdsByServiceCenter(
+                serviceCenter,
+                normalizedQueryPattern,
+                clientId,
+                status,
+                dateFrom,
+                dateTo,
+                PageRequest.of(safePage, safeSize)
+        );
+
+        List<MaintenanceRecord> orderedRecords = new ArrayList<>();
+        if (!idsPage.getContent().isEmpty()) {
+            List<Long> ids = idsPage.getContent();
+            List<MaintenanceRecord> records = maintenanceRecordRepository.findDetailedByIdIn(ids);
+            Map<Long, Integer> positions = new HashMap<>();
+            for (int index = 0; index < ids.size(); index++) {
+                positions.put(ids.get(index), index);
+            }
+            records.sort((left, right) -> Integer.compare(
+                    positions.getOrDefault(left.getId(), Integer.MAX_VALUE),
+                    positions.getOrDefault(right.getId(), Integer.MAX_VALUE)
+            ));
+            orderedRecords = records;
+        }
+
+        return new PagedResponse<>(
+                orderedRecords,
+                idsPage.getNumber(),
+                idsPage.getSize(),
+                idsPage.getTotalElements(),
+                idsPage.getTotalPages(),
+                idsPage.isFirst(),
+                idsPage.isLast()
+        );
     }
 
     public List<MaintenanceRecord> getMyServiceCenterOperationsByClient(Long serviceCenterUserId, Long clientId) {
