@@ -44,6 +44,20 @@ public class MaintenanceRecordController {
             @PathVariable Long carId) {
         return ResponseEntity.ok(maintenanceRecordService.getCarMaintenanceHistory(carId, user.getId()));
     }
+
+    @GetMapping("/my/history/search")
+    public ResponseEntity<PagedResponse<MaintenanceRecord>> searchMyMaintenanceHistory(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(required = false) Long carId) {
+        return ResponseEntity.ok(maintenanceRecordService.searchMyMaintenanceHistory(
+                user.getId(),
+                page,
+                size,
+                carId
+        ));
+    }
     
     @PostMapping("/{id}/replace-component")
     public ResponseEntity<Void> replaceComponent(

@@ -88,7 +88,7 @@ function getCarTitle(operation: ServiceOperationCardData) {
 }
 
 function getTotalLabel(value?: number | null) {
-  return value != null ? `${value.toLocaleString('ru-RU')} ₸` : '—'
+  return value != null ? `${value.toLocaleString('ru-RU')}\u00A0₸` : '—'
 }
 
 function OperationDetailsModal({
@@ -209,7 +209,6 @@ export default function ServiceCenterOperations() {
       <PageHeader
         eyebrow="Service operations"
         title="Журнал операций"
-        description="Компактный реестр сервисных работ с поиском, фильтрами и постраничной навигацией. Создание вынесено в отдельный поток."
         actions={
           <Link to="/service-center/operations/new" className="auto-button-primary">
             <FaPlus />
@@ -389,7 +388,9 @@ export default function ServiceCenterOperations() {
                           </td>
                           <td className="px-4 py-4 text-slate-300">{getOwnerName(operation)}</td>
                           <td className="px-4 py-4 text-slate-300">{getCarTitle(operation)}</td>
-                          <td className="px-4 py-4 font-medium text-emerald-300">{getTotalLabel(operation.cost)}</td>
+                          <td className="whitespace-nowrap px-4 py-4 font-medium text-emerald-300">
+                            {getTotalLabel(operation.cost)}
+                          </td>
                           <td className="px-4 py-4">
                             {status ? <span className={STATUS_BADGE_CLASSES[status]}>{STATUS_LABELS[status]}</span> : '—'}
                           </td>

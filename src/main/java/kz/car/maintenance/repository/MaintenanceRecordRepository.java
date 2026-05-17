@@ -134,6 +134,27 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             Pageable pageable
     );
 
+    @Query(
+            value = """
+                    select mr.id from MaintenanceRecord mr
+                    join mr.car c
+                    where c.owner = :owner
+                      and (:carId is null or c.id = :carId)
+                    order by mr.serviceDate desc, mr.createdAt desc
+                    """,
+            countQuery = """
+                    select count(mr.id) from MaintenanceRecord mr
+                    join mr.car c
+                    where c.owner = :owner
+                      and (:carId is null or c.id = :carId)
+                    """
+    )
+    Page<Long> findHistoryIdsByOwner(
+            @Param("owner") User owner,
+            @Param("carId") Long carId,
+            Pageable pageable
+    );
+
     @Query("""
             select distinct mr from MaintenanceRecord mr
             left join fetch mr.car c

@@ -233,6 +233,48 @@ public class MaintenanceRecordService {
         return maintenanceRecordRepository.findByServiceCenterOrderByServiceDateDesc(serviceCenter);
     }
 
+    public PagedResponse<MaintenanceRecord> searchMyMaintenanceHistory(
+            Long userId,
+            int page,
+            int size,
+            Long carId
+    ) {
+        User user = userService.findById(userId);
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 20);
+
+        Page<Long> idsPage = maintenanceRecordRepository.findHistoryIdsByOwner(
+                user,
+                carId,
+                PageRequest.of(safePage, safeSize)
+        );
+
+        List<MaintenanceRecord> orderedRecords = new ArrayList<>();
+        if (!idsPage.getContent().isEmpty()) {
+            List<Long> ids = idsPage.getContent();
+            List<MaintenanceRecord> records = maintenanceRecordRepository.findDetailedByIdIn(ids);
+            Map<Long, Integer> positions = new HashMap<>();
+            for (int index = 0; index < ids.size(); index++) {
+                positions.put(ids.get(index), index);
+            }
+            records.sort((left, right) -> Integer.compare(
+                    positions.getOrDefault(left.getId(), Integer.MAX_VALUE),
+                    positions.getOrDefault(right.getId(), Integer.MAX_VALUE)
+            ));
+            orderedRecords = records;
+        }
+
+        return new PagedResponse<>(
+                orderedRecords,
+                idsPage.getNumber(),
+                idsPage.getSize(),
+                idsPage.getTotalElements(),
+                idsPage.getTotalPages(),
+                idsPage.isFirst(),
+                idsPage.isLast()
+        );
+    }
+
     public PagedResponse<MaintenanceRecord> searchMyServiceCenterOperations(
             Long serviceCenterUserId,
             int page,

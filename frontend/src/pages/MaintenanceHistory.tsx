@@ -7,13 +7,18 @@ import {
   FaCalendarAlt,
   FaCamera,
   FaCheckCircle,
+  FaChevronDown,
+  FaChevronLeft,
+  FaChevronRight,
+  FaChevronUp,
   FaDollarSign,
   FaFilePdf,
   FaFilter,
   FaWrench,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
-import { EmptyState, Page, PageHeader, Section } from '../components/ui'
+import OperationAttachments from '../components/OperationAttachments'
+import { EmptyState, Page, PageHeader, Section, cx } from '../components/ui'
 import { normalizeCollectionResponse } from '../utils/normalizeCollectionResponse'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
 
@@ -27,6 +32,7 @@ interface CarSummary {
 
 interface MaintenanceRecord {
   id: number
+  car: CarSummary
   workType: string
   description?: string | null
   serviceDate: string
@@ -57,9 +63,17 @@ interface MaintenanceRecord {
   } | null
 }
 
-type MaintenanceHistoryItem = MaintenanceRecord & {
-  car: CarSummary
+type PagedResponse<T> = {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  first: boolean
+  last: boolean
 }
+
+const JOURNAL_PAGE_SIZE = 6
 
 function getStatusBadge(status: MaintenanceRecord['status']) {
   switch (status) {
@@ -87,9 +101,62 @@ function getStatusLabel(status: MaintenanceRecord['status']) {
   }
 }
 
+function formatServiceDate(value: string) {
+  try {
+    return format(new Date(value), 'dd MMMM yyyy', { locale: ru })
+  } catch {
+    return value
+  }
+}
+
+function formatMileage(value?: number | null) {
+  if (value == null) {
+    return null
+  }
+
+  return `${value.toLocaleString('ru-RU')} км`
+}
+
+function formatCost(value?: number | null) {
+  if (value == null) {
+    return null
+  }
+
+  return `${value.toLocaleString('ru-RU')} ₸`
+}
+
+function getTextPreview(value?: string | null, maxLength = 150) {
+  if (!value?.trim()) {
+    return null
+  }
+
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  return `${normalized.slice(0, maxLength).trimEnd()}...`
+}
+
+function getRecordKey(record: MaintenanceRecord) {
+  return `${record.car.id}-${record.id}`
+}
+
+function hasExpandedDetails(record: MaintenanceRecord) {
+  return Boolean(
+    record.description?.trim() ||
+      record.serviceCenter?.address?.trim() ||
+      (record.photos && record.photos.length > 0) ||
+      (record.replacedComponents && record.replacedComponents.length > 0) ||
+      record.invoice?.pdfUrl
+  )
+}
+
 export default function MaintenanceHistory() {
   const { id } = useParams()
   const [selectedCarId, setSelectedCarId] = useState('')
+  const [page, setPage] = useState(0)
+  const [expandedRecordKey, setExpandedRecordKey] = useState<string | null>(null)
 
   const { data: cars = [], isLoading: carsLoading } = useQuery<CarSummary[]>({
     queryKey: ['cars'],
@@ -104,71 +171,41 @@ export default function MaintenanceHistory() {
     [cars, id]
   )
 
+  const activeCarId = useMemo(() => {
+    if (id) {
+      return Number(id)
+    }
+
+    return selectedCarId ? Number(selectedCarId) : undefined
+  }, [id, selectedCarId])
+
   const {
-    data: records = [],
+    data: recordsPage,
     isLoading: recordsLoading,
+    isFetching: recordsFetching,
     isError,
-  } = useQuery<MaintenanceHistoryItem[]>({
-    queryKey: ['maintenance-history', id ?? 'all', cars.map((car) => car.id).join(',')],
+  } = useQuery<PagedResponse<MaintenanceRecord>>({
+    queryKey: ['maintenance-history', activeCarId ?? 'all', page, JOURNAL_PAGE_SIZE],
     queryFn: async () => {
-      if (id) {
-        const response = await apiClient.get(`/maintenance-records/car/${id}`)
-        const normalized = normalizeCollectionResponse<MaintenanceRecord>(response.data)
-        const fallbackCar =
-          selectedCar ||
-          cars.find((car) => String(car.id) === String(id)) || {
-            id: Number(id),
-            brand: 'Автомобиль',
-            model: '',
-            year: 0,
-            licensePlate: '',
-          }
-
-        return normalized.map((record) => ({
-          ...record,
-          car: fallbackCar,
-        }))
-      }
-
-      if (cars.length === 0) {
-        return []
-      }
-
-      const recordsByCar = await Promise.all(
-        cars.map(async (car) => {
-          const response = await apiClient.get(`/maintenance-records/car/${car.id}`)
-          const normalized = normalizeCollectionResponse<MaintenanceRecord>(response.data)
-          return normalized.map((record) => ({
-            ...record,
-            car,
-          }))
-        })
-      )
-
-      return recordsByCar
-        .flat()
-        .sort((a, b) => {
-          const byServiceDate = new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime()
-          if (byServiceDate !== 0) {
-            return byServiceDate
-          }
-          return b.id - a.id
-        })
+      const response = await apiClient.get('/maintenance-records/my/history/search', {
+        params: {
+          page,
+          size: JOURNAL_PAGE_SIZE,
+          ...(activeCarId ? { carId: activeCarId } : {}),
+        },
+      })
+      return response.data
     },
     enabled: !!id || cars.length > 0,
+    placeholderData: (previousData) => previousData,
   })
 
-  const filteredRecords = useMemo(() => {
-    if (id) {
-      return records
-    }
-
-    if (!selectedCarId) {
-      return records
-    }
-
-    return records.filter((record) => String(record.car.id) === selectedCarId)
-  }, [id, records, selectedCarId])
+  const records = recordsPage?.content ?? []
+  const totalRecords = recordsPage?.totalElements ?? 0
+  const totalPages = recordsPage?.totalPages ?? 0
+  const currentPage = recordsPage?.page ?? page
+  const pageStart = totalRecords > 0 ? currentPage * JOURNAL_PAGE_SIZE + 1 : 0
+  const pageEnd = totalRecords > 0 ? currentPage * JOURNAL_PAGE_SIZE + records.length : 0
 
   if (carsLoading || recordsLoading) {
     return (
@@ -236,7 +273,7 @@ export default function MaintenanceHistory() {
         description={
           id && selectedCar
             ? 'Фильтрованный журнал работ по выбранному автомобилю.'
-            : 'Единый журнал всех сервисных работ по вашим автомобилям. Здесь история открывается сразу, а не через экран выбора.'
+            : 'Единый журнал всех сервисных работ по вашим автомобилям. Краткая карточка оставляет в ленте только основную информацию.'
         }
         actions={
           id ? (
@@ -250,7 +287,7 @@ export default function MaintenanceHistory() {
       {!id && (
         <Section
           title="Фильтр"
-          description="Можно быстро ограничить историю одним автомобилем, но базовый режим всегда показывает весь журнал."
+          description="Можно быстро ограничить историю одним автомобилем. Подробные материалы и адрес сервиса скрыты до открытия карточки."
         >
           <div className="grid gap-4 md:grid-cols-[minmax(0,22rem)_1fr] md:items-end">
             <div>
@@ -259,7 +296,11 @@ export default function MaintenanceHistory() {
               </label>
               <select
                 value={selectedCarId}
-                onChange={(event) => setSelectedCarId(event.target.value)}
+                onChange={(event) => {
+                  setSelectedCarId(event.target.value)
+                  setPage(0)
+                  setExpandedRecordKey(null)
+                }}
                 className="auto-select"
               >
                 <option value="">Все автомобили</option>
@@ -278,12 +319,13 @@ export default function MaintenanceHistory() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">
-                    Найдено записей: {filteredRecords.length}
+                    Найдено записей: {totalRecords}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-400">
                     {selectedCarId
                       ? 'Показана история только по выбранному автомобилю.'
                       : 'Показана сводная история обслуживания по всему гаражу.'}
+                    {recordsFetching ? ' Список обновляется.' : ''}
                   </p>
                 </div>
               </div>
@@ -297,7 +339,7 @@ export default function MaintenanceHistory() {
         description={
           isError
             ? 'Не удалось загрузить данные с сервера.'
-            : 'Каждая запись включает дату, сервис, стоимость, замененные детали и вложения.'
+            : 'Компактные записи для быстрого сканирования. Полные детали, фото и документы открываются по кнопке.'
         }
       >
         {isError ? (
@@ -306,126 +348,256 @@ export default function MaintenanceHistory() {
             title="Не удалось загрузить историю"
             description="Проверьте доступ к автомобилю или повторите попытку позже."
           />
-        ) : filteredRecords.length > 0 ? (
-          <div className="space-y-5">
-            {filteredRecords.map((record) => (
-              <div key={`${record.car.id}-${record.id}`} className="auto-card p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    {!id && (
-                      <p className="mb-2 text-sm font-semibold text-[#ff9b82]">
-                        {record.car.brand} {record.car.model}
-                        {record.car.licensePlate ? ` · ${record.car.licensePlate}` : ''}
-                      </p>
-                    )}
-                    <h3 className="text-2xl font-bold tracking-[-0.04em] text-white">{record.workType}</h3>
-                    <p className="mt-2 flex items-center gap-2 text-sm text-slate-400">
-                      <FaCalendarAlt />
-                      {format(new Date(record.serviceDate), 'dd MMMM yyyy', { locale: ru })}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Пробег: {record.mileageAtService?.toLocaleString('ru-RU') || 0} км
-                    </p>
-                  </div>
+        ) : records.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {records.map((record) => {
+                const recordKey = getRecordKey(record)
+                const isExpanded = expandedRecordKey === recordKey
+                const mileageLabel = formatMileage(record.mileageAtService)
+                const costLabel = formatCost(record.cost)
+                const descriptionPreview = isExpanded ? null : getTextPreview(record.description)
+                const attachmentCount = record.photos?.length ?? 0
+                const replacedPartsCount = record.replacedComponents?.length ?? 0
+                const hasInvoice = Boolean(record.invoice?.pdfUrl)
+                const detailsAvailable = hasExpandedDetails(record)
 
-                  <span className={`auto-badge ${getStatusBadge(record.status)}`}>
-                    {record.status === 'COMPLETED' ? <FaCheckCircle /> : <FaWrench />}
-                    {getStatusLabel(record.status)}
-                  </span>
+                return (
+                  <article key={recordKey} className="auto-card p-4 sm:p-5">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          {!id && (
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff9b82]">
+                              {record.car.brand} {record.car.model}
+                              {record.car.licensePlate ? ` · ${record.car.licensePlate}` : ''}
+                            </p>
+                          )}
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg font-semibold text-white sm:text-xl">{record.workType}</h3>
+
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-400">
+                                <span className="inline-flex items-center gap-2">
+                                  <FaCalendarAlt className="text-slate-500" />
+                                  {formatServiceDate(record.serviceDate)}
+                                </span>
+
+                                {mileageLabel && (
+                                  <span className="inline-flex items-center gap-2">
+                                    <FaWrench className="text-slate-500" />
+                                    {mileageLabel}
+                                  </span>
+                                )}
+
+                                {record.serviceCenter?.name && (
+                                  <span className="min-w-0 truncate">
+                                    Сервис: {record.serviceCenter.name}
+                                  </span>
+                                )}
+                              </div>
+
+                              {descriptionPreview && (
+                                <p className="mt-3 hidden text-sm leading-6 text-slate-300 sm:block">
+                                  {descriptionPreview}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
+                              <span className={`auto-badge ${getStatusBadge(record.status)}`}>
+                                {record.status === 'COMPLETED' ? <FaCheckCircle /> : <FaWrench />}
+                                {getStatusLabel(record.status)}
+                              </span>
+
+                              {costLabel && (
+                                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-400 sm:text-base">
+                                  <FaDollarSign />
+                                  {costLabel}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {attachmentCount > 0 && (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
+                                <FaCamera className="text-[#ff9b82]" />
+                                {attachmentCount} фото
+                              </span>
+                            )}
+
+                            {replacedPartsCount > 0 && (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
+                                <FaWrench className="text-[#ff9b82]" />
+                                {replacedPartsCount} деталей
+                              </span>
+                            )}
+
+                            {hasInvoice && (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
+                                <FaFilePdf className="text-[#ff9b82]" />
+                                PDF
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {detailsAvailable && (
+                        <>
+                          <div className="flex items-center justify-end border-t border-white/10 pt-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedRecordKey((currentValue) =>
+                                  currentValue === recordKey ? null : recordKey
+                                )
+                              }
+                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white"
+                            >
+                              {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                              {isExpanded ? 'Скрыть детали' : 'Подробнее'}
+                            </button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="border-t border-white/10 pt-4">
+                              <div
+                                className={cx(
+                                  'grid gap-4',
+                                  attachmentCount > 0 && 'xl:grid-cols-[minmax(0,1fr)_18rem]'
+                                )}
+                              >
+                                <div className="space-y-4">
+                                  {record.description && (
+                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                        Описание работ
+                                      </p>
+                                      <p className="mt-2 text-sm leading-7 text-slate-300">{record.description}</p>
+                                    </div>
+                                  )}
+
+                                  {(record.serviceCenter?.name || record.serviceCenter?.address) && (
+                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                        Сервисный центр
+                                      </p>
+                                      {record.serviceCenter?.name && (
+                                        <p className="mt-2 text-sm font-medium text-white">{record.serviceCenter.name}</p>
+                                      )}
+                                      {record.serviceCenter?.address && (
+                                        <p className="mt-1 text-sm leading-6 text-slate-400">
+                                          {record.serviceCenter.address}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {replacedPartsCount > 0 && (
+                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                      <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
+                                        <FaWrench className="text-[#ff9b82]" />
+                                        Замененные детали
+                                      </h4>
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        {record.replacedComponents?.map((component) => (
+                                          <span
+                                            key={component.id}
+                                            className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-1.5 text-xs text-slate-300"
+                                          >
+                                            {component.carComponent?.name || 'Деталь'}
+                                            {component.partNumber ? ` · № ${component.partNumber}` : ''}
+                                            {component.manufacturer ? ` · ${component.manufacturer}` : ''}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {hasInvoice && (
+                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                      <a
+                                        href={resolveFileUrl(record.invoice?.pdfUrl || '') || '#'}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 text-sm font-medium text-[#ff9b82] transition-colors hover:text-[#ffb29f]"
+                                      >
+                                        <FaFilePdf />
+                                        Открыть счет в PDF
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {attachmentCount > 0 && (
+                                  <OperationAttachments
+                                    attachments={record.photos}
+                                    title="Материалы"
+                                    compact
+                                    inline
+                                    showLabels={false}
+                                    className="mt-0 self-start"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-col gap-3 rounded-[1.4rem] border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Показаны записи {pageStart}-{pageEnd} из {totalRecords}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    На мобильных устройствах вторичные данные скрыты до раскрытия карточки.
+                  </p>
                 </div>
 
-                {record.description && (
-                  <p className="mt-4 text-sm leading-7 text-slate-300">{record.description}</p>
-                )}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPage((currentValue) => Math.max(currentValue - 1, 0))
+                      setExpandedRecordKey(null)
+                    }}
+                    disabled={recordsPage?.first ?? currentPage === 0}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <FaChevronLeft />
+                    Назад
+                  </button>
 
-                {record.serviceCenter && (
-                  <div className="mt-4 rounded-[1.3rem] border border-white/10 bg-white/5 p-4">
-                    {record.serviceCenter.name && (
-                      <p className="text-sm text-slate-300">
-                        <strong className="text-white">Сервисный центр:</strong> {record.serviceCenter.name}
-                      </p>
-                    )}
-                    {record.serviceCenter.address && (
-                      <p className="mt-1 text-sm text-slate-400">
-                        <strong className="text-white">Адрес:</strong> {record.serviceCenter.address}
-                      </p>
-                    )}
-                  </div>
-                )}
+                  <span className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-2 text-sm font-medium text-slate-300">
+                    {currentPage + 1} / {totalPages}
+                  </span>
 
-                {record.cost != null && (
-                  <p className="mt-4 flex items-center gap-2 text-lg font-semibold text-emerald-400">
-                    <FaDollarSign />
-                    Стоимость: {record.cost.toLocaleString('ru-RU')} ₸
-                  </p>
-                )}
-
-                {record.photos && record.photos.length > 0 && (
-                  <div className="mt-5">
-                    <h4 className="mb-3 flex items-center gap-2 font-semibold text-white">
-                      <FaCamera />
-                      Фотографии и документы
-                    </h4>
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                      {record.photos.map((photo) => (
-                        <a
-                          key={photo.id}
-                          href={resolveFileUrl(photo.fileUrl) || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block group"
-                        >
-                          <div className="flex h-56 items-center justify-center overflow-hidden rounded-[1.2rem] border border-white/10 bg-slate-950/60 p-3 transition-colors group-hover:border-[#ff9b82]/40">
-                            <img
-                              src={resolveFileUrl(photo.fileUrl) || undefined}
-                              alt={photo.description || 'Фото ремонта'}
-                              className="h-full w-full rounded-xl object-contain"
-                              loading="lazy"
-                            />
-                          </div>
-                          {photo.description && (
-                            <p className="mt-2 text-xs text-slate-300">{photo.description}</p>
-                          )}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {record.replacedComponents && record.replacedComponents.length > 0 && (
-                  <div className="mt-5">
-                    <h4 className="mb-3 flex items-center gap-2 font-semibold text-white">
-                      <FaWrench />
-                      Замененные детали
-                    </h4>
-                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-300">
-                      {record.replacedComponents.map((rc) => (
-                        <li key={rc.id}>
-                          {rc.carComponent?.name || 'Деталь'}
-                          {rc.partNumber && ` (№ ${rc.partNumber})`}
-                          {rc.manufacturer && ` - ${rc.manufacturer}`}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {record.invoice?.pdfUrl && (
-                  <div className="mt-5 border-t border-white/10 pt-4">
-                    <a
-                      href={resolveFileUrl(record.invoice.pdfUrl) || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-medium text-[#ff9b82] hover:text-[#ffb29f]"
-                    >
-                      <FaFilePdf />
-                      Скачать счет (PDF)
-                    </a>
-                  </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPage((currentValue) => currentValue + 1)
+                      setExpandedRecordKey(null)
+                    }}
+                    disabled={recordsPage?.last ?? true}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Далее
+                    <FaChevronRight />
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <EmptyState
             icon={FaWrench}
