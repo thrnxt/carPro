@@ -72,7 +72,7 @@ export default function ServiceCenterMap() {
         title="Карта сервисных центров"
         description="Локальный поиск и карта собраны в одном экране: радиус поиска, текущее положение и список найденных центров доступны без отдельного режима."
         actions={
-          <div className="flex items-center gap-3 rounded-[1.3rem] border border-white/10 bg-white/5 px-4 py-3">
+          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3">
             <FaSearch className="text-slate-400" />
             <label className="flex items-center gap-3 text-sm text-slate-300">
               <span>Радиус</span>
@@ -95,7 +95,7 @@ export default function ServiceCenterMap() {
         title="Поиск на карте"
         description={`Текущая точка поиска: ${locationLabel}. Найдено центров: ${serviceCenters.length}.`}
       >
-        <div className="overflow-hidden rounded-[1.7rem] border border-white/10">
+        <div className="overflow-hidden rounded-lg border border-white/10">
           {isLoading ? (
             <div className="flex min-h-[34rem] items-center justify-center bg-slate-950/50">
               <div className="text-center">
@@ -104,7 +104,7 @@ export default function ServiceCenterMap() {
               </div>
             </div>
           ) : (
-            <div className="h-[34rem] w-full overflow-hidden rounded-[1.7rem]">
+            <div className="h-[34rem] w-full overflow-hidden rounded-lg">
               <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -180,11 +180,11 @@ export default function ServiceCenterMap() {
                 )}
 
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <Link to={`/service-centers/${center.id}`} className="auto-button-primary">
+                  <Link to={`/service-centers/${center.id}`} className="btn-primary">
                     Открыть
                   </Link>
                   {center.phoneNumber && (
-                    <a href={`tel:${center.phoneNumber}`} className="auto-button-secondary">
+                    <a href={`tel:${center.phoneNumber}`} className="btn-secondary">
                       Позвонить
                     </a>
                   )}
@@ -193,7 +193,7 @@ export default function ServiceCenterMap() {
             ))}
           </div>
         ) : (
-          <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/5 p-10 text-center">
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/5 p-10 text-center">
             <FaMapMarkerAlt className="mx-auto text-5xl text-text-muted" />
             <p className="mt-4 text-lg font-semibold text-white">Ничего не найдено в выбранном радиусе</p>
             <p className="mt-2 text-sm text-slate-400">Увеличьте радиус поиска или измените текущую точку.</p>

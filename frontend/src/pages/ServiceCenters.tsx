@@ -88,7 +88,7 @@ export default function ServiceCenters() {
         </div>
         <button
           onClick={() => navigate('/service-centers/map')}
-          className="auto-button-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           <FaMapMarkerAlt />
           Показать на карте
@@ -126,14 +126,14 @@ export default function ServiceCenters() {
           <div className="flex items-end gap-2">
             <button
               onClick={handleSearch}
-              className="auto-button-primary flex-1 flex items-center justify-center gap-2"
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
             >
               <FaSearch />
               Найти
             </button>
             <button
               onClick={handleShowAll}
-              className="auto-button-secondary"
+              className="btn-secondary"
             >
               Все
             </button>
@@ -205,7 +205,7 @@ export default function ServiceCenters() {
                   e.stopPropagation()
                   navigate(`/service-centers/${center.id}`)
                 }}
-                className="w-full auto-button-primary flex items-center justify-center gap-2"
+                className="w-full btn-primary flex items-center justify-center gap-2"
               >
                 Подробнее
                 <FaArrowRight />
@@ -219,7 +219,7 @@ export default function ServiceCenters() {
           <p className="text-slate-400 text-lg mb-6">Сервисные центры не найдены</p>
           <button
             onClick={handleShowAll}
-            className="auto-button-primary"
+            className="btn-primary"
           >
             Показать все центры
           </button>

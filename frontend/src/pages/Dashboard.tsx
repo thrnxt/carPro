@@ -18,14 +18,13 @@ import { useAuthStore } from '../store/authStore'
 import {
   Badge,
   EmptyState,
-  HeroCard,
   KeyValue,
+  NextActionCard,
   Page,
   PageHeader,
   Section,
   SectionGrid,
   StatCard,
-  Surface,
 } from '../components/ui'
 import { type ServiceOperationCardData } from '../components/ServiceOperationCard'
 
@@ -182,23 +181,78 @@ function ClientDashboard() {
     },
   })
 
+  const hasCars = cars.length > 0
+  const nextAction = !hasCars
+    ? {
+        eyebrow: 'Следующий шаг',
+        title: 'Добавьте первый автомобиль',
+        description: 'После добавления авто откроются календарь обслуживания, сервисные записи, документы и персональные напоминания.',
+        primaryTo: '/garage',
+        primaryLabel: 'Добавить автомобиль',
+        PrimaryIcon: FaPlus,
+        secondaryTo: '/service-centers',
+        secondaryLabel: 'Посмотреть сервисы',
+        SecondaryIcon: FaWrench,
+      }
+    : unreadCount > 0
+      ? {
+          eyebrow: 'Требует внимания',
+          title: `${unreadCount} уведомлений ждут реакции`,
+          description: 'Проверьте напоминания по обслуживанию и статусам, чтобы не пропустить важные действия по автомобилю.',
+          primaryTo: '/notifications',
+          primaryLabel: 'Открыть уведомления',
+          PrimaryIcon: FaBell,
+          secondaryTo: '/bookings',
+          secondaryLabel: 'Мои записи',
+          SecondaryIcon: FaCalendarAlt,
+        }
+      : {
+          eyebrow: 'Гараж готов',
+          title: 'Запланируйте следующий сервисный визит',
+          description: 'Выберите сервисный центр рядом с вами и создайте запись, чтобы держать обслуживание под контролем.',
+          primaryTo: '/service-centers',
+          primaryLabel: 'Найти сервис',
+          PrimaryIcon: FaWrench,
+          secondaryTo: '/my-documents',
+          secondaryLabel: 'Документы',
+          SecondaryIcon: FaFileInvoiceDollar,
+        }
+  const ClientPrimaryIcon = nextAction.PrimaryIcon
+  const ClientSecondaryIcon = nextAction.SecondaryIcon
+
   return (
     <Page>
       <PageHeader
-        eyebrow="Обзор кабинета"
+        eyebrow="Кабинет"
         title={`Добро пожаловать, ${user?.firstName || 'пользователь'}`}
-        description="Следите за гаражом, обслуживанием, уведомлениями и ближайшими сервисными действиями в одном рабочем контуре."
-        actions={
-          <>
-            <Link to="/garage" className="btn-primary">
-              <FaPlus />
-              Добавить автомобиль
-            </Link>
-            <Link to="/service-centers" className="btn-secondary">
-              <FaWrench />
-              Найти сервис
-            </Link>
-          </>
+        description="Главные действия по гаражу, сервисам и документам собраны в одном рабочем кабинете."
+      />
+
+      <NextActionCard
+        eyebrow={nextAction.eyebrow}
+        title={nextAction.title}
+        description={nextAction.description}
+        primaryAction={
+          <Link to={nextAction.primaryTo} className="btn-primary">
+            <ClientPrimaryIcon />
+            {nextAction.primaryLabel}
+          </Link>
+        }
+        secondaryAction={
+          <Link to={nextAction.secondaryTo} className="btn-secondary">
+            <ClientSecondaryIcon />
+            {nextAction.secondaryLabel}
+          </Link>
+        }
+        meta={
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={hasCars ? 'auto-badge-success' : 'auto-badge-warning'}>
+              {hasCars ? `${cars.length} авто в гараже` : 'Гараж пуст'}
+            </Badge>
+            <Badge tone={unreadCount > 0 ? 'auto-badge-warning' : 'auto-badge'}>
+              {unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Уведомлений нет'}
+            </Badge>
+          </div>
         }
       />
 
@@ -217,54 +271,21 @@ function ClientDashboard() {
         />
         <StatCard
           icon={FaCalendarAlt}
-          label="Контур обслуживания"
-          value={cars.length > 0 ? 'Активен' : 'Пусто'}
-          meta={cars.length > 0 ? 'Можно работать с календарем, сервисами и документами' : 'Сначала добавьте автомобиль'}
+          label="Обслуживание"
+          value={hasCars ? 'Готово' : 'Ожидает'}
+          meta={hasCars ? 'Можно создавать записи и напоминания' : 'Нужен первый автомобиль'}
         />
         <StatCard
           icon={FaFileInvoiceDollar}
           label="Документы"
-          value="Единый доступ"
-          meta="Операции, счета и история доступны из общего кабинета"
+          value={hasCars ? 'Доступны' : 'После авто'}
+          meta="Счета, операции и история обслуживания"
         />
       </SectionGrid>
 
-      <HeroCard
-        eyebrow="Рабочая область"
-        title="Гараж, сервисы и документы в одном потоке"
-        description="Новый shell собран как рабочий кабинет: меньше учебной визуальности, больше операционной ясности и сканируемых поверхностей."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Link to="/bookings" className="btn-primary">
-              <FaCalendarAlt />
-              Мои записи
-            </Link>
-            <Link to="/my-documents" className="btn-secondary">
-              <FaFileInvoiceDollar />
-              Документы
-            </Link>
-          </div>
-        }
-      >
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Surface>
-            <KeyValue label="Статус workspace" value="Онлайн" />
-            <KeyValue label="Контур данных" value={cars.length > 0 ? `${cars.length} авто` : 'Нет авто'} className="mt-3" />
-          </Surface>
-          <Surface>
-            <KeyValue label="Следующий шаг" value={cars.length > 0 ? 'Проверить сервисы' : 'Добавить VIN'} />
-            <KeyValue label="Уведомления" value={`${unreadCount} активных`} className="mt-3" />
-          </Surface>
-          <Surface>
-            <KeyValue label="Операции и счета" value="Доступны" />
-            <KeyValue label="История обслуживания" value="В кабинете" className="mt-3" />
-          </Surface>
-        </div>
-      </HeroCard>
-
       <Section
         title="Автомобили в гараже"
-        description="Карточки автомобиля стали спокойнее и плотнее: важные атрибуты видны сразу, без лишнего шума."
+        description="Ключевые данные по каждому автомобилю доступны без лишнего визуального шума."
         actions={
           <Link to="/garage" className="btn-secondary">
             Открыть гараж
@@ -376,6 +397,7 @@ function ServiceCenterDashboard() {
   })
 
   const pendingBookings = bookings.filter((booking) => booking.status === 'PENDING')
+  const inProgressOperations = operations.filter((operation) => operation.status === 'IN_PROGRESS')
 
   const upcomingBookings = useMemo(
     () =>
@@ -431,36 +453,90 @@ function ServiceCenterDashboard() {
     },
   ]
 
+  const serviceAction = pendingBookings.length > 0
+    ? {
+        eyebrow: 'Приоритет смены',
+        title: `${pendingBookings.length} записей ждут подтверждения`,
+        description: 'Подтвердите или отклоните входящие заявки, чтобы клиенты видели актуальное расписание сервиса.',
+        primaryTo: '/service-center/bookings',
+        primaryLabel: 'Разобрать записи',
+        PrimaryIcon: FaClock,
+        secondaryTo: '/service-center/operations',
+        secondaryLabel: 'Операции',
+        SecondaryIcon: FaTools,
+      }
+    : inProgressOperations.length > 0
+      ? {
+          eyebrow: 'В работе',
+          title: `${inProgressOperations.length} операций требуют завершения`,
+          description: 'Закройте активные работы, добавьте материалы и обновите статус для клиента.',
+          primaryTo: '/service-center/operations',
+          primaryLabel: 'Открыть операции',
+          PrimaryIcon: FaTools,
+          secondaryTo: '/service-center/invoices',
+          secondaryLabel: 'Счета',
+          SecondaryIcon: FaFileInvoiceDollar,
+        }
+      : {
+          eyebrow: 'Готово к работе',
+          title: 'Создайте новую сервисную операцию',
+          description: 'Зафиксируйте работы, детали и стоимость, чтобы клиент получил прозрачную историю обслуживания.',
+          primaryTo: '/service-center/operations/new',
+          primaryLabel: 'Создать операцию',
+          PrimaryIcon: FaPlus,
+          secondaryTo: '/service-center/clients',
+          secondaryLabel: 'Клиенты',
+          SecondaryIcon: FaUsers,
+        }
+  const ServicePrimaryIcon = serviceAction.PrimaryIcon
+  const ServiceSecondaryIcon = serviceAction.SecondaryIcon
+
   return (
     <Page>
-      <section className="auto-card p-card">
-        <div className="flex flex-col gap-5">
-          <div className="min-w-0 max-w-3xl">
-            <p className="section-label">
-              Сервисный центр
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <h1 className="text-h1 text-text-primary">
-                {serviceCenter?.name || 'Панель сервисного центра'}
-              </h1>
-              <span className="rounded-sm border border-border bg-surface-3 px-3 py-1 text-caption text-text-secondary">
-                Обзор
-              </span>
-            </div>
-          </div>
-        </div>
+      <PageHeader
+        eyebrow="Сервисный центр"
+        title={serviceCenter?.name || 'Панель сервисного центра'}
+        description="Операционный центр для записей, клиентов, работ и счетов."
+      />
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {overviewMetrics.map((metric) => (
-            <StatCard
-              key={metric.label}
-              icon={metric.icon}
-              label={metric.label}
-              value={metric.value}
-              meta={metric.meta}
-            />
-          ))}
-        </div>
+      <NextActionCard
+        eyebrow={serviceAction.eyebrow}
+        title={serviceAction.title}
+        description={serviceAction.description}
+        primaryAction={
+          <Link to={serviceAction.primaryTo} className="btn-primary">
+            <ServicePrimaryIcon />
+            {serviceAction.primaryLabel}
+          </Link>
+        }
+        secondaryAction={
+          <Link to={serviceAction.secondaryTo} className="btn-secondary">
+            <ServiceSecondaryIcon />
+            {serviceAction.secondaryLabel}
+          </Link>
+        }
+        meta={
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={pendingBookings.length > 0 ? 'auto-badge-warning' : 'auto-badge-success'}>
+              {pendingBookings.length > 0 ? `${pendingBookings.length} ожидают` : 'Очередь обработана'}
+            </Badge>
+            <Badge tone={inProgressOperations.length > 0 ? 'auto-badge-info' : 'auto-badge'}>
+              {inProgressOperations.length > 0 ? `${inProgressOperations.length} в работе` : 'Нет активных работ'}
+            </Badge>
+          </div>
+        }
+      />
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {overviewMetrics.map((metric) => (
+          <StatCard
+            key={metric.label}
+            icon={metric.icon}
+            label={metric.label}
+            value={metric.value}
+            meta={metric.meta}
+          />
+        ))}
       </section>
 
       <div className="grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">

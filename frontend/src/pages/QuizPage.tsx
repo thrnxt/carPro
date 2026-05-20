@@ -100,8 +100,8 @@ export default function QuizPage() {
         />
 
         <Section title={resultTitle} description={`Вы ответили правильно на ${score} из ${totalQuestions} вопросов.`}>
-          <div className="mx-auto max-w-2xl rounded-[1.6rem] border border-white/10 bg-white/5 p-8 text-center">
-            <div className={`text-6xl font-extrabold tracking-[-0.08em] ${resultTone}`}>{percentage}%</div>
+          <div className="mx-auto max-w-2xl rounded-lg border border-white/10 bg-white/5 p-8 text-center">
+            <div className={`text-6xl font-extrabold ${resultTone}`}>{percentage}%</div>
             <p className="mt-4 text-lg font-semibold text-white">
               {score} / {totalQuestions}
             </p>
@@ -117,7 +117,7 @@ export default function QuizPage() {
                 setSelectedAnswers({})
                 setScore(0)
               }}
-              className="auto-button-primary mt-8"
+              className="btn-primary mt-8"
             >
               <FaRedoAlt />
               Пройти заново
@@ -149,7 +149,7 @@ export default function QuizPage() {
 
         {currentQuestion && (
           <div>
-            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">{currentQuestion.question}</h2>
+            <h2 className="text-2xl font-semibold text-white">{currentQuestion.question}</h2>
 
             <div className="mt-6 space-y-3">
               {currentQuestion.answers?.map((answer: any) => {
@@ -159,7 +159,7 @@ export default function QuizPage() {
                   <button
                     key={answer.id}
                     onClick={() => handleAnswerSelect(answer.id)}
-                    className={`w-full rounded-[1.35rem] border p-4 text-left transition-all ${
+                    className={`w-full rounded-lg border p-4 text-left transition-all ${
                       isSelected
                         ? 'border-info bg-surface-3 text-white'
                         : 'border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/8'
@@ -175,7 +175,7 @@ export default function QuizPage() {
               <button
                 onClick={handlePrevious}
                 disabled={currentQuestionIndex === 0}
-                className="auto-button-secondary justify-center disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-secondary justify-center disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FaArrowLeft />
                 Назад
@@ -184,7 +184,7 @@ export default function QuizPage() {
               <button
                 onClick={handleNext}
                 disabled={!selectedAnswers[currentQuestionIndex]}
-                className="auto-button-primary justify-center disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-primary justify-center disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {currentQuestionIndex === totalQuestions - 1 ? 'Завершить квиз' : 'Следующий вопрос'}
                 <FaArrowRight />

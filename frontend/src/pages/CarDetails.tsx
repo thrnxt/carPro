@@ -56,21 +56,21 @@ export default function CarDetails() {
         <div className="flex gap-2">
           <Link
             to={`/cars/${id}/components`}
-            className="auto-button-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2"
           >
             <FaWrench />
             Все детали
           </Link>
           <Link
             to={`/cars/${id}/history`}
-            className="auto-button-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2"
           >
             <FaClipboardList />
             История ТО
           </Link>
           <Link
             to={`/maintenance-calendar`}
-            className="auto-button-success flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2"
           >
             <FaCalendarAlt />
             Календарь ТО

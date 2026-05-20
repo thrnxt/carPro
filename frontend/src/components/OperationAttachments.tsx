@@ -58,14 +58,14 @@ export default function OperationAttachments({
     <div
       className={cx(
         compact ? 'mt-4' : 'mt-5',
-        inline && 'rounded-[1.1rem] border border-white/10 bg-white/5 p-3.5',
+        inline && 'rounded-lg border border-white/10 bg-white/5 p-3.5',
         className
       )}
     >
       <h4 className={cx('flex items-center gap-2 font-semibold text-white', inline ? 'mb-2.5 text-sm' : 'mb-3')}>
         <FaCamera className="text-text-muted" />
         {title}
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-400">
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-caption font-medium text-slate-400">
           {totalAttachmentsCount}
         </span>
       </h4>
@@ -92,8 +92,8 @@ export default function OperationAttachments({
               >
                 <div
                   className={cx(
-                    'overflow-hidden rounded-[1.2rem] border border-white/10 bg-slate-950/70 transition-colors group-hover:border-border',
-                    inline ? 'h-20 rounded-[0.95rem]' : compact ? 'h-24 sm:h-28' : 'h-32 sm:h-36'
+                    'overflow-hidden rounded-lg border border-white/10 bg-slate-950/70 transition-colors group-hover:border-border',
+                    inline ? 'h-20 rounded-lg' : compact ? 'h-24 sm:h-28' : 'h-32 sm:h-36'
                   )}
                 >
                   <img
@@ -105,10 +105,10 @@ export default function OperationAttachments({
                 </div>
                 {showLabels && (
                   <div className={cx('mt-2 flex items-center justify-between gap-2', inline && 'mt-1.5')}>
-                    <p className={cx('truncate text-[11px] text-slate-300', inline && 'max-w-[4.8rem] text-[10px]')}>
+                    <p className={cx('truncate text-caption text-slate-300', inline && 'max-w-[4.8rem] text-caption')}>
                       {getAttachmentLabel(attachment)}
                     </p>
-                    <FaExternalLinkAlt className="shrink-0 text-[11px] text-slate-500 transition-colors group-hover:text-text-muted" />
+                    <FaExternalLinkAlt className="shrink-0 text-caption text-slate-500 transition-colors group-hover:text-text-muted" />
                   </div>
                 )}
               </a>

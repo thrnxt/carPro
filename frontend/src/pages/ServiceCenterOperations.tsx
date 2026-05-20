@@ -111,7 +111,7 @@ function OperationDetailsModal({
         aria-label="Закрыть детали операции"
       />
 
-      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#08111d]/95 p-5 shadow-[0_44px_120px_-42px_rgba(2,6,23,0.96)] sm:p-6">
+      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-lg border border-border bg-surface-2 p-5 sm:p-6">
         <button
           type="button"
           onClick={onClose}
@@ -122,8 +122,8 @@ function OperationDetailsModal({
         </button>
 
         <div className="pr-14">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Operation details</p>
-          <h2 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-white">Детали операции</h2>
+          <p className="text-caption font-semibold text-slate-500">Operation details</p>
+          <h2 className="mt-3 text-2xl font-bold text-white">Детали операции</h2>
           <p className="mt-2 text-sm text-slate-400">
             Операция #{operation.id} от {formatOperationDate(operation.serviceDate)}
           </p>
@@ -210,7 +210,7 @@ export default function ServiceCenterOperations() {
         eyebrow="Service operations"
         title="Журнал операций"
         actions={
-          <Link to="/service-center/operations/new" className="auto-button-primary">
+          <Link to="/service-center/operations/new" className="btn-primary">
             <FaPlus />
             Создать операцию
           </Link>
@@ -259,11 +259,11 @@ export default function ServiceCenterOperations() {
             }
             action={
               hasActiveFilters ? (
-                <button type="button" onClick={handleResetFilters} className="auto-button-secondary">
+                <button type="button" onClick={handleResetFilters} className="btn-secondary">
                   Сбросить фильтры
                 </button>
               ) : (
-                <Link to="/service-center/operations/new" className="auto-button-primary">
+                <Link to="/service-center/operations/new" className="btn-primary">
                   <FaPlus />
                   Создать операцию
                 </Link>
@@ -272,10 +272,10 @@ export default function ServiceCenterOperations() {
           />
         ) : (
           <>
-            <div className="mb-6 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-4 sm:p-5">
               <form onSubmit={handleApplyFilters} className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto_auto] 2xl:items-end">
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                  <label className="mb-2 block text-xs font-medium text-slate-500">
                     Клиент
                   </label>
                   <select
@@ -295,7 +295,7 @@ export default function ServiceCenterOperations() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                  <label className="mb-2 block text-xs font-medium text-slate-500">
                     Статус
                   </label>
                   <select
@@ -317,7 +317,7 @@ export default function ServiceCenterOperations() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                  <label className="mb-2 block text-xs font-medium text-slate-500">
                     Дата от
                   </label>
                   <input
@@ -332,7 +332,7 @@ export default function ServiceCenterOperations() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                  <label className="mb-2 block text-xs font-medium text-slate-500">
                     Дата до
                   </label>
                   <input
@@ -346,20 +346,20 @@ export default function ServiceCenterOperations() {
                   />
                 </div>
 
-                <button type="button" onClick={handleResetFilters} className="auto-button-secondary 2xl:self-end">
+                <button type="button" onClick={handleResetFilters} className="btn-secondary 2xl:self-end">
                   Сбросить
                 </button>
-                <button type="submit" className="auto-button-primary 2xl:self-end">
+                <button type="submit" className="btn-primary 2xl:self-end">
                   Применить
                 </button>
               </form>
             </div>
 
-            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
+            <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                    <tr className="border-b border-white/10 text-left text-caption text-slate-500">
                       <th className="px-4 py-3 font-medium">Дата</th>
                       <th className="px-4 py-3 font-medium">Операция</th>
                       <th className="px-4 py-3 font-medium">Клиент</th>
@@ -398,7 +398,7 @@ export default function ServiceCenterOperations() {
                             <button
                               type="button"
                               onClick={() => setOpenedOperationId(operation.id)}
-                              className="auto-button-secondary px-3 py-2 text-sm"
+                              className="btn-secondary px-3 py-2 text-sm"
                             >
                               <FaExternalLinkAlt />
                               Открыть
@@ -431,7 +431,7 @@ export default function ServiceCenterOperations() {
                     setOpenedOperationId(null)
                   }}
                   disabled={operationsPage.first}
-                  className="auto-button-secondary"
+                  className="btn-secondary"
                 >
                   <FaChevronLeft />
                   Назад
@@ -443,7 +443,7 @@ export default function ServiceCenterOperations() {
                     setOpenedOperationId(null)
                   }}
                   disabled={operationsPage.last}
-                  className="auto-button-secondary"
+                  className="btn-secondary"
                 >
                   Далее
                   <FaChevronRight />

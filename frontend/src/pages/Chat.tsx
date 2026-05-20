@@ -251,8 +251,8 @@ export default function Chat() {
             <div className="border-b border-white/10 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Контакты</p>
-                  <h2 className="mt-2 text-xl font-bold tracking-[-0.04em] text-white">Пользователи</h2>
+                  <p className="text-xs font-semibold text-slate-400">Контакты</p>
+                  <h2 className="mt-2 text-xl font-bold text-white">Пользователи</h2>
                 </div>
                 <Badge>{contactsPage?.totalElements ?? 0}</Badge>
               </div>
@@ -289,7 +289,7 @@ export default function Chat() {
                         type="button"
                         onClick={() => openConversation(contact.id)}
                         className={cx(
-                          'flex w-full items-center gap-3 rounded-[1.2rem] border border-l-[3px] p-3 text-left transition-all',
+                          'flex w-full items-center gap-3 rounded-lg border border-l-[3px] p-3 text-left transition-all',
                           roleStyle.accentBorder,
                           isActive
                             ? roleStyle.activeSurface
@@ -310,7 +310,7 @@ export default function Chat() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-col items-start gap-1.5">
-                            <p className={cx('text-[11px] font-semibold uppercase tracking-[0.16em]', roleStyle.accentText)}>
+                            <p className={cx('text-caption font-semibold', roleStyle.accentText)}>
                               {roleLabels[contact.role]}
                             </p>
                             <p className="w-full truncate text-sm font-semibold text-white">{getFullName(contact)}</p>
@@ -335,7 +335,7 @@ export default function Chat() {
                   type="button"
                   onClick={() => setPage((current) => Math.max(current - 1, 0))}
                   disabled={!contactsPage || contactsPage.first}
-                  className="auto-button-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Предыдущая страница"
                 >
                   <FaChevronLeft />
@@ -349,7 +349,7 @@ export default function Chat() {
                   type="button"
                   onClick={() => setPage((current) => current + 1)}
                   disabled={!contactsPage || contactsPage.last}
-                  className="auto-button-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Следующая страница"
                 >
                   <FaChevronRight />
@@ -359,7 +359,7 @@ export default function Chat() {
           </Surface>
 
           <div className={cx(showContacts ? 'hidden' : 'flex', 'min-h-[40rem] xl:flex')}>
-            <div className="w-full overflow-hidden rounded-[1.7rem] border border-white/10 bg-slate-950/35">
+            <div className="w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950/35">
               <div className="flex h-full min-h-[40rem] flex-col">
                 <div className="border-b border-white/10 px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -395,14 +395,14 @@ export default function Chat() {
                       {selectedContact ? (
                         <p
                           className={cx(
-                            'text-[11px] font-semibold uppercase tracking-[0.16em]',
+                            'text-caption font-semibold',
                             roleStyles[selectedContact.role].accentText
                           )}
                         >
                           {roleLabels[selectedContact.role]}
                         </p>
                       ) : null}
-                      <h2 className="truncate text-xl font-bold tracking-[-0.04em] text-white">{conversationTitle}</h2>
+                      <h2 className="truncate text-xl font-bold text-white">{conversationTitle}</h2>
                       <p className="mt-1 truncate text-sm text-slate-400">
                         {selectedContact ? selectedContact.email : 'Выберите пользователя'}
                       </p>
@@ -427,14 +427,14 @@ export default function Chat() {
                           return (
                             <div key={entry.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                               <div
-                                className={`max-w-xl rounded-[1.35rem] border px-4 py-3 ${
+                                className={`max-w-xl rounded-lg border px-4 py-3 ${
                                   isOwn
                                     ? 'border-border bg-surface-3 text-white'
                                     : 'border-white/10 bg-white/5 text-white'
                                 }`}
                               >
                                 {!isOwn && (
-                                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                  <div className="mb-1 text-xs font-semibold text-slate-400">
                                     {entry.sender.firstName} {entry.sender.lastName}
                                   </div>
                                 )}
@@ -469,7 +469,7 @@ export default function Chat() {
                         <button
                           type="submit"
                           disabled={!message.trim() || sendMessageMutation.isPending}
-                          className="auto-button-primary justify-center sm:min-w-[11rem]"
+                          className="btn-primary justify-center sm:min-w-[11rem]"
                         >
                           {sendMessageMutation.isPending ? (
                             <>

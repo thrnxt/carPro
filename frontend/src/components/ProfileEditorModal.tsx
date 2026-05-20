@@ -327,13 +327,11 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
         aria-label="Закрыть окно редактирования профиля"
       />
 
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#08111d]/95 shadow-[0_44px_120px_-42px_rgba(2,6,23,0.96)]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(55,138,221,0.28),transparent_52%),radial-gradient(circle_at_top_right,rgba(96,165,250,0.18),transparent_42%)]" />
-
+      <div className="relative w-full max-w-5xl overflow-hidden rounded-lg border border-border bg-surface-2">
         <div className="relative grid lg:grid-cols-[20rem_minmax(0,1fr)]">
-          <div className="border-b border-white/10 bg-white/[0.03] p-6 sm:p-8 lg:border-b-0 lg:border-r">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Profile</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-[-0.04em] text-white">
+          <div className="border-b border-border bg-surface-3 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+            <p className="text-caption font-semibold text-slate-500">Profile</p>
+            <h2 className="mt-3 text-3xl font-bold text-white">
               {isServiceCenter ? 'Профиль сервисного центра' : 'Редактирование профиля'}
             </h2>
             <p className="mt-3 max-w-sm text-sm leading-6 text-slate-400">
@@ -357,7 +355,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-slate-950 text-white shadow-[0_18px_36px_-20px_rgba(2,6,23,0.95)] transition-colors hover:bg-slate-900"
+                  className="btn-secondary absolute -bottom-2 -right-2 h-11 w-11 p-0"
                   aria-label={avatarActionLabel}
                 >
                   <FaCamera />
@@ -373,14 +371,14 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
               />
 
               <div className="mt-5 flex flex-wrap gap-3">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="auto-button-secondary px-4 py-2.5 text-sm">
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary px-4 py-2.5 text-sm">
                   <FaCamera />
                   {avatarActionLabel}
                 </button>
                 <button
                   type="button"
                   onClick={handleAvatarRemove}
-                  className="auto-button-secondary px-4 py-2.5 text-sm"
+                  className="btn-secondary px-4 py-2.5 text-sm"
                   disabled={!formData.avatarUrl && !selectedAvatarFile}
                 >
                   <FaTrashAlt />
@@ -388,8 +386,8 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
                 </button>
               </div>
 
-              <div className="mt-6 w-full rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Текущий доступ</p>
+              <div className="mt-6 w-full rounded-lg border border-white/10 bg-slate-950/45 p-4">
+                <p className="text-caption font-semibold text-slate-500">Текущий доступ</p>
                 <p className="mt-2 text-sm font-semibold text-white">{roleLabel}</p>
                 <p className="mt-1 break-all text-sm text-slate-400">{user.email}</p>
               </div>
@@ -407,8 +405,8 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
             </button>
 
             <div className="pr-14">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{introLabel}</p>
-              <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-white">{introTitle}</h3>
+              <p className="text-caption font-semibold text-slate-500">{introLabel}</p>
+              <h3 className="mt-3 text-2xl font-bold text-white">{introTitle}</h3>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
                 {introDescription}
               </p>
@@ -474,13 +472,13 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
                 {isServiceCenter ? 'Изменения сохраняются в карточку сервиса.' : 'Изменения сохраняются сразу в профиль и в текущую сессию.'}
               </p>
               <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={onClose} className="auto-button-secondary px-4 py-2.5 text-sm">
+                <button type="button" onClick={onClose} className="btn-secondary px-4 py-2.5 text-sm">
                   Отмена
                 </button>
                 <button
                   type="submit"
                   disabled={updateProfileMutation.isPending}
-                  className="auto-button-primary px-5 py-2.5 text-sm"
+                  className="btn-primary px-5 py-2.5 text-sm"
                 >
                   <FaSave />
                   {updateProfileMutation.isPending ? 'Сохраняем...' : 'Сохранить профиль'}

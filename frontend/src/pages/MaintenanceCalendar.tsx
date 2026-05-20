@@ -162,7 +162,7 @@ export default function MaintenanceCalendar() {
     if (event.type === 'notification') return <FaExclamationTriangle className="inline text-xs" />
     if (event.type === 'booking') return <FaCalendarAlt className="inline text-xs" />
     if (event.type === 'maintenance') return <FaWrench className="inline text-xs" />
-    return <FaCircle className="inline text-[8px]" />
+    return <FaCircle className="inline text-caption" />
   }
 
   return (
@@ -175,19 +175,19 @@ export default function MaintenanceCalendar() {
         <div className="flex gap-2">
           <button
             onClick={goToToday}
-            className="auto-button-secondary"
+            className="btn-secondary"
           >
             Сегодня
           </button>
           <button
             onClick={goToPreviousMonth}
-            className="auto-button-secondary flex items-center"
+            className="btn-secondary flex items-center"
           >
             <FaChevronLeft />
           </button>
           <button
             onClick={goToNextMonth}
-            className="auto-button-secondary flex items-center"
+            className="btn-secondary flex items-center"
           >
             <FaChevronRight />
           </button>
@@ -389,19 +389,19 @@ export default function MaintenanceCalendar() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => navigate('/service-centers')}
-            className="auto-button-primary"
+            className="btn-primary"
           >
             <FaSearch className="inline mr-2" /> Найти сервисный центр
           </button>
           <button
             onClick={() => navigate('/bookings')}
-            className="auto-button-success"
+            className="btn-secondary"
           >
             <FaCalendarAlt className="inline mr-2" /> Мои записи
           </button>
           <button
             onClick={() => navigate('/maintenance-history')}
-            className="auto-button-secondary"
+            className="btn-secondary"
           >
             <FaClipboardList className="inline mr-2" /> История обслуживания
           </button>

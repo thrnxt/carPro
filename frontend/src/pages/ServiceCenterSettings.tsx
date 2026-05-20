@@ -189,7 +189,7 @@ export default function ServiceCenterSettings() {
           <button
             type="submit"
             disabled={updateMutation.isPending}
-            className="auto-button-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
           >
             {updateMutation.isPending ? <FaWrench className="animate-spin" /> : <FaSave />}
             Сохранить

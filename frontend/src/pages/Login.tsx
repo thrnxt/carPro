@@ -32,11 +32,11 @@ export default function Login() {
           <div>
             <div className="page-eyebrow mb-5">Fleet workspace</div>
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(55,138,221,0.55)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10 text-3xl text-white">
                 <FaCarSide />
               </div>
               <div>
-                <h1 className="text-4xl font-extrabold tracking-[-0.06em] text-white">AutoService</h1>
+                <h1 className="text-4xl font-extrabold text-white">AutoService</h1>
                 <p className="mt-1 text-base text-slate-400">
                   Кабинет для владельцев авто, сервисов и операционных команд.
                 </p>
@@ -80,7 +80,7 @@ export default function Login() {
               'Плотные рабочие экраны без учебной стилистики',
               'Подготовлено под SaaS/fintech логику операций',
             ].map((item) => (
-              <div key={item} className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+              <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start gap-3">
                   <FaCheckCircle className="mt-1 text-text-muted" />
                   <p className="text-sm leading-6 text-slate-300">{item}</p>
@@ -94,14 +94,14 @@ export default function Login() {
           <div className="mx-auto w-full max-w-md">
             <div className="lg:hidden">
               <div className="page-eyebrow mb-4">AutoService</div>
-              <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-white">Вход в workspace</h1>
+              <h1 className="text-3xl font-extrabold text-white">Вход в workspace</h1>
               <p className="mt-3 text-sm leading-6 text-slate-400">
                 Управляйте автомобилями, обслуживанием, клиентскими визитами и документами из одного кабинета.
               </p>
             </div>
 
             <div className="hidden lg:block">
-              <h2 className="text-4xl font-extrabold tracking-[-0.06em] text-white">Вход в workspace</h2>
+              <h2 className="text-4xl font-extrabold text-white">Вход в workspace</h2>
               <p className="mt-3 text-sm leading-6 text-slate-400">
                 Возвращаем вас в рабочий контур: гараж, операции, сервисные записи и документы.
               </p>
@@ -138,12 +138,12 @@ export default function Login() {
                 />
               </div>
 
-              <button type="submit" className="auto-button-primary w-full justify-center">
+              <button type="submit" className="btn-primary w-full justify-center">
                 Войти
                 <FaArrowRight className="text-sm" />
               </button>
 
-              <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
                 Вход открывает доступ к единому кабинету владельца, сервисного центра или администратора в зависимости от роли.
               </div>
 

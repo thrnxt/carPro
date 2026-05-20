@@ -108,7 +108,7 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
         <div className="relative mx-auto bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-2xl p-16 md:p-20 border border-slate-700 shadow-2xl" style={{ maxWidth: '900px', minHeight: '600px' }}>
           {/* Центральная иконка автомобиля - только одна, как фон */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-            <FaCarSide className="text-9xl md:text-[16rem] text-slate-700 opacity-10 select-none" />
+            <FaCarSide className="car-visualization-hero-icon text-slate-700 opacity-10 select-none" />
           </div>
 
           {/* Индикаторы категорий вокруг автомобиля */}
@@ -166,7 +166,7 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
       <div className="mb-8 flex justify-center">
         <div className="auto-card px-6 py-4 inline-block">
           <div className="text-center">
-            <div className="text-sm text-slate-300 mb-2 font-semibold uppercase tracking-wide">Общее состояние</div>
+            <div className="text-sm text-slate-300 mb-2 font-semibold">Общее состояние</div>
             <div className={`text-2xl font-bold ${overallStatus.color} flex items-center justify-center gap-2`}>
               <overallStatus.Icon className="text-xl" />
               <span>{overallStatus.text}</span>

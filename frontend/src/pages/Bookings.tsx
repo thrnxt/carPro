@@ -205,7 +205,7 @@ export default function Bookings() {
         </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="auto-button-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           {showCreateForm ? (
             <>
@@ -317,7 +317,7 @@ export default function Bookings() {
               <button
                 type="submit"
                 disabled={createBookingMutation.isPending}
-                className="auto-button-primary flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
               >
                 {createBookingMutation.isPending ? (
                   <>
@@ -343,7 +343,7 @@ export default function Bookings() {
                     contactPhone: '',
                   })
                 }}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 Отмена
               </button>
@@ -433,7 +433,7 @@ export default function Bookings() {
                       {booking.serviceCenter && (
                         <button
                           onClick={() => navigate(`/service-centers/${booking.serviceCenter?.id}`)}
-                          className="auto-button-secondary text-sm whitespace-nowrap"
+                          className="btn-secondary text-sm whitespace-nowrap"
                         >
                           Подробнее
                         </button>
@@ -445,7 +445,7 @@ export default function Bookings() {
                               cancelBookingMutation.mutate(booking.id)
                             }
                           }}
-                          className="auto-button-danger text-sm whitespace-nowrap flex items-center gap-2"
+                          className="btn-secondary text-danger text-sm whitespace-nowrap flex items-center gap-2"
                         >
                           <FaTimes />
                           Отменить
@@ -511,7 +511,7 @@ export default function Bookings() {
           <p className="text-slate-400 mb-6">Создайте первую запись на обслуживание</p>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="auto-button-primary flex items-center gap-2 mx-auto"
+            className="btn-primary flex items-center gap-2 mx-auto"
           >
             <FaPlus />
             Создать первую запись

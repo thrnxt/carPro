@@ -251,11 +251,11 @@ export default function ServiceCenterBookings() {
             description="Когда клиенты начнут бронировать обслуживание, записи появятся в этом реестре."
           />
         ) : filteredBookings.length === 0 ? (
-          <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
             По выбранному статусу записей нет.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[0.03]">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
             {filteredBookings.map((booking) => {
               const currentStatus = booking.status as Exclude<BookingStatus, 'ALL'>
 
@@ -267,7 +267,7 @@ export default function ServiceCenterBookings() {
                   <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[12rem_minmax(0,1.15fr)_minmax(0,1fr)_auto] xl:items-center">
                     <div className="flex items-start justify-between gap-3 xl:block">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        <p className="text-caption font-semibold text-slate-500">
                           Запись
                         </p>
                         <p className="mt-1 text-sm font-semibold text-white">
@@ -291,7 +291,7 @@ export default function ServiceCenterBookings() {
                     <div className="min-w-0 space-y-1.5">
                       <p className="text-sm text-slate-400">{getTextPreview(booking.description)}</p>
                       <p className="inline-flex items-center gap-2 text-sm text-slate-500">
-                        <FaPhoneAlt className="text-[12px]" />
+                        <FaPhoneAlt className="text-caption" />
                         <span>{getPhoneLabel(booking)}</span>
                       </p>
                     </div>

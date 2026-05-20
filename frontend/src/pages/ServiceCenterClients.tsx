@@ -268,11 +268,11 @@ export default function ServiceCenterClients() {
             description="Когда появятся записи и сервисная история, клиенты начнут собираться в этот реестр."
           />
         ) : filteredClients.length === 0 ? (
-          <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
             По выбранному статусу клиентов нет.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[0.03]">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
             {paginatedClients.map((client) => {
               const isExpanded = selectedClientId === client.clientId
 
@@ -321,7 +321,7 @@ export default function ServiceCenterClients() {
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                       <button
                         type="button"
-                        className="auto-button-secondary px-3 py-2 text-sm"
+                        className="btn-secondary px-3 py-2 text-sm"
                         onClick={() => toggleClientDetails(client.clientId)}
                       >
                         {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
@@ -333,7 +333,7 @@ export default function ServiceCenterClients() {
                   {isExpanded && (
                     <div className="mt-4 border-t border-white/10 pt-4">
                       <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]">
-                        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
                             <FaCar className="text-text-muted" />
                             Автомобили клиента
@@ -353,7 +353,7 @@ export default function ServiceCenterClients() {
                                   type="button"
                                   onClick={() => setSelectedCarId((currentValue) => (currentValue === car.id ? null : car.id))}
                                   className={cx(
-                                    'w-full rounded-[1rem] border px-3 py-3 text-left transition-colors',
+                                    'w-full rounded-lg border px-3 py-3 text-left transition-colors',
                                     selectedCarId === car.id
                                       ? 'border-border bg-surface-3'
                                       : 'border-white/10 bg-slate-950/30 hover:border-white/20 hover:bg-white/[0.04]'
@@ -369,7 +369,7 @@ export default function ServiceCenterClients() {
                           )}
                         </div>
 
-                        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
                             <FaClipboardList className="text-text-muted" />
                             История операций
@@ -384,7 +384,7 @@ export default function ServiceCenterClients() {
                           ) : sortedOperations.length === 0 ? (
                             <p className="mt-3 text-sm text-slate-400">Операции не найдены.</p>
                           ) : (
-                            <div className="mt-3 overflow-hidden rounded-[1rem] border border-white/10 bg-slate-950/25">
+                            <div className="mt-3 overflow-hidden rounded-lg border border-white/10 bg-slate-950/25">
                               {sortedOperations.map((operation) => (
                                 <div
                                   key={operation.id}
@@ -442,7 +442,7 @@ export default function ServiceCenterClients() {
                   resetExpandedState()
                 }}
                 disabled={currentPage === 0}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 <FaChevronLeft />
                 Назад
@@ -454,7 +454,7 @@ export default function ServiceCenterClients() {
                   resetExpandedState()
                 }}
                 disabled={currentPage >= totalPages - 1}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 Далее
                 <FaChevronRight />

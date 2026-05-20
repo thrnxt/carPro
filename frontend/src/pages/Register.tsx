@@ -36,7 +36,7 @@ export default function Register() {
         <section className="auto-card flex items-center p-6 sm:p-8 lg:p-10">
           <div className="mx-auto w-full max-w-2xl">
             <div className="page-eyebrow mb-4">Create profile</div>
-            <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-white lg:text-4xl">
+            <h1 className="text-3xl font-extrabold text-white lg:text-4xl">
               Регистрация в рабочем кабинете
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
@@ -104,12 +104,12 @@ export default function Register() {
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-4 pt-2">
-                <button type="submit" className="auto-button-primary w-full justify-center sm:w-auto">
+                <button type="submit" className="btn-primary w-full justify-center sm:w-auto">
                   Создать аккаунт
                   <FaArrowRight className="text-sm" />
                 </button>
 
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+                <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
                   После регистрации вы попадете в основной workspace. Роль и функциональность подхватятся из вашей учетной записи.
                 </div>
 
@@ -127,11 +127,11 @@ export default function Register() {
         <section className="auto-card hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(55,138,221,0.55)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10 text-3xl text-white">
                 <FaCarSide />
               </div>
               <div>
-                <h2 className="text-4xl font-extrabold tracking-[-0.06em] text-white">AutoService</h2>
+                <h2 className="text-4xl font-extrabold text-white">AutoService</h2>
                 <p className="mt-1 text-base text-slate-400">Workspace для транспорта и сервиса.</p>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function Register() {
               'Профессиональная подача без учебной верстки',
               'Структура под реальные SaaS и cabinet workflows',
             ].map((item) => (
-              <div key={item} className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
+              <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start gap-3">
                   <FaCheckCircle className="mt-1 text-text-muted" />
                   <p className="text-sm leading-6 text-slate-300">{item}</p>

@@ -45,6 +45,43 @@ export function Button({
   return <button type={type} className={cx(`btn-${variant}`, className)} {...props} />
 }
 
+export function NextActionCard({
+  eyebrow,
+  title,
+  description,
+  primaryAction,
+  secondaryAction,
+  meta,
+  className,
+}: {
+  eyebrow?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  primaryAction?: ReactNode
+  secondaryAction?: ReactNode
+  meta?: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cx('next-action-card', className)}>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
+          {eyebrow ? <p className="section-label">{eyebrow}</p> : null}
+          <h2 className="mt-2 text-h1 text-text-primary">{title}</h2>
+          {description ? <p className="mt-2 max-w-3xl text-body text-text-secondary">{description}</p> : null}
+          {meta ? <div className="mt-4">{meta}</div> : null}
+        </div>
+        {(primaryAction || secondaryAction) ? (
+          <div className="flex flex-wrap gap-3 lg:justify-end">
+            {primaryAction}
+            {secondaryAction}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
 export function HeroCard({
   eyebrow,
   title,
@@ -154,13 +191,28 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cx('rounded-lg border border-dashed border-border bg-surface-2 p-8 text-center sm:p-12', className)}>
+    <div className={cx('empty-state', className)}>
       {Icon ? <Icon className="mx-auto text-display text-text-muted" /> : null}
       <h3 className="mt-6 text-h2 text-text-primary">{title}</h3>
       {description ? (
         <p className="mx-auto mt-3 max-w-2xl text-body text-text-secondary">{description}</p>
       ) : null}
       {action ? <div className="mt-6">{action}</div> : null}
+    </div>
+  )
+}
+
+export function LoadingState({
+  label = 'Загрузка...',
+  className,
+}: {
+  label?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cx('loading-state', className)} role="status" aria-live="polite">
+      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-b-info" />
+      <p className="mt-3 text-body text-text-secondary">{label}</p>
     </div>
   )
 }

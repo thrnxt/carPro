@@ -346,7 +346,7 @@ export default function ServiceCenterInvoices() {
           <button
             type="button"
             onClick={() => setIsCreateOpen((currentValue) => !currentValue)}
-            className={isCreateOpen ? 'auto-button-secondary' : 'auto-button-primary'}
+            className={isCreateOpen ? 'btn-secondary' : 'btn-primary'}
           >
             {isCreateOpen ? <FaChevronUp /> : <FaPlus />}
             {isCreateOpen ? 'Скрыть форму' : 'Создать счет'}
@@ -483,10 +483,10 @@ export default function ServiceCenterInvoices() {
               </div>
             </div>
 
-            <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-white">Позиции счета</h3>
-                <button type="button" onClick={addItem} className="auto-button-secondary px-3 py-2 text-sm">
+                <button type="button" onClick={addItem} className="btn-secondary px-3 py-2 text-sm">
                   <FaPlus />
                   Добавить позицию
                 </button>
@@ -496,7 +496,7 @@ export default function ServiceCenterInvoices() {
                 {items.map((item, index) => (
                   <div
                     key={`invoice-item-${index}`}
-                    className="grid gap-3 rounded-[1rem] border border-white/10 bg-slate-950/25 p-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
+                    className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
                   >
                     <input
                       value={item.name}
@@ -531,7 +531,7 @@ export default function ServiceCenterInvoices() {
                       type="button"
                       onClick={() => removeItem(index)}
                       disabled={items.length === 1}
-                      className="auto-button-danger px-3 py-2 text-sm"
+                      className="btn-secondary text-danger px-3 py-2 text-sm"
                     >
                       Удалить
                     </button>
@@ -544,7 +544,7 @@ export default function ServiceCenterInvoices() {
               <button
                 type="submit"
                 disabled={createInvoiceMutation.isPending}
-                className="auto-button-primary"
+                className="btn-primary"
               >
                 {createInvoiceMutation.isPending ? 'Создание...' : 'Создать счет'}
               </button>
@@ -553,7 +553,7 @@ export default function ServiceCenterInvoices() {
                 onClick={() => {
                   setIsCreateOpen(false)
                 }}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 Закрыть
               </button>
@@ -613,11 +613,11 @@ export default function ServiceCenterInvoices() {
             description="Когда сервис начнет выставлять счета, они появятся в этом реестре."
           />
         ) : filteredInvoices.length === 0 ? (
-          <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-sm text-slate-400">
             По выбранному статусу счетов нет.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[0.03]">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
             {paginatedInvoices.map((invoice) => {
               const parsedItems = parseItems(invoice.items)
               const isExpanded = expandedInvoiceId === invoice.id
@@ -694,7 +694,7 @@ export default function ServiceCenterInvoices() {
                               currentValue === invoice.id ? null : invoice.id
                             )
                           }
-                          className="auto-button-secondary px-3 py-2 text-sm"
+                          className="btn-secondary px-3 py-2 text-sm"
                         >
                           {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                           {isExpanded ? 'Скрыть' : 'Детали'}
@@ -706,7 +706,7 @@ export default function ServiceCenterInvoices() {
                   {isExpanded && hasDetails && (
                     <div className="mt-4 border-t border-white/10 pt-4">
                       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/25 p-4">
+                        <div className="rounded-lg border border-white/10 bg-slate-950/25 p-4">
                           <h4 className="text-sm font-semibold text-white">Информация по счету</h4>
                           <div className="mt-3 space-y-2 text-sm text-slate-400">
                             {invoice.maintenanceRecordId != null && (
@@ -718,7 +718,7 @@ export default function ServiceCenterInvoices() {
                           </div>
                         </div>
 
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/25 p-4">
+                        <div className="rounded-lg border border-white/10 bg-slate-950/25 p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
                             <FaReceipt className="text-text-muted" />
                             Позиции
@@ -731,7 +731,7 @@ export default function ServiceCenterInvoices() {
                               {parsedItems.map((item, index) => (
                                 <div
                                   key={`invoice-${invoice.id}-item-${index}`}
-                                  className="rounded-[1rem] border border-white/10 bg-white/[0.03] px-3 py-2"
+                                  className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"
                                 >
                                   <p className="text-sm font-medium text-white">
                                     {item.name || `Позиция ${index + 1}`}
@@ -775,7 +775,7 @@ export default function ServiceCenterInvoices() {
                   setExpandedInvoiceId(null)
                 }}
                 disabled={currentPage === 0}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 <FaChevronLeft />
                 Назад
@@ -787,7 +787,7 @@ export default function ServiceCenterInvoices() {
                   setExpandedInvoiceId(null)
                 }}
                 disabled={currentPage >= totalPages - 1}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 Далее
                 <FaChevronRight />

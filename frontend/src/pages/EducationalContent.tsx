@@ -287,7 +287,7 @@ export default function EducationalContent() {
                     type="button"
                     onClick={() => previousItem && setSelectedItemId(previousItem.id)}
                     disabled={!previousItem}
-                    className="auto-button-secondary px-4 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-secondary px-4 py-3 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Предыдущий урок"
                   >
                     <FaChevronLeft />
@@ -296,7 +296,7 @@ export default function EducationalContent() {
                     type="button"
                     onClick={() => nextItem && setSelectedItemId(nextItem.id)}
                     disabled={!nextItem}
-                    className="auto-button-secondary px-4 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-secondary px-4 py-3 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Следующий урок"
                   >
                     <FaChevronRight />
@@ -304,7 +304,7 @@ export default function EducationalContent() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#07101c] shadow-[0_24px_64px_-36px_rgba(2,6,23,0.95)]">
+              <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
                 {selectedEmbedUrl ? (
                   <div className="aspect-video">
                     <iframe
@@ -318,7 +318,7 @@ export default function EducationalContent() {
                     />
                   </div>
                 ) : (
-                  <div className="flex min-h-[320px] items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(55,138,221,0.18),transparent_34%),linear-gradient(180deg,#111c2b_0%,#08111b_100%)] p-8 text-center">
+                  <div className="flex min-h-[320px] items-center justify-center bg-surface-3 p-8 text-center">
                     <div className="max-w-xl">
                       {SelectedItemIcon ? <SelectedItemIcon className="mx-auto text-6xl text-text-muted" /> : null}
                       <p className="mt-5 text-xl font-semibold text-white">{TYPE_LABELS[selectedItem.type]}</p>
@@ -346,7 +346,7 @@ export default function EducationalContent() {
                 </div>
 
                 <div>
-                  <h2 className="text-3xl font-bold tracking-[-0.04em] text-white">{selectedItem.title}</h2>
+                  <h2 className="text-3xl font-bold text-white">{selectedItem.title}</h2>
                   <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">{selectedItem.content}</p>
                 </div>
 
@@ -355,7 +355,7 @@ export default function EducationalContent() {
                     href={selectedItem.videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="auto-button-secondary inline-flex"
+                    className="btn-secondary inline-flex"
                   >
                     <FaExternalLinkAlt />
                     Открыть источник
@@ -368,8 +368,8 @@ export default function EducationalContent() {
               <div className="border-b border-white/10 px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Программа</p>
-                    <h3 className="mt-2 text-xl font-bold tracking-[-0.04em] text-white">Уроки и материалы</h3>
+                    <p className="text-xs font-semibold text-slate-400">Программа</p>
+                    <h3 className="mt-2 text-xl font-bold text-white">Уроки и материалы</h3>
                   </div>
                   <Badge>{filteredContent.length}</Badge>
                 </div>
@@ -386,7 +386,7 @@ export default function EducationalContent() {
                         type="button"
                         onClick={() => setSelectedItemId(item.id)}
                         className={cx(
-                          'w-full rounded-[1.25rem] border p-4 text-left transition-all',
+                          'w-full rounded-lg border p-4 text-left transition-all',
                           selectedItem.id === item.id
                             ? 'border-info bg-surface-3'
                             : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
@@ -397,7 +397,7 @@ export default function EducationalContent() {
                             <LessonIcon />
                           </div>
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
+                            <div className="flex items-center gap-2 text-xs text-slate-400">
                               <span>Урок {index + 1}</span>
                               <span>{TYPE_LABELS[item.type]}</span>
                             </div>

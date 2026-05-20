@@ -89,12 +89,12 @@ function DetailRow({
   value: string
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-[1rem] border border-white/10 bg-white/[0.03] px-3.5 py-3">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/5 text-[13px] text-slate-200">
+    <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3.5 py-3">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/5 text-caption text-slate-200">
         <Icon />
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">{label}</p>
+        <p className="text-caption font-medium text-slate-500">{label}</p>
         <p className="mt-1 break-words text-sm font-medium leading-5 text-slate-200">{value}</p>
       </div>
     </div>
@@ -114,7 +114,7 @@ export default function ServiceOperationCard({
   return (
     <div
       className={cx(
-        'rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02))] p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.8)] sm:p-5',
+        'rounded-lg border border-border bg-surface-2 p-4 sm:p-5',
         className
       )}
     >
@@ -122,13 +122,13 @@ export default function ServiceOperationCard({
         <div className="min-w-0">
           <div className="flex items-start justify-between gap-4 lg:hidden">
             <div className="min-w-0">
-              <h3 className="truncate text-2xl font-bold tracking-[-0.04em] text-white">{operation.workType}</h3>
+              <h3 className="truncate text-2xl font-bold text-white">{operation.workType}</h3>
             </div>
             <span className={statusMeta.tone}>{statusMeta.label}</span>
           </div>
 
           <div className="hidden lg:block">
-            <h3 className="truncate text-2xl font-bold tracking-[-0.04em] text-white">{operation.workType}</h3>
+            <h3 className="truncate text-2xl font-bold text-white">{operation.workType}</h3>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
@@ -143,7 +143,7 @@ export default function ServiceOperationCard({
           </div>
 
           {operation.description && (
-            <div className="mt-4 rounded-[1.1rem] border border-white/10 bg-slate-950/45 p-4">
+            <div className="mt-4 rounded-lg border border-white/10 bg-slate-950/45 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
                 <FaCommentDots className="text-text-muted" />
                 Комментарий мастера
@@ -153,7 +153,7 @@ export default function ServiceOperationCard({
           )}
 
           {operation.replacedComponents && operation.replacedComponents.length > 0 && (
-            <div className="mt-4 rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
                 <FaTools className="text-sky-300" />
                 Использованные материалы и замены
@@ -174,18 +174,18 @@ export default function ServiceOperationCard({
 
         <aside className="flex flex-col gap-3 lg:pl-1">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">Статус</p>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-caption font-medium text-slate-500">Статус</p>
               <div className="mt-3">
                 <span className={statusMeta.tone}>{statusMeta.label}</span>
               </div>
             </div>
 
-            <div className="rounded-[1.1rem] border border-emerald-400/15 bg-emerald-400/[0.08] p-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-emerald-200/70">
+            <div className="rounded-lg border border-emerald-400/15 bg-emerald-400/[0.08] p-4">
+              <p className="text-caption font-medium text-emerald-200/70">
                 Financial total
               </p>
-              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-emerald-300">{totalValue}</p>
+              <p className="mt-3 text-2xl font-semibold text-emerald-300">{totalValue}</p>
             </div>
           </div>
 

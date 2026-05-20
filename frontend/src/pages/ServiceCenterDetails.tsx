@@ -210,7 +210,7 @@ export default function ServiceCenterDetails() {
             <div className="flex flex-col gap-2">
               <Link
                 to={`/service-centers/map?center=${serviceCenter.id}`}
-                className="auto-button-secondary text-center"
+                className="btn-secondary text-center"
               >
                 <FaMapMarkerAlt className="inline mr-2" />
                 Показать на карте
@@ -218,7 +218,7 @@ export default function ServiceCenterDetails() {
               {user && cars && cars.length > 0 && (
                 <button
                   onClick={() => setShowBookingForm(!showBookingForm)}
-                  className="auto-button-primary"
+                  className="btn-primary"
                 >
                   {showBookingForm ? (
                     <>
@@ -322,7 +322,7 @@ export default function ServiceCenterDetails() {
               <button
                 type="submit"
                 disabled={createBookingMutation.isPending}
-                className="auto-button-primary"
+                className="btn-primary"
               >
                 {createBookingMutation.isPending ? (
                   <>
@@ -347,7 +347,7 @@ export default function ServiceCenterDetails() {
                     contactPhone: '',
                   })
                 }}
-                className="auto-button-secondary"
+                className="btn-secondary"
               >
                 Отмена
               </button>
@@ -394,7 +394,7 @@ export default function ServiceCenterDetails() {
             <button
               onClick={() => submitReviewMutation.mutate({ rating, comment })}
               disabled={submitReviewMutation.isPending}
-              className="auto-button-primary"
+              className="btn-primary"
             >
               {submitReviewMutation.isPending ? (
                 <>

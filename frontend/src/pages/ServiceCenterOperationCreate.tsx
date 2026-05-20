@@ -328,7 +328,7 @@ export default function ServiceCenterOperationCreate() {
         title="Создание операции"
         description="Фиксируйте выполненные работы отдельно от журнала, чтобы история оставалась чистой и сканируемой."
         actions={
-          <Link to="/service-center/operations" className="auto-button-secondary">
+          <Link to="/service-center/operations" className="btn-secondary">
             <FaArrowLeft />
             К журналу операций
           </Link>
@@ -449,7 +449,7 @@ export default function ServiceCenterOperationCreate() {
                 <FaTools className="text-text-muted" />
                 Замененные детали
               </h3>
-              <button type="button" className="auto-button-secondary text-sm" onClick={addReplacedPartRow}>
+              <button type="button" className="btn-secondary text-sm" onClick={addReplacedPartRow}>
                 <FaPlus />
                 Добавить деталь
               </button>
@@ -509,7 +509,7 @@ export default function ServiceCenterOperationCreate() {
                     <div className="flex items-end">
                       <button
                         type="button"
-                        className="auto-button-danger text-sm"
+                        className="btn-secondary text-danger text-sm"
                         onClick={() => removeReplacedPartRow(index)}
                       >
                         <FaTimes />
@@ -536,7 +536,7 @@ export default function ServiceCenterOperationCreate() {
               className="hidden"
             />
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="auto-button-secondary">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary">
                 <FaCamera />
                 Добавить файлы
               </button>
@@ -559,13 +559,13 @@ export default function ServiceCenterOperationCreate() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-6">
             <p className="text-sm text-slate-500">После сохранения операция вернется в журнал и появится в истории сервиса.</p>
             <div className="flex flex-wrap gap-3">
-              <Link to="/service-center/operations" className="auto-button-secondary">
+              <Link to="/service-center/operations" className="btn-secondary">
                 Отмена
               </Link>
               <button
                 type="submit"
                 disabled={createOperationMutation.isPending}
-                className="auto-button-primary"
+                className="btn-primary"
               >
                 {createOperationMutation.isPending ? 'Сохранение...' : 'Сохранить операцию'}
               </button>

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import ru from 'date-fns/locale/ru'
 import { FaBell, FaCheck, FaClock, FaCar } from 'react-icons/fa'
-import { Button, EmptyState, Page, PageHeader } from '../components/ui'
+import { Button, EmptyState, LoadingState, Page, PageHeader } from '../components/ui'
 
 type NotificationRecord = {
   id: number
@@ -71,10 +71,7 @@ export default function Notifications() {
   if (isLoading) {
     return (
       <Page>
-        <div className="auto-card p-card text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info"></div>
-          <p className="mt-2 text-body text-text-secondary">Загрузка...</p>
-        </div>
+        <LoadingState />
       </Page>
     )
   }

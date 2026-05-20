@@ -99,19 +99,19 @@ export default function AdminPanel() {
 
                   <div className="flex gap-2">
                     <button
-                      className="auto-button-success text-sm"
+                      className="btn-secondary text-sm"
                       onClick={() => moderationMutation.mutate({ id: serviceCenter.id, status: 'ACTIVE' })}
                     >
                       Одобрить
                     </button>
                     <button
-                      className="auto-button-danger text-sm"
+                      className="btn-secondary text-danger text-sm"
                       onClick={() => moderationMutation.mutate({ id: serviceCenter.id, status: 'REJECTED' })}
                     >
                       Отклонить
                     </button>
                     <button
-                      className="auto-button-secondary text-sm"
+                      className="btn-secondary text-sm"
                       onClick={() => moderationMutation.mutate({ id: serviceCenter.id, status: 'SUSPENDED' })}
                     >
                       Приостановить
@@ -130,11 +130,11 @@ export default function AdminPanel() {
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Имя</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Роль</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Статус</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Имя</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Роль</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Статус</th>
               </tr>
             </thead>
             <tbody className="bg-slate-800/50 divide-y divide-slate-700">

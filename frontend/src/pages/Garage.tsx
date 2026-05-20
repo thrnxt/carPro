@@ -213,7 +213,7 @@ export default function Garage() {
               handleCancel()
             }
           }}
-          className="auto-button-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           {showAddForm ? (
             <>
@@ -328,7 +328,7 @@ export default function Garage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="auto-button-primary flex items-center gap-2"
+                  className="btn-primary flex items-center gap-2"
                   disabled={updateCarMutation.isPending}
                 >
                   <FaSave />
@@ -337,7 +337,7 @@ export default function Garage() {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="auto-button-secondary"
+                  className="btn-secondary"
                 >
                   Отмена
                 </button>
@@ -417,7 +417,7 @@ export default function Garage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="auto-button-primary flex items-center gap-2"
+                  className="btn-primary flex items-center gap-2"
                   disabled={!catalogCar || lookupCarQuery.isFetching || addCarMutation.isPending}
                 >
                   <FaPlus />
@@ -426,7 +426,7 @@ export default function Garage() {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="auto-button-secondary"
+                  className="btn-secondary"
                 >
                   Отмена
                 </button>
@@ -515,7 +515,7 @@ export default function Garage() {
           <p className="text-slate-400 mb-6">Добавьте свой первый автомобиль для начала работы</p>
           <button
             onClick={openAddForm}
-            className="auto-button-primary flex items-center gap-2 mx-auto"
+            className="btn-primary flex items-center gap-2 mx-auto"
           >
             <FaPlus />
             Добавить автомобиль

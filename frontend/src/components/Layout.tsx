@@ -147,13 +147,18 @@ export function NavItem({
       to={item.path}
       onClick={onNavigate}
       className={`app-nav-link ${active ? 'app-nav-link-active' : ''}`}
+      aria-current={active ? 'page' : undefined}
       title={item.description}
     >
       <span className="app-nav-icon" aria-hidden="true">
         <IconComponent />
       </span>
       <span className="app-nav-label">{item.label}</span>
-      {badgeContent ? <span className="app-nav-badge">{badgeContent}</span> : null}
+      {badgeContent ? (
+        <span className="app-nav-badge" aria-label={`${badgeContent} непрочитанных уведомлений`}>
+          {badgeContent}
+        </span>
+      ) : null}
     </Link>
   )
 }
@@ -308,7 +313,8 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => setProfileEditorOpen(true)}
-                className="group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3"
+                className="group flex max-w-[13rem] min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3 sm:max-w-[18rem] xl:max-w-[24rem]"
+                aria-label="Открыть профиль"
               >
                 <div className="relative shrink-0">
                   <div className="app-avatar relative h-11 w-11 text-sm">
@@ -358,7 +364,7 @@ export default function Layout() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Навигация">
           <button
             type="button"
             className="absolute inset-0 bg-surface-1/80"

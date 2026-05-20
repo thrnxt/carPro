@@ -232,7 +232,7 @@ export default function MaintenanceHistory() {
             title="Пока нечего показывать"
             description="Добавьте автомобиль в гараж, чтобы операции, работы и документы начали складываться в историю обслуживания."
             action={
-              <Link to="/garage" className="auto-button-primary">
+              <Link to="/garage" className="btn-primary">
                 Добавить автомобиль
               </Link>
             }
@@ -251,7 +251,7 @@ export default function MaintenanceHistory() {
             title="Не удалось определить автомобиль"
             description="Вероятно, автомобиль удален или у вас больше нет к нему доступа."
             action={
-              <Link to="/maintenance-history" className="auto-button-primary">
+              <Link to="/maintenance-history" className="btn-primary">
                 Открыть всю историю
               </Link>
             }
@@ -277,7 +277,7 @@ export default function MaintenanceHistory() {
         }
         actions={
           id ? (
-            <Link to="/maintenance-history" className="auto-button-secondary">
+            <Link to="/maintenance-history" className="btn-secondary">
               Все автомобили
             </Link>
           ) : undefined
@@ -312,7 +312,7 @@ export default function MaintenanceHistory() {
               </select>
             </div>
 
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-text-muted">
                   <FaFilter />
@@ -368,7 +368,7 @@ export default function MaintenanceHistory() {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0 flex-1">
                           {!id && (
-                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                            <p className="mb-2 text-caption font-semibold text-text-muted">
                               {record.car.brand} {record.car.model}
                               {record.car.licensePlate ? ` · ${record.car.licensePlate}` : ''}
                             </p>
@@ -472,8 +472,8 @@ export default function MaintenanceHistory() {
                               >
                                 <div className="space-y-4">
                                   {record.description && (
-                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                                      <p className="text-caption font-semibold text-slate-500">
                                         Описание работ
                                       </p>
                                       <p className="mt-2 text-sm leading-7 text-slate-300">{record.description}</p>
@@ -481,8 +481,8 @@ export default function MaintenanceHistory() {
                                   )}
 
                                   {(record.serviceCenter?.name || record.serviceCenter?.address) && (
-                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                                      <p className="text-caption font-semibold text-slate-500">
                                         Сервисный центр
                                       </p>
                                       {record.serviceCenter?.name && (
@@ -497,7 +497,7 @@ export default function MaintenanceHistory() {
                                   )}
 
                                   {replacedPartsCount > 0 && (
-                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
                                         <FaWrench className="text-text-muted" />
                                         Замененные детали
@@ -518,7 +518,7 @@ export default function MaintenanceHistory() {
                                   )}
 
                                   {hasInvoice && (
-                                    <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
+                                    <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                                       <a
                                         href={resolveFileUrl(record.invoice?.pdfUrl || '') || '#'}
                                         target="_blank"
@@ -554,7 +554,7 @@ export default function MaintenanceHistory() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-6 flex flex-col gap-3 rounded-[1.4rem] border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-6 flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">
                     Показаны записи {pageStart}-{pageEnd} из {totalRecords}
