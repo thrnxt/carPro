@@ -28,6 +28,7 @@ import apiClient from '../api/client'
 import ProfileEditorModal from './ProfileEditorModal'
 import { useAuthStore } from '../store/authStore'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
+import { BRAND_NAME, BRAND_SUBTITLE } from '../config/branding'
 
 type NavigationItem = {
   path: string
@@ -93,7 +94,7 @@ function getFallbackSection(pathname: string) {
   }
 
   return {
-    title: 'Workspace',
+    title: 'Кабинет',
     group: 'Кабинет',
   }
 }
@@ -191,7 +192,7 @@ export default function Layout() {
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || '')
-    .join('') || 'AS'
+    .join('') || 'SP'
   const avatarSrc = resolveFileUrl(isServiceCenter ? serviceCenterProfile?.logoUrl || user?.avatarUrl : user?.avatarUrl)
 
   const { data: unreadNotificationsCount = 0 } = useQuery({
@@ -255,8 +256,8 @@ export default function Layout() {
               <FaCarSide className="text-xl" />
             </div>
             <div>
-              <div className="app-brand-title">AutoService</div>
-              <div className="app-brand-subtitle">Operations workspace</div>
+              <div className="app-brand-title">{BRAND_NAME}</div>
+              <div className="app-brand-subtitle">{BRAND_SUBTITLE}</div>
             </div>
           </Link>
 
@@ -379,8 +380,8 @@ export default function Layout() {
                   <FaCarSide className="text-xl" />
                 </div>
                 <div>
-                  <div className="app-brand-title">AutoService</div>
-                  <div className="app-brand-subtitle">Operations workspace</div>
+                  <div className="app-brand-title">{BRAND_NAME}</div>
+                  <div className="app-brand-subtitle">{BRAND_SUBTITLE}</div>
                 </div>
               </Link>
 

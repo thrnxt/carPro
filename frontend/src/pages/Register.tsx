@@ -4,6 +4,7 @@ import { FaArrowRight, FaCarSide, FaCheckCircle, FaFileInvoiceDollar, FaUsers } 
 import toast from 'react-hot-toast'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { BRAND_NAME, BRAND_TAGLINE } from '../config/branding'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -37,7 +38,7 @@ export default function Register() {
           <div className="mx-auto w-full max-w-2xl">
             <div className="page-eyebrow mb-4">Create profile</div>
             <h1 className="text-3xl font-extrabold text-white lg:text-4xl">
-              Регистрация в рабочем кабинете
+              Регистрация в SteppePass
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
               Создайте аккаунт, чтобы управлять автомобилями, обслуживанием, документами и сервисными операциями в одном продукте.
@@ -110,7 +111,7 @@ export default function Register() {
                 </button>
 
                 <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
-                  После регистрации вы попадете в основной workspace. Роль и функциональность подхватятся из вашей учетной записи.
+                  После регистрации вы попадете в основной кабинет. Роль и функциональность подхватятся из вашей учетной записи.
                 </div>
 
                 <div className="text-sm text-slate-400">
@@ -131,8 +132,8 @@ export default function Register() {
                 <FaCarSide />
               </div>
               <div>
-                <h2 className="text-4xl font-extrabold text-white">AutoService</h2>
-                <p className="mt-1 text-base text-slate-400">Workspace для транспорта и сервиса.</p>
+                <h2 className="text-4xl font-extrabold text-white">{BRAND_NAME}</h2>
+                <p className="mt-1 text-base text-slate-400">{BRAND_TAGLINE}</p>
               </div>
             </div>
 
@@ -171,7 +172,7 @@ export default function Register() {
             {[
               'Сценарии для владельца и сервиса в одном интерфейсе',
               'Профессиональная подача без учебной верстки',
-              'Структура под реальные SaaS и cabinet workflows',
+              'Структура под реальные SaaS-сценарии владения авто',
             ].map((item) => (
               <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start gap-3">

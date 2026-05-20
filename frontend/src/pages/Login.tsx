@@ -4,6 +4,7 @@ import { FaArrowRight, FaCarSide, FaCheckCircle, FaClipboardList, FaShieldAlt } 
 import toast from 'react-hot-toast'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
+import { BRAND_NAME, BRAND_SUBTITLE, BRAND_TAGLINE } from '../config/branding'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -30,15 +31,15 @@ export default function Login() {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl gap-6 lg:grid-cols-[1.08fr_0.92fr]">
         <section className="auto-card hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <div className="page-eyebrow mb-5">Fleet workspace</div>
+            <div className="page-eyebrow mb-5">{BRAND_SUBTITLE}</div>
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10 text-3xl text-white">
                 <FaCarSide />
               </div>
               <div>
-                <h1 className="text-4xl font-extrabold text-white">AutoService</h1>
+                <h1 className="text-4xl font-extrabold text-white">{BRAND_NAME}</h1>
                 <p className="mt-1 text-base text-slate-400">
-                  Кабинет для владельцев авто, сервисов и операционных команд.
+                  {BRAND_TAGLINE}
                 </p>
               </div>
             </div>
@@ -52,7 +53,7 @@ export default function Login() {
                   <div>
                     <h2 className="text-lg font-semibold text-white">Операционный cockpit</h2>
                     <p className="mt-1 text-sm leading-6 text-slate-400">
-                      Гараж, записи, сервисные операции, счета и документы в одном рабочем пространстве.
+                      Гараж, записи, сервисные операции, счета и документы в едином цифровом паспорте автомобиля.
                     </p>
                   </div>
                 </div>
@@ -93,15 +94,15 @@ export default function Login() {
         <section className="auto-card flex items-center p-6 sm:p-8 lg:p-10">
           <div className="mx-auto w-full max-w-md">
             <div className="lg:hidden">
-              <div className="page-eyebrow mb-4">AutoService</div>
-              <h1 className="text-3xl font-extrabold text-white">Вход в workspace</h1>
+              <div className="page-eyebrow mb-4">{BRAND_NAME}</div>
+              <h1 className="text-3xl font-extrabold text-white">Вход в SteppePass</h1>
               <p className="mt-3 text-sm leading-6 text-slate-400">
                 Управляйте автомобилями, обслуживанием, клиентскими визитами и документами из одного кабинета.
               </p>
             </div>
 
             <div className="hidden lg:block">
-              <h2 className="text-4xl font-extrabold text-white">Вход в workspace</h2>
+              <h2 className="text-4xl font-extrabold text-white">Вход в SteppePass</h2>
               <p className="mt-3 text-sm leading-6 text-slate-400">
                 Возвращаем вас в рабочий контур: гараж, операции, сервисные записи и документы.
               </p>
