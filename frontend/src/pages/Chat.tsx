@@ -275,7 +275,7 @@ export default function Chat() {
               <div className="space-y-2">
                 {isContactsLoading ? (
                   <div className="flex min-h-[16rem] items-center justify-center">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info"></div>
                   </div>
                 ) : contacts.length > 0 ? (
                   contacts.map((contact) => {
@@ -416,7 +416,7 @@ export default function Chat() {
                       {isConversationLoading ? (
                         <div className="flex h-full min-h-[26rem] items-center justify-center">
                           <div className="text-center">
-                            <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+                            <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
                             <p className="mt-3 text-sm text-slate-400">Загрузка переписки...</p>
                           </div>
                         </div>
@@ -429,7 +429,7 @@ export default function Chat() {
                               <div
                                 className={`max-w-xl rounded-[1.35rem] border px-4 py-3 ${
                                   isOwn
-                                    ? 'border-[#ff6b4a]/20 bg-[#ff6b4a]/12 text-white'
+                                    ? 'border-border bg-surface-3 text-white'
                                     : 'border-white/10 bg-white/5 text-white'
                                 }`}
                               >
@@ -439,7 +439,7 @@ export default function Chat() {
                                   </div>
                                 )}
                                 <p className="text-sm leading-6">{entry.content}</p>
-                                <div className={`mt-2 text-xs ${isOwn ? 'text-[#ffb29f]' : 'text-slate-400'}`}>
+                                <div className={`mt-2 text-xs ${isOwn ? 'text-text-secondary' : 'text-slate-400'}`}>
                                   {format(new Date(entry.createdAt), 'HH:mm', { locale: ru })}
                                 </div>
                               </div>

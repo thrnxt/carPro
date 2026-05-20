@@ -32,7 +32,7 @@ export default function Login() {
           <div>
             <div className="page-eyebrow mb-5">Fleet workspace</div>
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(255,107,74,0.55)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(55,138,221,0.55)]">
                 <FaCarSide />
               </div>
               <div>
@@ -46,7 +46,7 @@ export default function Login() {
             <div className="mt-10 space-y-5">
               <div className="glass-panel p-5">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[#ff9b82]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-text-muted">
                     <FaClipboardList />
                   </div>
                   <div>
@@ -82,7 +82,7 @@ export default function Login() {
             ].map((item) => (
               <div key={item} className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start gap-3">
-                  <FaCheckCircle className="mt-1 text-[#ff9b82]" />
+                  <FaCheckCircle className="mt-1 text-text-muted" />
                   <p className="text-sm leading-6 text-slate-300">{item}</p>
                 </div>
               </div>
@@ -149,7 +149,7 @@ export default function Login() {
 
               <div className="text-center text-sm text-slate-400">
                 Нет аккаунта?{' '}
-                <Link to="/register" className="font-semibold text-[#ff9b82] transition-colors hover:text-[#ffb29f]">
+                <Link to="/register" className="font-semibold text-text-muted transition-colors hover:text-text-primary">
                   Создать профиль
                 </Link>
               </div>

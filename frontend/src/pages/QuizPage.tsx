@@ -57,7 +57,7 @@ export default function QuizPage() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка квиза...</p>
         </div>
       </Page>
@@ -143,7 +143,7 @@ export default function QuizPage() {
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-            <div className="h-2 rounded-full bg-[#ff6b4a] transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-2 rounded-full bg-info transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
@@ -161,7 +161,7 @@ export default function QuizPage() {
                     onClick={() => handleAnswerSelect(answer.id)}
                     className={`w-full rounded-[1.35rem] border p-4 text-left transition-all ${
                       isSelected
-                        ? 'border-[#ff6b4a]/25 bg-[#ff6b4a]/12 text-white'
+                        ? 'border-info bg-surface-3 text-white'
                         : 'border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/8'
                     }`}
                   >

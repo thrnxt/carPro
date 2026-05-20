@@ -202,7 +202,7 @@ export default function ServiceCenterClients() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка клиентов...</p>
         </div>
       </Page>
@@ -335,7 +335,7 @@ export default function ServiceCenterClients() {
                       <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]">
                         <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
-                            <FaCar className="text-[#ff9b82]" />
+                            <FaCar className="text-text-muted" />
                             Автомобили клиента
                           </h4>
 
@@ -355,7 +355,7 @@ export default function ServiceCenterClients() {
                                   className={cx(
                                     'w-full rounded-[1rem] border px-3 py-3 text-left transition-colors',
                                     selectedCarId === car.id
-                                      ? 'border-[#ff9b82]/35 bg-[#ff9b82]/10'
+                                      ? 'border-border bg-surface-3'
                                       : 'border-white/10 bg-slate-950/30 hover:border-white/20 hover:bg-white/[0.04]'
                                   )}
                                 >
@@ -371,7 +371,7 @@ export default function ServiceCenterClients() {
 
                         <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
-                            <FaClipboardList className="text-[#ff9b82]" />
+                            <FaClipboardList className="text-text-muted" />
                             История операций
                           </h4>
 

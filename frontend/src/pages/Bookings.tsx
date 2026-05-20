@@ -395,7 +395,7 @@ export default function Bookings() {
                               <p className="text-white font-semibold">
                                 {booking.car.brand} {booking.car.model}
                               </p>
-                              <p className="text-red-400 font-mono text-sm">{booking.car.licensePlate}</p>
+                              <p className="text-info font-mono text-sm">{booking.car.licensePlate}</p>
                             </div>
                           </div>
                         )}

@@ -146,7 +146,7 @@ export default function MaintenanceCalendar() {
   const getEventColor = (event: any) => {
     if (event.type === 'notification') {
       return event.priority === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700/50' :
-             event.priority === 'HIGH' ? 'bg-orange-900/50 text-orange-300 border border-orange-700/50' :
+             event.priority === 'HIGH' ? 'bg-surface-3 text-warning border border-warning' :
              'bg-amber-900/50 text-amber-300 border border-amber-700/50'
     }
     if (event.type === 'booking') {
@@ -296,7 +296,7 @@ export default function MaintenanceCalendar() {
                   key={notification.id}
                   className={`p-4 rounded-lg border-l-4 ${
                     notification.priority === 'CRITICAL' ? 'border-red-500 bg-red-900/20' :
-                    notification.priority === 'HIGH' ? 'border-orange-500 bg-orange-900/20' :
+                    notification.priority === 'HIGH' ? 'border-warning bg-surface-3' :
                     'border-amber-500 bg-amber-900/20'
                   }`}
                 >

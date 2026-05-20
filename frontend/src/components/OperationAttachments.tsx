@@ -63,7 +63,7 @@ export default function OperationAttachments({
       )}
     >
       <h4 className={cx('flex items-center gap-2 font-semibold text-white', inline ? 'mb-2.5 text-sm' : 'mb-3')}>
-        <FaCamera className="text-[#ff9b82]" />
+        <FaCamera className="text-text-muted" />
         {title}
         <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-400">
           {totalAttachmentsCount}
@@ -92,7 +92,7 @@ export default function OperationAttachments({
               >
                 <div
                   className={cx(
-                    'overflow-hidden rounded-[1.2rem] border border-white/10 bg-slate-950/70 transition-colors group-hover:border-[#ff9b82]/40',
+                    'overflow-hidden rounded-[1.2rem] border border-white/10 bg-slate-950/70 transition-colors group-hover:border-border',
                     inline ? 'h-20 rounded-[0.95rem]' : compact ? 'h-24 sm:h-28' : 'h-32 sm:h-36'
                   )}
                 >
@@ -108,7 +108,7 @@ export default function OperationAttachments({
                     <p className={cx('truncate text-[11px] text-slate-300', inline && 'max-w-[4.8rem] text-[10px]')}>
                       {getAttachmentLabel(attachment)}
                     </p>
-                    <FaExternalLinkAlt className="shrink-0 text-[11px] text-slate-500 transition-colors group-hover:text-[#ff9b82]" />
+                    <FaExternalLinkAlt className="shrink-0 text-[11px] text-slate-500 transition-colors group-hover:text-text-muted" />
                   </div>
                 )}
               </a>
@@ -129,11 +129,11 @@ export default function OperationAttachments({
                 target="_blank"
                 rel="noreferrer"
                 className={cx(
-                  'inline-flex min-w-0 items-center gap-2 border border-white/10 bg-white/5 text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10',
+                  'inline-flex min-w-0 items-center gap-2 border border-white/10 bg-white/5 text-slate-200 transition-colors hover:border-border hover:bg-white/10',
                   inline ? 'rounded-xl px-2.5 py-2 text-xs' : 'rounded-2xl px-3 py-2 text-sm'
                 )}
               >
-                <FaFileAlt className="shrink-0 text-[#ff9b82]" />
+                <FaFileAlt className="shrink-0 text-text-muted" />
                 <span className={cx('truncate', inline ? 'max-w-[10rem]' : 'max-w-[15rem]')}>
                   {getAttachmentLabel(attachment)}
                 </span>

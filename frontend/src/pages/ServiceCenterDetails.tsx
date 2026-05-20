@@ -147,7 +147,7 @@ export default function ServiceCenterDetails() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <FaInfoCircle className="text-[#ff9b82]" />
+              <FaInfoCircle className="text-text-muted" />
               Информация
             </h2>
             <div className="space-y-3">

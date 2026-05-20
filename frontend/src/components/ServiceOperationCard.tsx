@@ -145,7 +145,7 @@ export default function ServiceOperationCard({
           {operation.description && (
             <div className="mt-4 rounded-[1.1rem] border border-white/10 bg-slate-950/45 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <FaCommentDots className="text-[#ff9b82]" />
+                <FaCommentDots className="text-text-muted" />
                 Комментарий мастера
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-300">{operation.description}</p>

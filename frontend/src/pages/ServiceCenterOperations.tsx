@@ -245,7 +245,7 @@ export default function ServiceCenterOperations() {
       >
         {isLoading && !operationsPage ? (
           <div className="py-12 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#ff9b82]" />
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info" />
             <p className="mt-2 text-slate-400">Загрузка журнала операций...</p>
           </div>
         ) : !operationsPage || operationsPage.content.length === 0 ? (
@@ -418,7 +418,7 @@ export default function ServiceCenterOperations() {
                   Показаны {pageStart}-{pageEnd} из {operationsPage.totalElements}
                 </span>
                 <span className="flex items-center gap-2">
-                  <FaCalendarAlt className="text-[#ff9b82]" />
+                  <FaCalendarAlt className="text-text-muted" />
                   Страница {operationsPage.page + 1} из {Math.max(operationsPage.totalPages, 1)}
                 </span>
               </div>

@@ -99,7 +99,7 @@ export default function ServiceCenterMap() {
           {isLoading ? (
             <div className="flex min-h-[34rem] items-center justify-center bg-slate-950/50">
               <div className="text-center">
-                <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+                <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
                 <p className="mt-3 text-sm text-slate-400">Загрузка карты...</p>
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function ServiceCenterMap() {
                         )}
                         <Link
                           to={`/service-centers/${center.id}`}
-                          className="mt-3 inline-flex text-sm font-semibold text-[#ff9b82] transition-colors hover:text-[#ffb29f]"
+                          className="mt-3 inline-flex text-sm font-semibold text-text-muted transition-colors hover:text-text-primary"
                         >
                           Открыть карточку
                         </Link>
@@ -165,7 +165,7 @@ export default function ServiceCenterMap() {
                     <h3 className="text-lg font-semibold text-white">{center.name}</h3>
                     <p className="mt-2 text-sm leading-6 text-slate-400">{center.address}</p>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#ff9b82]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-text-muted">
                     <FaMapMarkerAlt />
                   </div>
                 </div>
@@ -194,7 +194,7 @@ export default function ServiceCenterMap() {
           </div>
         ) : (
           <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/5 p-10 text-center">
-            <FaMapMarkerAlt className="mx-auto text-5xl text-[#ff9b82]/70" />
+            <FaMapMarkerAlt className="mx-auto text-5xl text-text-muted" />
             <p className="mt-4 text-lg font-semibold text-white">Ничего не найдено в выбранном радиусе</p>
             <p className="mt-2 text-sm text-slate-400">Увеличьте радиус поиска или измените текущую точку.</p>
           </div>

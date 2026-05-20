@@ -115,7 +115,7 @@ export default function Register() {
 
                 <div className="text-sm text-slate-400">
                   Уже есть аккаунт?{' '}
-                  <Link to="/login" className="font-semibold text-[#ff9b82] transition-colors hover:text-[#ffb29f]">
+                  <Link to="/login" className="font-semibold text-text-muted transition-colors hover:text-text-primary">
                     Войти
                   </Link>
                 </div>
@@ -127,7 +127,7 @@ export default function Register() {
         <section className="auto-card hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(255,107,74,0.55)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white/10 text-3xl text-white shadow-[0_24px_42px_-26px_rgba(55,138,221,0.55)]">
                 <FaCarSide />
               </div>
               <div>
@@ -139,7 +139,7 @@ export default function Register() {
             <div className="mt-10 grid gap-4">
               <div className="glass-panel p-5">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[#ff9b82]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-text-muted">
                     <FaUsers />
                   </div>
                   <div>
@@ -175,7 +175,7 @@ export default function Register() {
             ].map((item) => (
               <div key={item} className="rounded-[1.35rem] border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start gap-3">
-                  <FaCheckCircle className="mt-1 text-[#ff9b82]" />
+                  <FaCheckCircle className="mt-1 text-text-muted" />
                   <p className="text-sm leading-6 text-slate-300">{item}</p>
                 </div>
               </div>

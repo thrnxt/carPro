@@ -328,7 +328,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
       />
 
       <div className="relative w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#08111d]/95 shadow-[0_44px_120px_-42px_rgba(2,6,23,0.96)]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(255,107,74,0.28),transparent_52%),radial-gradient(circle_at_top_right,rgba(96,165,250,0.18),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,rgba(55,138,221,0.28),transparent_52%),radial-gradient(circle_at_top_right,rgba(96,165,250,0.18),transparent_42%)]" />
 
         <div className="relative grid lg:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="border-b border-white/10 bg-white/[0.03] p-6 sm:p-8 lg:border-b-0 lg:border-r">
@@ -342,8 +342,8 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
 
             <div className="mt-8 flex flex-col items-start">
               <div className="relative">
-                <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-br from-[#ff6b4a]/45 via-[#ff9d82]/10 to-sky-400/20 blur-md" />
-                <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-[#ff6b4a] to-[#ff845f] text-3xl font-bold text-white shadow-[0_26px_50px_-28px_rgba(255,107,74,0.7)]">
+                <div className="absolute -inset-1 rounded-lg bg-surface-3" />
+                <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-3 text-3xl font-bold text-white">
                   {resolvedAvatarUrl ? (
                     <img
                       src={resolvedAvatarUrl}

@@ -211,7 +211,7 @@ export default function MaintenanceHistory() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка истории обслуживания...</p>
         </div>
       </Page>
@@ -314,7 +314,7 @@ export default function MaintenanceHistory() {
 
             <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[#ff9b82]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-text-muted">
                   <FaFilter />
                 </div>
                 <div>
@@ -368,7 +368,7 @@ export default function MaintenanceHistory() {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0 flex-1">
                           {!id && (
-                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ff9b82]">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                               {record.car.brand} {record.car.model}
                               {record.car.licensePlate ? ` · ${record.car.licensePlate}` : ''}
                             </p>
@@ -423,21 +423,21 @@ export default function MaintenanceHistory() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             {attachmentCount > 0 && (
                               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
-                                <FaCamera className="text-[#ff9b82]" />
+                                <FaCamera className="text-text-muted" />
                                 {attachmentCount} фото
                               </span>
                             )}
 
                             {replacedPartsCount > 0 && (
                               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
-                                <FaWrench className="text-[#ff9b82]" />
+                                <FaWrench className="text-text-muted" />
                                 {replacedPartsCount} деталей
                               </span>
                             )}
 
                             {hasInvoice && (
                               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
-                                <FaFilePdf className="text-[#ff9b82]" />
+                                <FaFilePdf className="text-text-muted" />
                                 PDF
                               </span>
                             )}
@@ -455,7 +455,7 @@ export default function MaintenanceHistory() {
                                   currentValue === recordKey ? null : recordKey
                                 )
                               }
-                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white"
+                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-border hover:bg-white/10 hover:text-white"
                             >
                               {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
                               {isExpanded ? 'Скрыть детали' : 'Подробнее'}
@@ -499,7 +499,7 @@ export default function MaintenanceHistory() {
                                   {replacedPartsCount > 0 && (
                                     <div className="rounded-[1.1rem] border border-white/10 bg-white/5 p-4">
                                       <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
-                                        <FaWrench className="text-[#ff9b82]" />
+                                        <FaWrench className="text-text-muted" />
                                         Замененные детали
                                       </h4>
                                       <div className="mt-3 flex flex-wrap gap-2">
@@ -523,7 +523,7 @@ export default function MaintenanceHistory() {
                                         href={resolveFileUrl(record.invoice?.pdfUrl || '') || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 text-sm font-medium text-[#ff9b82] transition-colors hover:text-[#ffb29f]"
+                                        className="inline-flex items-center gap-2 text-sm font-medium text-text-muted transition-colors hover:text-text-primary"
                                       >
                                         <FaFilePdf />
                                         Открыть счет в PDF
@@ -572,7 +572,7 @@ export default function MaintenanceHistory() {
                       setExpandedRecordKey(null)
                     }}
                     disabled={recordsPage?.first ?? currentPage === 0}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-border hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <FaChevronLeft />
                     Назад
@@ -589,7 +589,7 @@ export default function MaintenanceHistory() {
                       setExpandedRecordKey(null)
                     }}
                     disabled={recordsPage?.last ?? true}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-[#ff9b82]/35 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-border hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Далее
                     <FaChevronRight />

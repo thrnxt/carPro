@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
-import { IconType } from 'react-icons'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { IconType } from 'react-icons'
 
 export function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
@@ -32,6 +32,19 @@ export function PageHeader({
   )
 }
 
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'chip'
+
+export function Button({
+  variant = 'secondary',
+  className,
+  type = 'button',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant
+}) {
+  return <button type={type} className={cx(`btn-${variant}`, className)} {...props} />
+}
+
 export function HeroCard({
   eyebrow,
   title,
@@ -48,11 +61,11 @@ export function HeroCard({
   className?: string
 }) {
   return (
-    <section className={cx('auto-card p-7 sm:p-8', className)}>
+    <section className={cx('auto-card p-card', className)}>
       <div className="page-header">
         <div className="page-header-content">
           {eyebrow ? <div className="page-eyebrow">{eyebrow}</div> : null}
-          <h2 className="page-title text-[2.35rem] sm:text-[2.7rem] xl:text-[3rem]">{title}</h2>
+          <h2 className="page-title">{title}</h2>
           {description ? <p className="page-subtitle">{description}</p> : null}
         </div>
         {actions ? <div className="page-actions">{actions}</div> : null}
@@ -78,12 +91,12 @@ export function Section({
   className?: string
 }) {
   return (
-    <section className={cx('auto-card p-7 sm:p-8', className)}>
+    <section className={cx('auto-card p-card', className)}>
       {title || description || eyebrow || actions ? (
         <div className="page-header">
           <div className="page-header-content">
             {eyebrow ? <div className="page-eyebrow">{eyebrow}</div> : null}
-            {title ? <h2 className="text-3xl font-bold text-white">{title}</h2> : null}
+            {title ? <h2 className="text-h2 text-text-primary">{title}</h2> : null}
             {description ? <p className="page-subtitle">{description}</p> : null}
           </div>
           {actions ? <div className="page-actions">{actions}</div> : null}
@@ -99,7 +112,7 @@ export function StatCard({
   label,
   value,
   meta,
-  tone = 'text-[#ff9b82]',
+  tone,
 }: {
   icon?: IconType
   label: ReactNode
@@ -107,16 +120,18 @@ export function StatCard({
   meta?: ReactNode
   tone?: string
 }) {
+  void tone
+
   return (
     <div className="metric-card">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="metric-label">{label}</p>
           <p className="metric-value">{value}</p>
           {meta ? <p className="metric-meta">{meta}</p> : null}
         </div>
         {Icon ? (
-          <div className={cx('flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-xl', tone)}>
+          <div className="metric-icon">
             <Icon />
           </div>
         ) : null}
@@ -139,11 +154,11 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cx('rounded-[28px] border border-dashed border-white/10 bg-white/5 p-10 text-center sm:p-12', className)}>
-      {Icon ? <Icon className="mx-auto text-7xl text-orange-300/70" /> : null}
-      <h3 className="mt-6 text-3xl font-bold text-white">{title}</h3>
+    <div className={cx('rounded-lg border border-dashed border-border bg-surface-2 p-8 text-center sm:p-12', className)}>
+      {Icon ? <Icon className="mx-auto text-display text-text-muted" /> : null}
+      <h3 className="mt-6 text-h2 text-text-primary">{title}</h3>
       {description ? (
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-400">{description}</p>
+        <p className="mx-auto mt-3 max-w-2xl text-body text-text-secondary">{description}</p>
       ) : null}
       {action ? <div className="mt-6">{action}</div> : null}
     </div>
@@ -157,7 +172,7 @@ export function Surface({
   children: ReactNode
   className?: string
 }) {
-  return <div className={cx('glass-panel p-5', className)}>{children}</div>
+  return <div className={cx('glass-panel p-card', className)}>{children}</div>
 }
 
 export function KeyValue({
@@ -170,9 +185,9 @@ export function KeyValue({
   className?: string
 }) {
   return (
-    <div className={cx('flex items-center justify-between gap-4 text-sm', className)}>
-      <span className="text-slate-400">{label}</span>
-      <span className="text-right font-semibold text-white">{value}</span>
+    <div className={cx('flex items-center justify-between gap-4 text-body', className)}>
+      <span className="text-text-secondary">{label}</span>
+      <span className="text-right font-medium text-text-primary">{value}</span>
     </div>
   )
 }
@@ -187,17 +202,17 @@ export function SegmentedControl<T extends string>({
   onChange: (value: T) => void
 }) {
   return (
-    <div className="inline-flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+    <div className="inline-flex flex-wrap gap-2 rounded-md border border-border bg-surface-2 p-1">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
           className={cx(
-            'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+            'rounded-sm px-4 py-2 text-body transition-colors',
             option.value === value
-              ? 'bg-white text-slate-900'
-              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+              ? 'bg-surface-3 text-text-primary'
+              : 'text-text-secondary hover:bg-surface-3 hover:text-text-primary'
           )}
         >
           {option.label}
@@ -208,7 +223,7 @@ export function SegmentedControl<T extends string>({
 }
 
 export function FilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('glass-panel p-4 sm:p-5', className)}>{children}</div>
+  return <div className={cx('glass-panel p-card', className)}>{children}</div>
 }
 
 export function SectionGrid({
@@ -218,7 +233,7 @@ export function SectionGrid({
   children: ReactNode
   className?: string
 }) {
-  return <div className={cx('grid gap-6 md:grid-cols-2 xl:grid-cols-3', className)}>{children}</div>
+  return <div className={cx('grid gap-3 md:grid-cols-2 xl:grid-cols-3', className)}>{children}</div>
 }
 
 export function Badge({
@@ -228,7 +243,7 @@ export function Badge({
   children: ReactNode
   tone?: string
 }) {
-  return <span className={cx('auto-badge', tone)}>{children}</span>
+  return <span className={cx('btn-chip', tone)}>{children}</span>
 }
 
 export function TableShell({
@@ -242,7 +257,7 @@ export function TableShell({
 }) {
   return (
     <Section title={title} description={description}>
-      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5">
+      <div className="overflow-hidden rounded-md border border-border bg-surface-2">
         <div className="overflow-x-auto">{children}</div>
       </div>
     </Section>

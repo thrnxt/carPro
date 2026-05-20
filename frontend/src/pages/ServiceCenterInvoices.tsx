@@ -330,7 +330,7 @@ export default function ServiceCenterInvoices() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка счетов...</p>
         </div>
       </Page>
@@ -720,7 +720,7 @@ export default function ServiceCenterInvoices() {
 
                         <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/25 p-4">
                           <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
-                            <FaReceipt className="text-[#ff9b82]" />
+                            <FaReceipt className="text-text-muted" />
                             Позиции
                           </h4>
 

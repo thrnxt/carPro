@@ -207,7 +207,7 @@ export default function ServiceCenterBookings() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка записей...</p>
         </div>
       </Page>
@@ -282,7 +282,7 @@ export default function ServiceCenterBookings() {
 
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 text-sm font-semibold text-white">
-                        <FaCar className="shrink-0 text-[#ff9b82]" />
+                        <FaCar className="shrink-0 text-text-muted" />
                         <span className="truncate">{getCarTitle(booking)}</span>
                       </p>
                       <p className="mt-1 text-sm text-slate-300">{getClientName(booking)}</p>

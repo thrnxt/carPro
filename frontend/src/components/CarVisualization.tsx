@@ -43,14 +43,14 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
 
   const getStatusColor = (wearLevel: number) => {
     if (wearLevel >= 90) return 'bg-red-500'
-    if (wearLevel >= 70) return 'bg-orange-500'
+    if (wearLevel >= 70) return 'bg-warning'
     if (wearLevel >= 50) return 'bg-yellow-500'
     return 'bg-emerald-500'
   }
 
   const getStatusTextColor = (wearLevel: number) => {
     if (wearLevel >= 90) return 'text-red-300'
-    if (wearLevel >= 70) return 'text-orange-300'
+    if (wearLevel >= 70) return 'text-warning'
     if (wearLevel >= 50) return 'text-yellow-300'
     return 'text-emerald-300'
   }
@@ -86,7 +86,7 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
     avgWear >= 90
       ? { text: 'Критическое', color: 'text-red-400', Icon: FaExclamationTriangle }
       : avgWear >= 70
-        ? { text: 'Требует внимания', color: 'text-orange-400', Icon: FaExclamationTriangle }
+        ? { text: 'Требует внимания', color: 'text-warning', Icon: FaExclamationTriangle }
         : avgWear >= 50
           ? { text: 'Нормальное', color: 'text-yellow-400', Icon: FaInfoCircle }
           : { text: 'Отличное', color: 'text-emerald-400', Icon: FaCheckCircle }
@@ -244,8 +244,8 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
                       )}
                       {component.wearLevel >= 70 && component.wearLevel < 90 && (
                         <>
-                          <FaExclamationTriangle className="text-orange-400" />
-                          <span className="text-orange-300">Рекомендуется замена в ближайшее время</span>
+                          <FaExclamationTriangle className="text-warning" />
+                          <span className="text-warning">Рекомендуется замена в ближайшее время</span>
                         </>
                       )}
                       {component.wearLevel < 70 && (

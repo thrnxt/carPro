@@ -446,7 +446,7 @@ export default function ServiceCenterOperationCreate() {
           <div className="border-t border-white/10 pt-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
-                <FaTools className="text-[#ff9b82]" />
+                <FaTools className="text-text-muted" />
                 Замененные детали
               </h3>
               <button type="button" className="auto-button-secondary text-sm" onClick={addReplacedPartRow}>
@@ -524,7 +524,7 @@ export default function ServiceCenterOperationCreate() {
 
           <div className="border-t border-white/10 pt-6">
             <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
-              <FaCamera className="text-[#ff9b82]" />
+              <FaCamera className="text-text-muted" />
               Подтверждающие фото и документы
             </h3>
             <input

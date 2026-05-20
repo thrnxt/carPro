@@ -107,7 +107,7 @@ export default function ComponentsView() {
 
   const getStatusColor = (wearLevel: number) => {
     if (wearLevel >= 90) return 'border-red-500/50 bg-red-900/20'
-    if (wearLevel >= 70) return 'border-orange-500/50 bg-orange-900/20'
+    if (wearLevel >= 70) return 'border-warning bg-surface-3'
     if (wearLevel >= 50) return 'border-yellow-500/50 bg-yellow-900/20'
     return 'border-emerald-500/50 bg-emerald-900/20'
   }
@@ -129,7 +129,7 @@ export default function ComponentsView() {
 
   const getStatusTextColor = (wearLevel: number) => {
     if (wearLevel >= 90) return 'text-red-400'
-    if (wearLevel >= 70) return 'text-orange-400'
+    if (wearLevel >= 70) return 'text-warning'
     if (wearLevel >= 50) return 'text-yellow-400'
     return 'text-emerald-400'
   }
@@ -218,8 +218,8 @@ export default function ComponentsView() {
       key: 'WARNING',
       label: 'Требует внимания',
       count: components?.filter((component: Component) => getStatusKey(component.wearLevel) === 'WARNING').length || 0,
-      countClassName: 'text-orange-400',
-      activeClassName: 'bg-orange-500/10',
+      countClassName: 'text-warning',
+      activeClassName: 'bg-surface-3',
       activeStyle: {
         borderColor: 'rgb(249 115 22 / 1)',
         boxShadow: '0 0 0 1px rgba(249, 115, 22, 0.22)',
@@ -378,7 +378,7 @@ export default function ComponentsView() {
                                 {component.wearLevel >= 90 ? (
                                   <FaExclamationTriangle className="text-2xl text-red-500" />
                                 ) : component.wearLevel >= 70 ? (
-                                  <FaExclamationTriangle className="text-2xl text-orange-500" />
+                                  <FaExclamationTriangle className="text-2xl text-warning" />
                                 ) : (
                                   <FaCheckCircle className="text-2xl text-emerald-500" />
                                 )}
@@ -403,7 +403,7 @@ export default function ComponentsView() {
                                 <div
                                   className={`h-4 rounded-full transition-all ${
                                     component.wearLevel >= 90 ? 'bg-red-500' :
-                                    component.wearLevel >= 70 ? 'bg-orange-500' :
+                                    component.wearLevel >= 70 ? 'bg-warning' :
                                     component.wearLevel >= 50 ? 'bg-yellow-500' :
                                     'bg-emerald-500'
                                   }`}

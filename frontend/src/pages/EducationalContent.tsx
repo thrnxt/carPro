@@ -50,7 +50,7 @@ const TYPE_LABELS: Record<ContentType, string> = {
 
 const TYPE_STYLES: Record<ContentType, string> = {
   ARTICLE: 'bg-sky-500/12 text-sky-200 border-sky-400/20',
-  VIDEO: 'bg-[#ff6b4a]/12 text-orange-200 border-[#ff6b4a]/20',
+  VIDEO: 'bg-surface-3 text-info border-border',
   CHECKLIST: 'bg-emerald-500/12 text-emerald-200 border-emerald-400/20',
 }
 
@@ -207,7 +207,7 @@ export default function EducationalContent() {
     return (
       <Page>
         <div className="p-10 text-center">
-          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-[#ff9b82]"></div>
+          <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
           <p className="mt-3 text-sm text-slate-400">Загрузка материалов...</p>
         </div>
       </Page>
@@ -258,7 +258,7 @@ export default function EducationalContent() {
               className={cx(
                 'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
                 activeCategory === category
-                  ? 'border-[#ff6b4a]/25 bg-[#ff6b4a]/12 text-white'
+                  ? 'border-info bg-surface-3 text-white'
                   : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
               )}
             >
@@ -318,9 +318,9 @@ export default function EducationalContent() {
                     />
                   </div>
                 ) : (
-                  <div className="flex min-h-[320px] items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,107,74,0.18),transparent_34%),linear-gradient(180deg,#111c2b_0%,#08111b_100%)] p-8 text-center">
+                  <div className="flex min-h-[320px] items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(55,138,221,0.18),transparent_34%),linear-gradient(180deg,#111c2b_0%,#08111b_100%)] p-8 text-center">
                     <div className="max-w-xl">
-                      {SelectedItemIcon ? <SelectedItemIcon className="mx-auto text-6xl text-[#ff9b82]" /> : null}
+                      {SelectedItemIcon ? <SelectedItemIcon className="mx-auto text-6xl text-text-muted" /> : null}
                       <p className="mt-5 text-xl font-semibold text-white">{TYPE_LABELS[selectedItem.type]}</p>
                       <p className="mt-3 text-sm leading-7 text-slate-300">{selectedItem.content}</p>
                     </div>
@@ -334,12 +334,12 @@ export default function EducationalContent() {
                     Урок {selectedIndex + 1} из {filteredContent.length}
                   </span>
                   <span className="inline-flex items-center gap-2">
-                    <FaClock className="text-[#ff9b82]" />
+                    <FaClock className="text-text-muted" />
                     {formatDuration(selectedItem.durationMinutes)}
                   </span>
                   {selectedItem.difficulty ? (
                     <span className="inline-flex items-center gap-2">
-                      <FaSignal className="text-[#ff9b82]" />
+                      <FaSignal className="text-text-muted" />
                       {selectedItem.difficulty}
                     </span>
                   ) : null}
@@ -388,12 +388,12 @@ export default function EducationalContent() {
                         className={cx(
                           'w-full rounded-[1.25rem] border p-4 text-left transition-all',
                           selectedItem.id === item.id
-                            ? 'border-[#ff6b4a]/25 bg-[#ff6b4a]/12'
+                            ? 'border-info bg-surface-3'
                             : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
                         )}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#ff9b82]">
+                          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-text-muted">
                             <LessonIcon />
                           </div>
                           <div className="min-w-0">

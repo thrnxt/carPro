@@ -29,14 +29,14 @@ import ProfileEditorModal from './ProfileEditorModal'
 import { useAuthStore } from '../store/authStore'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
 
-type NavItem = {
+type NavigationItem = {
   path: string
   label: string
   icon: typeof FaHome
   description: string
 }
 
-const userNavItems: NavItem[] = [
+const userNavItems: NavigationItem[] = [
   { path: '/', label: 'Главная', icon: FaHome, description: 'Обзор аккаунта' },
   { path: '/garage', label: 'Гараж', icon: FaCar, description: 'Автомобили и VIN' },
   { path: '/service-centers', label: 'Сервисы', icon: FaWrench, description: 'Поиск партнеров' },
@@ -49,7 +49,7 @@ const userNavItems: NavItem[] = [
   { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации' },
 ]
 
-const serviceCenterNavItems: NavItem[] = [
+const serviceCenterNavItems: NavigationItem[] = [
   { path: '/', label: 'Обзор', icon: FaChartBar, description: 'KPI и расписание' },
   { path: '/service-center/bookings', label: 'Записи', icon: FaClipboardList, description: 'Поток клиентов' },
   { path: '/service-center/clients', label: 'Клиенты', icon: FaUsers, description: 'База и статусы' },
@@ -104,43 +104,57 @@ function NavigationList({
   onNavigate,
   getBadgeContent,
 }: {
-  items: NavItem[]
+  items: NavigationItem[]
   pathname: string
   onNavigate?: () => void
-  getBadgeContent?: (item: NavItem) => string | null
+  getBadgeContent?: (item: NavigationItem) => string | null
 }) {
   return (
     <nav className="space-y-2">
       {items.map((item) => {
-        const IconComponent = item.icon
         const isActive = isPathActive(pathname, item.path)
         const badgeContent = getBadgeContent?.(item)
 
         return (
-          <Link
+          <NavItem
             key={item.path}
-            to={item.path}
-            onClick={onNavigate}
-            className={`app-nav-link ${isActive ? 'app-nav-link-active' : ''}`}
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/5 bg-white/5 text-base text-white/90">
-              <IconComponent />
-            </div>
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{item.label}</p>
-                <p className="truncate text-xs text-slate-400">{item.description}</p>
-              </div>
-              {badgeContent && (
-                <span className="inline-flex min-w-[1.6rem] items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold leading-none text-white shadow-[0_10px_20px_-12px_rgba(239,68,68,0.95)]">
-                  {badgeContent}
-                </span>
-              )}
-            </div>
-          </Link>
+            item={item}
+            active={isActive}
+            badgeContent={badgeContent}
+            onNavigate={onNavigate}
+          />
         )
       })}
     </nav>
+  )
+}
+
+export function NavItem({
+  item,
+  active,
+  badgeContent,
+  onNavigate,
+}: {
+  item: NavigationItem
+  active: boolean
+  badgeContent?: string | null
+  onNavigate?: () => void
+}) {
+  const IconComponent = item.icon
+
+  return (
+    <Link
+      to={item.path}
+      onClick={onNavigate}
+      className={`app-nav-link ${active ? 'app-nav-link-active' : ''}`}
+      title={item.description}
+    >
+      <span className="app-nav-icon" aria-hidden="true">
+        <IconComponent />
+      </span>
+      <span className="app-nav-label">{item.label}</span>
+      {badgeContent ? <span className="app-nav-badge">{badgeContent}</span> : null}
+    </Link>
   )
 }
 
@@ -278,7 +292,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 lg:hidden"
+                className="btn-secondary h-11 w-11 p-0 lg:hidden"
                 aria-label="Открыть меню"
               >
                 <FaBars />
@@ -294,11 +308,10 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => setProfileEditorOpen(true)}
-                className="group flex min-w-0 items-center gap-3 rounded-[1.45rem] border border-white/10 bg-white/5 px-3 py-2 text-left transition-all duration-200 hover:border-white/20 hover:bg-white/[0.08]"
+                className="group flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3"
               >
                 <div className="relative shrink-0">
-                  <div className="absolute -inset-1 rounded-[1.35rem] bg-gradient-to-br from-[#ff6b4a]/40 via-transparent to-sky-400/20 opacity-90 blur-sm transition-opacity duration-200 group-hover:opacity-100" />
-                  <div className="app-avatar relative h-11 w-11 rounded-[1.1rem] text-sm ring-1 ring-white/10">
+                  <div className="app-avatar relative h-11 w-11 text-sm">
                     {avatarSrc && !avatarLoadFailed ? (
                       <img
                         src={avatarSrc}
@@ -310,16 +323,16 @@ export default function Layout() {
                       <span>{initials}</span>
                     )}
                   </div>
-                  <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#08111d] bg-emerald-400 shadow-[0_0_0_4px_rgba(16,185,129,0.16)]" />
+                  <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-surface-2 bg-success" />
                 </div>
 
                 <div className="hidden min-w-0 sm:block">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Профиль</p>
-                  <p className="truncate text-sm font-semibold text-white">{profileTitle}</p>
-                  <p className="truncate text-xs text-slate-400">{roleLabel}</p>
-                  <p className="hidden text-[11px] text-[#ff9b82] xl:block">Нажмите, чтобы изменить данные</p>
+                  <p className="section-label">Профиль</p>
+                  <p className="truncate text-body font-medium text-text-primary">{profileTitle}</p>
+                  <p className="truncate text-caption text-text-secondary">{roleLabel}</p>
+                  <p className="hidden text-caption text-text-muted xl:block">Нажмите, чтобы изменить данные</p>
                 </div>
-                <div className="hidden h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-400 transition-all duration-200 group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white md:flex">
+                <div className="btn-secondary hidden h-10 w-10 p-0 text-text-secondary md:flex">
                   <FaChevronRight className="text-xs" />
                 </div>
               </button>
@@ -327,7 +340,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition-all duration-200 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                className="btn-secondary h-11 w-11 p-0"
                 aria-label="Выйти"
                 title="Выйти"
               >
@@ -348,12 +361,12 @@ export default function Layout() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-surface-1/80"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Закрыть меню"
           />
 
-          <div className="relative h-full w-[88vw] max-w-sm border-r border-white/10 bg-[#08111d] p-4 shadow-[0_24px_60px_-24px_rgba(2,6,23,0.95)]">
+          <div className="relative h-full w-[88vw] max-w-sm border-r border-border bg-surface-2 p-4">
             <div className="flex items-center justify-between pb-4">
               <Link to="/" className="app-brand">
                 <div className="app-brand-mark">
@@ -368,7 +381,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white"
+                className="btn-secondary h-10 w-10 p-0"
                 aria-label="Закрыть меню"
               >
                 <FaTimes />

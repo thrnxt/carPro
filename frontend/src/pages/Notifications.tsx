@@ -4,6 +4,48 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import ru from 'date-fns/locale/ru'
 import { FaBell, FaCheck, FaClock, FaCar } from 'react-icons/fa'
+import { Button, EmptyState, Page, PageHeader } from '../components/ui'
+
+type NotificationRecord = {
+  id: number
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+  car?: {
+    brand?: string
+    model?: string
+  } | null
+}
+
+export function NotificationItem({ notification }: { notification: NotificationRecord }) {
+  const isRead = notification.isRead
+
+  return (
+    <article className={`notification-item ${isRead ? 'notification-item-read' : 'notification-item-unread'}`}>
+      <div className="flex items-start gap-3">
+        {!isRead ? <span className="notification-dot mt-2" aria-hidden="true" /> : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <h3 className={`text-h3 ${isRead ? 'text-text-secondary' : 'text-text-primary'}`}>
+              {notification.title}
+            </h3>
+          </div>
+          <p className="mt-2 text-body text-text-secondary">{notification.message}</p>
+          {notification.car ? (
+            <p className="mt-3 flex items-center gap-2 text-caption text-text-muted">
+              <FaCar />
+              {notification.car.brand} {notification.car.model}
+            </p>
+          ) : null}
+          <p className="mt-2 text-caption text-text-muted">
+            {format(new Date(notification.createdAt), 'dd MMMM yyyy, HH:mm', { locale: ru })}
+          </p>
+        </div>
+      </div>
+    </article>
+  )
+}
 
 export default function Notifications() {
   const queryClient = useQueryClient()
@@ -13,15 +55,6 @@ export default function Notifications() {
     queryFn: async () => {
       const response = await apiClient.get('/notifications')
       return response.data
-    },
-  })
-
-  const markAsReadMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.patch(`/notifications/${id}/read`)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
 
@@ -37,94 +70,54 @@ export default function Notifications() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка...</p>
+      <Page>
+        <div className="auto-card p-card text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info"></div>
+          <p className="mt-2 text-body text-text-secondary">Загрузка...</p>
         </div>
-      </div>
+      </Page>
     )
   }
 
-  const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0
+  const unreadCount = notifications?.filter((n: NotificationRecord) => !n.isRead).length || 0
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Уведомления</h1>
-          <p className="text-slate-400">
-            {unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Все уведомления прочитаны'}
-          </p>
-        </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={() => markAllAsReadMutation.mutate()}
-            className="auto-button-secondary flex items-center gap-2"
-            disabled={markAllAsReadMutation.isPending}
-          >
-            {markAllAsReadMutation.isPending ? (
-              <>
-                <FaClock className="animate-spin" />
-                Обработка...
-              </>
-            ) : (
-              <>
-                <FaCheck />
-                Отметить все как прочитанные
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        {notifications && notifications.length > 0 ? (
-          notifications.map((notification: any) => (
-            <div
-              key={notification.id}
-              className={`auto-card p-6 ${
-                !notification.isRead ? 'border-l-4 border-red-500' : 'opacity-75'
-              }`}
+    <Page>
+      <PageHeader
+        title="Уведомления"
+        description={unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Все уведомления прочитаны'}
+        actions={
+          unreadCount > 0 ? (
+            <Button
+              variant="ghost"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-bold text-white">{notification.title}</h3>
-                    {!notification.isRead && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                    )}
-                  </div>
-                  <p className="text-slate-300 mb-3">{notification.message}</p>
-                  {notification.car && (
-                    <p className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-                      <FaCar />
-                      {notification.car.brand} {notification.car.model}
-                    </p>
-                  )}
-                  <p className="text-sm text-slate-500">
-                    {format(new Date(notification.createdAt), 'dd MMMM yyyy, HH:mm', { locale: ru })}
-                  </p>
-                </div>
-                {!notification.isRead && (
-                  <button
-                    onClick={() => markAsReadMutation.mutate(notification.id)}
-                    className="auto-button-secondary text-sm ml-4"
-                    disabled={markAsReadMutation.isPending}
-                  >
-                    Прочитано
-                  </button>
-                )}
-              </div>
-            </div>
+              {markAllAsReadMutation.isPending ? (
+                <>
+                  <FaClock className="animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                <>
+                  <FaCheck />
+                  Отметить все прочитанными
+                </>
+              )}
+            </Button>
+          ) : null
+        }
+      />
+
+      <div className="notification-list">
+        {notifications && notifications.length > 0 ? (
+          notifications.map((notification: NotificationRecord) => (
+            <NotificationItem key={notification.id} notification={notification} />
           ))
         ) : (
-          <div className="auto-card p-12 text-center">
-            <FaBell className="text-6xl text-red-500 mx-auto mb-4 opacity-50" />
-            <p className="text-slate-400 text-lg">У вас нет уведомлений</p>
-          </div>
+          <EmptyState icon={FaBell} title="У вас нет уведомлений" />
         )}
       </div>
-    </div>
+    </Page>
   )
 }

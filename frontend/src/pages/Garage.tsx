@@ -480,7 +480,7 @@ export default function Garage() {
                   {car.licensePlate && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-400">Гос. номер:</span>
-                      <span className="text-red-400 font-mono font-bold">{car.licensePlate}</span>
+                      <span className="text-info font-mono font-bold">{car.licensePlate}</span>
                     </div>
                   )}
                   {car.color && (
