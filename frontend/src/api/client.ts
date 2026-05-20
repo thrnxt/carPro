@@ -6,6 +6,7 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
 })
 
+
 apiClient.interceptors.request.use((config) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
     if (typeof config.headers.delete === 'function') {
