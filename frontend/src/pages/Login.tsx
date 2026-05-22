@@ -142,7 +142,6 @@ export default function Login() {
                 error={errors.password?.message}
                 {...register('password', {
                   required: 'Введите пароль',
-                  minLength: { value: 8, message: 'Минимум 8 символов' },
                 })}
               />
 

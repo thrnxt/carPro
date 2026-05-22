@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   FaBars,
@@ -10,6 +10,7 @@ import {
   FaCar,
   FaCarSide,
   FaChartBar,
+  FaChevronDown,
   FaChevronRight,
   FaClipboardList,
   FaCog,
@@ -21,6 +22,7 @@ import {
   FaStar,
   FaTimes,
   FaTools,
+  FaUserCog,
   FaUsers,
   FaWrench,
 } from 'react-icons/fa'
@@ -45,9 +47,12 @@ const userNavItems: NavigationItem[] = [
   { path: '/my-documents', label: 'Документы', icon: FaFileInvoiceDollar, description: 'Операции и счета' },
   { path: '/maintenance-calendar', label: 'Календарь', icon: FaCalendarAlt, description: 'План обслуживания' },
   { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList, description: 'Архив работ' },
-  { path: '/notifications', label: 'Уведомления', icon: FaBell, description: 'Напоминания и статус' },
-  { path: '/educational-content', label: 'Знания', icon: FaBookOpen, description: 'Гайды и квизы' },
   { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации' },
+]
+
+const userTopNavItems: NavigationItem[] = [
+  { path: '/educational-content', label: 'Знания', icon: FaBookOpen, description: 'Гайды и квизы' },
+  { path: '/notifications', label: 'Уведомления', icon: FaBell, description: 'Напоминания и статус' },
 ]
 
 const serviceCenterNavItems: NavigationItem[] = [
@@ -164,6 +169,38 @@ export function NavItem({
   )
 }
 
+function TopNavButton({
+  item,
+  active,
+  badgeContent,
+}: {
+  item: NavigationItem
+  active: boolean
+  badgeContent?: string | null
+}) {
+  const IconComponent = item.icon
+
+  return (
+    <Link
+      to={item.path}
+      className={`btn-secondary relative h-11 w-11 p-0 ${active ? 'border-accent/40 bg-surface-3 text-accent' : ''}`}
+      aria-label={item.label}
+      aria-current={active ? 'page' : undefined}
+      title={item.description}
+    >
+      <IconComponent className="text-sm" />
+      {badgeContent ? (
+        <span
+          className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-none text-white"
+          aria-label={`${badgeContent} непрочитанных уведомлений`}
+        >
+          {badgeContent}
+        </span>
+      ) : null}
+    </Link>
+  )
+}
+
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -171,10 +208,13 @@ export default function Layout() {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileEditorOpen, setProfileEditorOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const isAdmin = user?.role === 'ADMIN'
   const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
-  const shouldShowNotificationsBadge = Boolean(user && navItems.some((item) => item.path === '/notifications'))
+  const topNavItems = isServiceCenter ? [] : userTopNavItems
+  const shouldShowNotificationsBadge = Boolean(user && topNavItems.some((item) => item.path === '/notifications'))
   const { data: serviceCenterProfile } = useQuery<ServiceCenterProfileChrome>({
     queryKey: ['service-center', 'my'],
     queryFn: async () => {
@@ -210,7 +250,33 @@ export default function Layout() {
 
   useEffect(() => {
     setMobileMenuOpen(false)
+    setUserMenuOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    if (!userMenuOpen) {
+      return
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [userMenuOpen])
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen || profileEditorOpen ? 'hidden' : ''
@@ -220,7 +286,10 @@ export default function Layout() {
   }, [mobileMenuOpen, profileEditorOpen])
 
   const currentSection = useMemo(() => {
-    const activeItem = navItems.find((item) => isPathActive(location.pathname, item.path))
+    const items = isServiceCenter
+      ? serviceCenterNavItems
+      : [...userNavItems, ...userTopNavItems]
+    const activeItem = items.find((item) => isPathActive(location.pathname, item.path))
     if (activeItem) {
       return {
         title: activeItem.label,
@@ -236,7 +305,7 @@ export default function Layout() {
     }
 
     return getFallbackSection(location.pathname)
-  }, [isAdmin, isServiceCenter, location.pathname, navItems])
+  }, [isAdmin, isServiceCenter, location.pathname])
 
   const handleLogout = () => {
     logout()
@@ -304,55 +373,122 @@ export default function Layout() {
                 <FaBars />
               </button>
 
-              <div className="min-w-0">
-                <p className="app-topbar-eyebrow">{currentSection.group}</p>
-                <p className="app-topbar-title truncate">{currentSection.title}</p>
-              </div>
+              <nav aria-label="Хлебные крошки" className="min-w-0">
+                <ol className="flex items-center gap-2 text-sm">
+                  <li className="hidden shrink-0 text-text-muted sm:block">{currentSection.group}</li>
+                  <li className="hidden shrink-0 text-text-muted sm:block" aria-hidden="true">
+                    <FaChevronRight className="text-[10px]" />
+                  </li>
+                  <li className="min-w-0 truncate font-medium text-text-primary" aria-current="page">
+                    {currentSection.title}
+                  </li>
+                </ol>
+              </nav>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setProfileEditorOpen(true)}
-                className="group flex max-w-[13rem] min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-left transition-colors hover:bg-surface-3 sm:max-w-[18rem] xl:max-w-[24rem]"
-                aria-label="Открыть профиль"
-              >
-                <div className="relative shrink-0">
-                  <div className="app-avatar relative h-11 w-11 text-sm">
-                    {avatarSrc && !avatarLoadFailed ? (
-                      <img
-                        src={avatarSrc}
-                        alt={profileTitle}
-                        className="h-full w-full object-cover"
-                        onError={() => setAvatarLoadFailed(true)}
-                      />
-                    ) : (
-                      <span>{initials}</span>
-                    )}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {topNavItems.length > 0 ? (
+                <nav className="flex items-center gap-1" aria-label="Быстрый доступ">
+                  {topNavItems.map((item) => (
+                    <TopNavButton
+                      key={item.path}
+                      item={item}
+                      active={isPathActive(location.pathname, item.path)}
+                      badgeContent={item.path === '/notifications' ? notificationsBadgeContent : null}
+                    />
+                  ))}
+                </nav>
+              ) : null}
+
+              {topNavItems.length > 0 ? (
+                <span className="hidden h-8 w-px bg-border sm:block" aria-hidden="true" />
+              ) : null}
+
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((value) => !value)}
+                  className="flex max-w-[12rem] min-w-0 items-center gap-2.5 rounded-lg border border-border bg-surface-2 py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-surface-3 sm:max-w-[16rem]"
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                  aria-label="Меню профиля"
+                >
+                  <div className="relative shrink-0">
+                    <div className="app-avatar h-9 w-9 text-sm">
+                      {avatarSrc && !avatarLoadFailed ? (
+                        <img
+                          src={avatarSrc}
+                          alt={profileTitle}
+                          className="h-full w-full object-cover"
+                          onError={() => setAvatarLoadFailed(true)}
+                        />
+                      ) : (
+                        <span>{initials}</span>
+                      )}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface-2 bg-success" />
                   </div>
-                  <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-surface-2 bg-success" />
-                </div>
 
-                <div className="hidden min-w-0 sm:block">
-                  <p className="section-label">Профиль</p>
-                  <p className="truncate text-body font-medium text-text-primary">{profileTitle}</p>
-                  <p className="truncate text-caption text-text-secondary">{roleLabel}</p>
-                  <p className="hidden text-caption text-text-muted xl:block">Нажмите, чтобы изменить данные</p>
-                </div>
-                <div className="btn-secondary hidden h-10 w-10 p-0 text-text-secondary md:flex">
-                  <FaChevronRight className="text-xs" />
-                </div>
-              </button>
+                  <div className="hidden min-w-0 text-left sm:block">
+                    <p className="truncate text-sm font-medium leading-tight text-text-primary">{profileTitle}</p>
+                    <p className="truncate text-caption leading-tight text-text-muted">{roleLabel}</p>
+                  </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn-secondary h-11 w-11 p-0"
-                aria-label="Выйти"
-                title="Выйти"
-              >
-                <FaSignOutAlt className="text-sm" />
-              </button>
+                  <FaChevronDown
+                    className={`hidden shrink-0 text-xs text-text-muted transition-transform duration-200 sm:block ${userMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {userMenuOpen ? (
+                  <div
+                    role="menu"
+                    aria-label="Меню профиля"
+                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-64 origin-top-right overflow-hidden rounded-lg border border-border bg-surface-2 shadow-xl"
+                  >
+                    <div className="flex items-center gap-3 border-b border-border bg-surface-3 p-4">
+                      <div className="app-avatar h-10 w-10 shrink-0 text-sm">
+                        {avatarSrc && !avatarLoadFailed ? (
+                          <img src={avatarSrc} alt={profileTitle} className="h-full w-full object-cover" />
+                        ) : (
+                          <span>{initials}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-text-primary">{profileTitle}</p>
+                        <p className="truncate text-caption text-text-muted">{user?.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-1.5">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setProfileEditorOpen(true)
+                        }}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+                      >
+                        <FaUserCog className="shrink-0 text-text-muted" />
+                        Редактировать профиль
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          handleLogout()
+                        }}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+                      >
+                        <FaSignOutAlt className="shrink-0" />
+                        Выйти
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>

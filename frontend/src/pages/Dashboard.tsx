@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
@@ -30,6 +30,8 @@ import {
   StatCard,
 } from '../components/ui'
 import { type ServiceOperationCardData } from '../components/ServiceOperationCard'
+import { bookingStatusMeta, operationStatusMeta } from '../utils/statusMeta'
+import { resolveFileUrl } from '../utils/resolveFileUrl'
 
 interface ServiceCenterProfile {
   id: number
@@ -56,55 +58,6 @@ interface ServiceCenterBooking {
 
 interface ServiceCenterClient {
   clientId: number
-}
-
-function getBookingBadge(status: string) {
-  switch (status) {
-    case 'CONFIRMED':
-      return 'auto-badge-success'
-    case 'PENDING':
-      return 'auto-badge-warning'
-    case 'IN_PROGRESS':
-      return 'auto-badge-info'
-    case 'COMPLETED':
-      return 'auto-badge-success'
-    case 'CANCELLED':
-      return 'auto-badge-danger'
-    default:
-      return 'auto-badge'
-  }
-}
-
-function getBookingStatusLabel(status: string) {
-  switch (status) {
-    case 'CONFIRMED':
-      return 'Подтверждено'
-    case 'PENDING':
-      return 'Ожидает'
-    case 'IN_PROGRESS':
-      return 'В работе'
-    case 'COMPLETED':
-      return 'Завершено'
-    case 'CANCELLED':
-      return 'Отменено'
-    default:
-      return status || 'Без статуса'
-  }
-}
-
-function getOperationStatusMeta(status?: string) {
-  switch (status) {
-    case 'COMPLETED':
-      return { label: 'Завершено', tone: 'auto-badge-success' }
-    case 'IN_PROGRESS':
-      return { label: 'В работе', tone: 'auto-badge-info' }
-    case 'SCHEDULED':
-      return { label: 'Запланировано', tone: 'auto-badge-warning' }
-    case 'CANCELLED':
-      return { label: 'Отменено', tone: 'auto-badge-danger' }
-    default:
-      return { label: status || 'Без статуса', tone: 'auto-badge' }
-  }
 }
 
 function formatCompactDateTime(value: string) {
@@ -167,6 +120,17 @@ export default function Dashboard() {
 
 function ClientDashboard() {
   const { user } = useAuthStore()
+  const [avatarFailed, setAvatarFailed] = useState(false)
+
+  const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+  const avatarSrc = resolveFileUrl(user?.avatarUrl)
+  const initials =
+    fullName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('') || (user?.email?.[0]?.toUpperCase() ?? 'U')
 
   const { data: cars = [], isLoading: carsLoading } = useQuery({
     queryKey: ['cars'],
@@ -189,9 +153,7 @@ function ClientDashboard() {
   const hasCars = cars.length > 0
   const nextAction = !hasCars
     ? {
-        eyebrow: 'Следующий шаг',
-        title: 'Добавьте первый автомобиль',
-        description: 'После добавления авто откроются календарь обслуживания, сервисные записи, документы и персональные напоминания.',
+        hint: 'Добавьте первый автомобиль, чтобы открыть записи, документы и напоминания.',
         primaryTo: '/garage',
         primaryLabel: 'Добавить автомобиль',
         PrimaryIcon: FaPlus,
@@ -201,9 +163,7 @@ function ClientDashboard() {
       }
     : unreadCount > 0
       ? {
-          eyebrow: 'Требует внимания',
-          title: `${unreadCount} уведомлений ждут реакции`,
-          description: 'Проверьте напоминания по обслуживанию и статусам, чтобы не пропустить важные действия по автомобилю.',
+          hint: `Непрочитанные уведомления: ${unreadCount}. Проверьте напоминания по обслуживанию.`,
           primaryTo: '/notifications',
           primaryLabel: 'Открыть уведомления',
           PrimaryIcon: FaBell,
@@ -212,9 +172,7 @@ function ClientDashboard() {
           SecondaryIcon: FaCalendarAlt,
         }
       : {
-          eyebrow: 'Гараж готов',
-          title: 'Запланируйте следующий сервисный визит',
-          description: 'Выберите сервисный центр рядом с вами и создайте запись, чтобы держать обслуживание под контролем.',
+          hint: 'Гараж в порядке — можно запланировать следующий визит в сервис.',
           primaryTo: '/service-centers',
           primaryLabel: 'Найти сервис',
           PrimaryIcon: FaWrench,
@@ -227,39 +185,46 @@ function ClientDashboard() {
 
   return (
     <Page>
-      <PageHeader
-        eyebrow="Кабинет"
-        title={`Добро пожаловать, ${user?.firstName || 'пользователь'}`}
-        description="Главные действия по гаражу, сервисам и документам собраны в одном рабочем кабинете."
-      />
+      <section className="next-action-card">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="relative shrink-0">
+              <div className="app-avatar h-16 w-16 text-xl sm:h-20 sm:w-20 sm:text-2xl">
+                {avatarSrc && !avatarFailed ? (
+                  <img
+                    src={avatarSrc}
+                    alt={fullName || 'Профиль'}
+                    className="h-full w-full object-cover"
+                    onError={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+              <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-surface-2 bg-success" />
+            </div>
 
-      <NextActionCard
-        eyebrow={nextAction.eyebrow}
-        title={nextAction.title}
-        description={nextAction.description}
-        primaryAction={
-          <Link to={nextAction.primaryTo} className="btn-primary">
-            <ClientPrimaryIcon />
-            {nextAction.primaryLabel}
-          </Link>
-        }
-        secondaryAction={
-          <Link to={nextAction.secondaryTo} className="btn-secondary">
-            <ClientSecondaryIcon />
-            {nextAction.secondaryLabel}
-          </Link>
-        }
-        meta={
-          <div className="flex flex-wrap gap-2">
-            <Badge tone={hasCars ? 'auto-badge-success' : 'auto-badge-warning'}>
-              {hasCars ? `${cars.length} авто в гараже` : 'Гараж пуст'}
-            </Badge>
-            <Badge tone={unreadCount > 0 ? 'auto-badge-warning' : 'auto-badge'}>
-              {unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Уведомлений нет'}
-            </Badge>
+            <div className="min-w-0">
+              <p className="section-label">Личный кабинет</p>
+              <h1 className="mt-1 text-h1 text-text-primary">
+                Добро пожаловать, {user?.firstName || 'пользователь'}
+              </h1>
+              <p className="mt-2 max-w-xl text-body text-text-secondary">{nextAction.hint}</p>
+            </div>
           </div>
-        }
-      />
+
+          <div className="flex flex-wrap gap-3 lg:shrink-0 lg:justify-end">
+            <Link to={nextAction.primaryTo} className="btn-primary">
+              <ClientPrimaryIcon />
+              {nextAction.primaryLabel}
+            </Link>
+            <Link to={nextAction.secondaryTo} className="btn-secondary">
+              <ClientSecondaryIcon />
+              {nextAction.secondaryLabel}
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {isLoading ? (
         <SectionGrid className="xl:grid-cols-4">
@@ -271,34 +236,29 @@ function ClientDashboard() {
             icon={FaCar}
             label="Автомобили"
             value={cars.length}
-            meta="Подключены к вашему гаражу"
             tone={cars.length > 0 ? 'success' : undefined}
           />
           <StatCard
             icon={FaBell}
             label="Уведомлений"
             value={unreadCount}
-            meta="Непрочитанные напоминания и обновления"
             tone={unreadCount > 0 ? 'warning' : undefined}
           />
           <StatCard
             icon={FaCalendarAlt}
             label="Сервисных записей"
             value={hasCars ? 'Активно' : 'Нет авто'}
-            meta={hasCars ? 'Можно создавать записи и напоминания' : 'Нужен первый автомобиль'}
           />
           <StatCard
             icon={FaFileInvoiceDollar}
             label="Документы"
             value={hasCars ? 'Доступны' : 'Закрыто'}
-            meta="Счета, операции и история обслуживания"
           />
         </SectionGrid>
       )}
 
       <Section
         title="Автомобили в гараже"
-        description="Ключевые данные по каждому автомобилю доступны без лишнего визуального шума."
         actions={
           <Link to="/garage" className="btn-secondary">
             Открыть гараж
@@ -606,8 +566,8 @@ function ServiceCenterDashboard() {
                   </p>
 
                   <div className="md:justify-self-end">
-                    <Badge tone={getBookingBadge(booking.status)}>
-                      {getBookingStatusLabel(booking.status)}
+                    <Badge tone={bookingStatusMeta(booking.status).tone}>
+                      {bookingStatusMeta(booking.status).label}
                     </Badge>
                   </div>
                 </div>
@@ -638,7 +598,7 @@ function ServiceCenterDashboard() {
           ) : recentOperations.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border bg-surface-2">
               {recentOperations.map((operation) => {
-                const statusMeta = getOperationStatusMeta(operation.status)
+                const statusMeta = operationStatusMeta(operation.status)
 
                 return (
                   <div

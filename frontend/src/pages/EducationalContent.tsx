@@ -8,7 +8,6 @@ import {
   FaClock,
   FaExternalLinkAlt,
   FaPlayCircle,
-  FaSearch,
   FaSignal,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
@@ -19,7 +18,6 @@ import {
   Page,
   PageHeader,
   Section,
-  SegmentedControl,
   Surface,
   cx,
 } from '../components/ui'
@@ -39,8 +37,6 @@ type EducationalItem = {
   durationMinutes?: number | null
   sortOrder?: number | null
 }
-
-type FilterType = 'ALL' | ContentType
 
 const TYPE_LABELS: Record<ContentType, string> = {
   ARTICLE: 'Статья',
@@ -103,9 +99,6 @@ function formatDuration(duration?: number | null) {
 }
 
 export default function EducationalContent() {
-  const [activeCategory, setActiveCategory] = useState<string>('Все')
-  const [activeType, setActiveType] = useState<FilterType>('ALL')
-  const [searchTerm, setSearchTerm] = useState('')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
 
   const { data: content = [], isLoading } = useQuery<EducationalItem[]>({
@@ -124,61 +117,17 @@ export default function EducationalContent() {
     [content]
   )
 
-  const categories = useMemo(
-    () => ['Все', ...Array.from(new Set(orderedContent.map((item) => item.category)))],
+  const filteredContent = orderedContent
+
+  const topicsCount = useMemo(
+    () => new Set(orderedContent.map((item) => item.category)).size,
     [orderedContent]
   )
-
-  const filteredContent = useMemo(() => {
-    const normalizedQuery = searchTerm.trim().toLowerCase()
-
-    return orderedContent.filter((item) => {
-      const matchesCategory = activeCategory === 'Все' || item.category === activeCategory
-      const matchesType = activeType === 'ALL' || item.type === activeType
-
-      const haystack = [
-        item.title,
-        item.content,
-        item.category,
-        item.provider,
-        item.difficulty,
-        TYPE_LABELS[item.type],
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery)
-
-      return matchesCategory && matchesType && matchesSearch
-    })
-  }, [activeCategory, activeType, orderedContent, searchTerm])
-
-  const groupedContent = useMemo(() => {
-    return categories
-      .filter((category) => category !== 'Все')
-      .map((category) => {
-        const items = orderedContent.filter((item) => item.category === category)
-
-        return {
-          category,
-          items,
-          totalMinutes: items.reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0),
-        }
-      })
-      .filter((group) => group.items.length > 0)
-  }, [categories, orderedContent])
 
   const totalVideoMinutes = useMemo(
     () => orderedContent.filter((item) => item.type === 'VIDEO').reduce((sum, item) => sum + (item.durationMinutes ?? 0), 0),
     [orderedContent]
   )
-
-  useEffect(() => {
-    if (!categories.includes(activeCategory)) {
-      setActiveCategory('Все')
-    }
-  }, [activeCategory, categories])
 
   useEffect(() => {
     if (filteredContent.length === 0) {
@@ -218,53 +167,11 @@ export default function EducationalContent() {
     <Page>
       <PageHeader eyebrow="Знания" title="Знания" />
 
-      <FilterBar className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-          <label className="relative block">
-            <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400" />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Поиск по названию, теме или источнику"
-              className="auto-input pl-11"
-            />
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-            <Badge>{groupedContent.length} тем</Badge>
-            <Badge>{orderedContent.length} материалов</Badge>
-            <Badge>{totalVideoMinutes} минут видео</Badge>
-          </div>
-        </div>
-
-        <SegmentedControl<FilterType>
-          value={activeType}
-          onChange={setActiveType}
-          options={[
-            { value: 'ALL', label: 'Все форматы' },
-            { value: 'VIDEO', label: 'Видео' },
-            { value: 'ARTICLE', label: 'Статьи' },
-            { value: 'CHECKLIST', label: 'Чек-листы' },
-          ]}
-        />
-
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setActiveCategory(category)}
-              className={cx(
-                'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                activeCategory === category
-                  ? 'border-info bg-surface-3 text-white'
-                  : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
-              )}
-            >
-              {category}
-            </button>
-          ))}
+      <FilterBar>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+          <Badge>{topicsCount} тем</Badge>
+          <Badge>{orderedContent.length} материалов</Badge>
+          <Badge>{totalVideoMinutes} минут видео</Badge>
         </div>
       </FilterBar>
 
@@ -420,11 +327,10 @@ export default function EducationalContent() {
           <EmptyState
             icon={FaBookOpen}
             title="Материалы не найдены"
-            description="Измените фильтры или строку поиска."
+            description="Материалы появятся здесь."
           />
         )}
       </Section>
-
     </Page>
   )
 }

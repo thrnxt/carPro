@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import ru from 'date-fns/locale/ru'
 import {
+  FaCamera,
   FaChevronDown,
   FaChevronLeft,
   FaChevronRight,
@@ -25,6 +26,7 @@ import {
 } from '../components/ui'
 import { normalizeCollectionResponse } from '../utils/normalizeCollectionResponse'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
+import { operationStatusMeta } from '../utils/statusMeta'
 
 interface CarSummary {
   id: number
@@ -73,20 +75,6 @@ type PagedResponse<T> = {
 }
 
 const JOURNAL_PAGE_SIZE = 10
-
-const STATUS_BADGE: Record<MaintenanceRecord['status'], string> = {
-  COMPLETED: 'auto-badge-success',
-  IN_PROGRESS: 'auto-badge-info',
-  CANCELLED: 'auto-badge-danger',
-  SCHEDULED: 'auto-badge-warning',
-}
-
-const STATUS_LABEL: Record<MaintenanceRecord['status'], string> = {
-  COMPLETED: 'Завершено',
-  IN_PROGRESS: 'В процессе',
-  CANCELLED: 'Отменено',
-  SCHEDULED: 'Запланировано',
-}
 
 function formatServiceDate(value: string) {
   try {
@@ -315,26 +303,43 @@ export default function MaintenanceHistory() {
               return (
                 <article key={recordKey} className="border-b border-border last:border-0">
                   {/* ── Compact row ── */}
-                  <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 hover:bg-surface-2/40 transition-colors">
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 hover:bg-surface-3 transition-colors">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-body font-medium text-text-primary truncate">
                           {record.workType}
                         </span>
-                        <Badge tone={`auto-badge ${STATUS_BADGE[record.status]}`}>
-                          {STATUS_LABEL[record.status]}
+                        <Badge tone={operationStatusMeta(record.status).tone}>
+                          {operationStatusMeta(record.status).label}
                         </Badge>
                       </div>
 
-                      <p className="mt-0.5 truncate text-caption text-text-muted">
-                        {formatServiceDate(record.serviceDate)}
-                        {mileageLabel ? ` · ${mileageLabel}` : ''}
-                        {record.serviceCenter?.name ? ` · ${record.serviceCenter.name}` : ''}
-                        {!id ? ` · ${record.car.brand} ${record.car.model}` : ''}
-                        {attachmentCount > 0 ? ` · 📷 ${attachmentCount}` : ''}
-                        {replacedPartsCount > 0 ? ` · 🔧 ${replacedPartsCount} дет.` : ''}
-                        {hasInvoice ? ' · PDF' : ''}
-                      </p>
+                      <div className="mt-0.5 flex items-center gap-x-2 overflow-hidden text-caption text-text-muted">
+                        <span className="truncate">
+                          {formatServiceDate(record.serviceDate)}
+                          {mileageLabel ? ` · ${mileageLabel}` : ''}
+                          {record.serviceCenter?.name ? ` · ${record.serviceCenter.name}` : ''}
+                          {!id ? ` · ${record.car.brand} ${record.car.model}` : ''}
+                        </span>
+                        {attachmentCount > 0 && (
+                          <span className="inline-flex shrink-0 items-center gap-1">
+                            <FaCamera aria-hidden="true" />
+                            {attachmentCount}
+                          </span>
+                        )}
+                        {replacedPartsCount > 0 && (
+                          <span className="inline-flex shrink-0 items-center gap-1">
+                            <FaWrench aria-hidden="true" />
+                            {replacedPartsCount} дет.
+                          </span>
+                        )}
+                        {hasInvoice && (
+                          <span className="inline-flex shrink-0 items-center gap-1">
+                            <FaFilePdf aria-hidden="true" />
+                            PDF
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-3">

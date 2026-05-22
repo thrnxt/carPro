@@ -12,6 +12,7 @@ import {
   SegmentedControl,
   Skeleton,
 } from '../components/ui'
+import { invoiceStatusMeta } from '../utils/statusMeta'
 
 interface CarSummary {
   id: number
@@ -48,18 +49,6 @@ interface InvoiceRecord {
 
 type Tab = 'operations' | 'invoices'
 
-const INVOICE_STATUS_LABEL: Record<InvoiceRecord['status'], string> = {
-  CREATED: 'Создан',
-  PAID: 'Оплачен',
-  CANCELLED: 'Отменён',
-}
-
-const INVOICE_STATUS_TONE: Record<InvoiceRecord['status'], string> = {
-  CREATED: 'auto-badge auto-badge-warning',
-  PAID: 'auto-badge auto-badge-success',
-  CANCELLED: 'auto-badge auto-badge-danger',
-}
-
 function RowSkeleton() {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 last:border-0">
@@ -74,7 +63,7 @@ function RowSkeleton() {
 
 function OperationRow({ record }: { record: OperationRecord }) {
   return (
-    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/50 transition-colors">
+    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-3 transition-colors">
       <div className="min-w-0">
         <p className="truncate text-body font-medium text-text-primary">{record.workType}</p>
         <p className="mt-0.5 text-caption text-text-muted">
@@ -103,12 +92,12 @@ function OperationRow({ record }: { record: OperationRecord }) {
 
 function InvoiceRow({ invoice }: { invoice: InvoiceRecord }) {
   return (
-    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/50 transition-colors">
+    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-3 transition-colors">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-body font-medium text-text-primary">{invoice.invoiceNumber}</p>
-          <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>
-            {INVOICE_STATUS_LABEL[invoice.status]}
+          <Badge tone={invoiceStatusMeta(invoice.status).tone}>
+            {invoiceStatusMeta(invoice.status).label}
           </Badge>
         </div>
         <p className="mt-0.5 text-caption text-text-muted">

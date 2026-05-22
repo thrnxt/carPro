@@ -211,7 +211,7 @@ export default function Garage() {
     return (
       <Page>
         <PageHeader eyebrow="Гараж" title="Мой гараж" />
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} lines={4} />)}
         </div>
       </Page>
@@ -393,7 +393,7 @@ export default function Garage() {
       )}
 
       {cars.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {cars.map((car) => (
             <div key={car.id} className="auto-card p-card flex flex-col gap-4">
               <div className="flex items-start justify-between gap-4">

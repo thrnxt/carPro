@@ -25,6 +25,7 @@ import {
   Section,
   Skeleton,
 } from '../components/ui'
+import { bookingStatusMeta } from '../utils/statusMeta'
 
 interface Booking {
   id: number
@@ -53,22 +54,6 @@ type BookingFormFields = {
   bookingDateTime: string
   contactPhone: string
   description: string
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  CONFIRMED: 'Подтверждена',
-  PENDING: 'Ожидает',
-  IN_PROGRESS: 'В процессе',
-  COMPLETED: 'Завершена',
-  CANCELLED: 'Отменена',
-}
-
-const STATUS_TONE: Record<string, string> = {
-  CONFIRMED: 'auto-badge-success',
-  PENDING: 'auto-badge-warning',
-  IN_PROGRESS: 'auto-badge-info',
-  COMPLETED: 'auto-badge-success',
-  CANCELLED: 'auto-badge-danger',
 }
 
 function formatBookingDate(value: string) {
@@ -365,8 +350,8 @@ export default function Bookings() {
                 </p>
 
                 <div className="md:justify-self-end">
-                  <Badge tone={STATUS_TONE[booking.status] ?? 'auto-badge'}>
-                    {STATUS_LABEL[booking.status] ?? booking.status}
+                  <Badge tone={bookingStatusMeta(booking.status).tone}>
+                    {bookingStatusMeta(booking.status).label}
                   </Badge>
                 </div>
               </div>
@@ -420,8 +405,8 @@ function BookingCard({
           <h3 className="text-h2 text-text-primary">
             {booking.serviceCenter?.name ?? 'Сервисный центр'}
           </h3>
-          <Badge tone={STATUS_TONE[booking.status] ?? 'auto-badge'}>
-            {STATUS_LABEL[booking.status] ?? booking.status}
+          <Badge tone={bookingStatusMeta(booking.status).tone}>
+            {bookingStatusMeta(booking.status).label}
           </Badge>
         </div>
 

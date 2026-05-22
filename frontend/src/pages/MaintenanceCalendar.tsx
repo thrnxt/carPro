@@ -1,38 +1,32 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../api/client'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths } from 'date-fns'
-import ru from 'date-fns/locale/ru'
 import {
-  FaExclamationTriangle,
-  FaCalendarAlt,
-  FaWrench,
-  FaCar,
-  FaCheckCircle,
-  FaClock,
-  FaSearch,
-  FaClipboardList,
-  FaChevronLeft,
-  FaChevronRight,
-  FaBolt,
-  FaTimes,
-  FaCircle,
-} from 'react-icons/fa'
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  eachDayOfInterval,
+  isSameDay,
+  isToday,
+  isSameMonth,
+  addMonths,
+  subMonths,
+} from 'date-fns'
+import ru from 'date-fns/locale/ru'
+import { FaCalendarAlt, FaCar, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { normalizeCollectionResponse } from '../utils/normalizeCollectionResponse'
+import { bookingStatusMeta } from '../utils/statusMeta'
+import { Badge, EmptyState, Page, PageHeader, Section, cx } from '../components/ui'
 
 interface Booking {
   id: number
   bookingDateTime: string
-  serviceCenter?: {
-    id: number
-    name: string
-  }
-  car?: {
-    id: number
-    brand: string
-    model: string
-  }
+  serviceCenter?: { id: number; name: string }
+  car?: { id: number; brand: string; model: string }
   status: string
   description?: string
 }
@@ -42,39 +36,53 @@ interface MaintenanceRecord {
   serviceDate: string
   workType: string
   description?: string
-  car?: {
-    id: number
-    brand: string
-    model: string
-  }
+  car?: { id: number; brand: string; model: string }
 }
+
+type EventType = 'notification' | 'booking' | 'maintenance'
+
+type CalEvent = {
+  id: string
+  type: EventType
+  date: Date
+  title: string
+  subtitle?: string
+  status?: string
+  to: string
+}
+
+const EVENT_DOT: Record<EventType, string> = {
+  notification: 'bg-warning',
+  booking: 'bg-info',
+  maintenance: 'bg-success',
+}
+
+const LEGEND: Array<{ type: EventType; label: string }> = [
+  { type: 'notification', label: 'Напоминания' },
+  { type: 'booking', label: 'Записи' },
+  { type: 'maintenance', label: 'Обслуживание' },
+]
+
+const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 export default function MaintenanceCalendar() {
   const navigate = useNavigate()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications'],
-    queryFn: async () => {
-      const response = await apiClient.get('/notifications')
-      return response.data
-    },
+    queryFn: async () => (await apiClient.get('/notifications')).data,
   })
 
   const { data: cars } = useQuery({
     queryKey: ['cars'],
-    queryFn: async () => {
-      const response = await apiClient.get('/cars')
-      return response.data
-    },
+    queryFn: async () => (await apiClient.get('/cars')).data,
   })
 
   const { data: bookings } = useQuery({
     queryKey: ['bookings'],
-    queryFn: async () => {
-      const response = await apiClient.get('/bookings/my')
-      return response.data
-    },
+    queryFn: async () => (await apiClient.get('/bookings/my')).data,
   })
 
   const { data: maintenanceRecords } = useQuery({
@@ -93,320 +101,238 @@ export default function MaintenanceCalendar() {
     enabled: !!cars && cars.length > 0,
   })
 
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const events = useMemo<CalEvent[]>(() => {
+    const list: CalEvent[] = []
 
-  const firstDayOfWeek = monthStart.getDay()
-  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
+    ;(notifications ?? [])
+      .filter(
+        (n: any) =>
+          n.type === 'MAINTENANCE_DUE' || n.type === 'COMPONENT_WEAR' || n.type === 'MILEAGE_REMINDER'
+      )
+      .forEach((n: any) => {
+        list.push({
+          id: `n-${n.id}`,
+          type: 'notification',
+          date: new Date(n.createdAt),
+          title: n.title || 'Напоминание',
+          subtitle: n.message,
+          to: '/notifications',
+        })
+      })
 
-  const maintenanceNotifications = notifications?.filter((n: any) => 
-    n.type === 'MAINTENANCE_DUE' || n.type === 'COMPONENT_WEAR' || n.type === 'MILEAGE_REMINDER'
-  ) || []
+    ;(bookings ?? []).forEach((b: Booking) => {
+      list.push({
+        id: `b-${b.id}`,
+        type: 'booking',
+        date: new Date(b.bookingDateTime),
+        title: b.serviceCenter?.name || 'Запись',
+        subtitle: b.car ? `${b.car.brand} ${b.car.model}` : undefined,
+        status: b.status,
+        to: '/bookings',
+      })
+    })
 
-  const getDayEvents = (day: Date) => {
-    const events: any[] = []
-    
-    maintenanceNotifications.forEach((n: any) => {
-      const notificationDate = new Date(n.createdAt)
-      if (isSameDay(notificationDate, day)) {
-        events.push({ ...n, type: 'notification', color: 'yellow' })
-      }
+    ;(maintenanceRecords ?? []).forEach((r: MaintenanceRecord) => {
+      list.push({
+        id: `m-${r.id}`,
+        type: 'maintenance',
+        date: new Date(r.serviceDate),
+        title: r.workType || 'Обслуживание',
+        subtitle: r.car ? `${r.car.brand} ${r.car.model}` : undefined,
+        to: r.car ? `/cars/${r.car.id}/history` : '/maintenance-history',
+      })
     })
-    
-    bookings?.forEach((booking: Booking) => {
-      const bookingDate = new Date(booking.bookingDateTime)
-      if (isSameDay(bookingDate, day)) {
-        events.push({ ...booking, type: 'booking', color: 'blue' })
-      }
-    })
-    
-    maintenanceRecords?.forEach((record: MaintenanceRecord) => {
-      const recordDate = new Date(record.serviceDate)
-      if (isSameDay(recordDate, day)) {
-        events.push({ ...record, type: 'maintenance', color: 'green' })
-      }
-    })
-    
+
+    return list
+  }, [notifications, bookings, maintenanceRecords])
+
+  const calendarDays = useMemo(() => {
+    const gridStart = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 })
+    const gridEnd = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 })
+    return eachDayOfInterval({ start: gridStart, end: gridEnd })
+  }, [currentDate])
+
+  const eventsForDay = (day: Date) => events.filter((event) => isSameDay(event.date, day))
+
+  const upcomingEvents = useMemo(() => {
+    const from = startOfDay(new Date())
     return events
-  }
+      .filter((event) => event.date >= from)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 6)
+  }, [events])
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1))
-  }
+  const panelEvents = selectedDay ? eventsForDay(selectedDay) : upcomingEvents
 
-  const goToNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1))
-  }
-
-  const goToToday = () => {
-    setCurrentDate(new Date())
-  }
-
-  const getEventColor = (event: any) => {
-    if (event.type === 'notification') {
-      return event.priority === 'CRITICAL' ? 'bg-red-900/50 text-red-300 border border-red-700/50' :
-             event.priority === 'HIGH' ? 'bg-surface-3 text-warning border border-warning' :
-             'bg-amber-900/50 text-amber-300 border border-amber-700/50'
-    }
-    if (event.type === 'booking') {
-      return 'bg-blue-900/50 text-blue-300 border border-blue-700/50'
-    }
-    if (event.type === 'maintenance') {
-      return 'bg-emerald-900/50 text-emerald-300 border border-emerald-700/50'
-    }
-    return 'bg-slate-800 text-slate-300'
-  }
-
-  const getEventIcon = (event: any) => {
-    if (event.type === 'notification') return <FaExclamationTriangle className="inline text-xs" />
-    if (event.type === 'booking') return <FaCalendarAlt className="inline text-xs" />
-    if (event.type === 'maintenance') return <FaWrench className="inline text-xs" />
-    return <FaCircle className="inline text-caption" />
-  }
+  const handleEventClick = (event: CalEvent) => navigate(event.to)
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Календарь обслуживания</h1>
-          <p className="text-slate-400">Планирование и отслеживание обслуживания</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={goToToday}
-            className="btn-secondary"
-          >
-            Сегодня
-          </button>
-          <button
-            onClick={goToPreviousMonth}
-            className="btn-secondary flex items-center"
-          >
-            <FaChevronLeft />
-          </button>
-          <button
-            onClick={goToNextMonth}
-            className="btn-secondary flex items-center"
-          >
-            <FaChevronRight />
-          </button>
-        </div>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Календарь"
+        title="Календарь обслуживания"
+        description="Записи, напоминания и история обслуживания по месяцам."
+      />
 
-      <div className="auto-card p-6 mb-6">
-        <h2 className="text-2xl font-bold text-white mb-4 text-center">
-          {format(currentDate, 'MMMM yyyy', { locale: ru })}
-        </h2>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        {/* ── Calendar ── */}
+        <section className="auto-card p-card">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-h3 capitalize text-text-primary">
+              {format(currentDate, 'LLLL yyyy', { locale: ru })}
+            </h2>
 
-        {/* Легенда */}
-        <div className="flex gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 bg-amber-900/50 border border-amber-700/50 rounded"></span>
-            <span className="text-slate-300">Напоминания</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 bg-blue-900/50 border border-blue-700/50 rounded"></span>
-            <span className="text-slate-300">Записи</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 bg-emerald-900/50 border border-emerald-700/50 rounded"></span>
-            <span className="text-slate-300">Обслуживание</span>
-          </div>
-        </div>
-
-        {/* Календарь */}
-        <div className="grid grid-cols-7 gap-2 mb-4">
-          {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
-            <div key={day} className="text-center font-semibold text-slate-300 p-2">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: adjustedFirstDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-24"></div>
-          ))}
-          
-          {daysInMonth.map((day) => {
-            const dayEvents = getDayEvents(day)
-            const isCurrentDay = isToday(day)
-            const isCurrentMonth = isSameMonth(day, currentDate)
-            
-            return (
-              <div
-                key={day.toISOString()}
-                className={`min-h-24 p-2 border rounded cursor-pointer transition-colors ${
-                  isCurrentDay ? 'bg-red-900/30 border-red-500 ring-2 ring-red-400' : 
-                  isCurrentMonth ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800' : 'bg-slate-900/30 opacity-50'
-                }`}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentDate(new Date())
+                  setSelectedDay(null)
+                }}
+                className="btn-secondary h-9 px-3 text-sm"
               >
-                <div className={`text-sm font-semibold mb-1 ${
-                  isCurrentDay ? 'text-red-400' : 'text-white'
-                }`}>
-                  {format(day, 'd')}
-                </div>
-                {dayEvents.length > 0 && (
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 2).map((event: any, idx: number) => (
-                      <div
-                        key={`${event.id || idx}-${event.type}`}
-                        className={`text-xs p-1 rounded truncate ${getEventColor(event)}`}
-                        title={event.message || event.description || event.title}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (event.type === 'booking') {
-                            navigate('/bookings')
-                          } else if (event.type === 'maintenance') {
-                            navigate(`/cars/${event.car?.id}/history`)
-                          }
-                        }}
-                      >
-                        <span className="inline-flex items-center gap-1">{getEventIcon(event)} {event.title || event.workType || 'Событие'}</span>
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <div className="text-xs text-slate-400">
-                        +{dayEvents.length - 2} еще
-                      </div>
-                    )}
-                  </div>
-                )}
+                Сегодня
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                className="btn-secondary h-9 w-9 p-0"
+                aria-label="Предыдущий месяц"
+              >
+                <FaChevronLeft className="text-xs" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                className="btn-secondary h-9 w-9 p-0"
+                aria-label="Следующий месяц"
+              >
+                <FaChevronRight className="text-xs" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-7 gap-1">
+            {WEEKDAYS.map((day) => (
+              <div key={day} className="pb-1 text-center text-caption text-text-muted">
+                {day}
               </div>
-            )
-          })}
-        </div>
-      </div>
+            ))}
 
-      {/* Предстоящие события */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Предстоящие напоминания */}
-        <div className="auto-card p-6">
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <FaExclamationTriangle className="text-red-500" />
-            Предстоящие напоминания
-          </h2>
-          <div className="space-y-3">
-            {maintenanceNotifications
-              .filter((n: any) => new Date(n.createdAt) >= new Date())
-              .slice(0, 5)
-              .map((notification: any) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    notification.priority === 'CRITICAL' ? 'border-red-500 bg-red-900/20' :
-                    notification.priority === 'HIGH' ? 'border-warning bg-surface-3' :
-                    'border-amber-500 bg-amber-900/20'
-                  }`}
+            {calendarDays.map((day) => {
+              const dayEvents = eventsForDay(day)
+              const isCurrentDay = isToday(day)
+              const isCurrentMonth = isSameMonth(day, currentDate)
+              const isSelected = selectedDay ? isSameDay(day, selectedDay) : false
+
+              return (
+                <button
+                  type="button"
+                  key={day.toISOString()}
+                  onClick={() => setSelectedDay(isSelected ? null : day)}
+                  className={cx(
+                    'flex min-h-[52px] flex-col items-center gap-1 rounded-md border p-1 transition-colors',
+                    isSelected
+                      ? 'border-accent bg-surface-3'
+                      : isCurrentMonth
+                        ? 'border-border bg-surface-2 hover:bg-surface-3'
+                        : 'border-transparent hover:bg-surface-2'
+                  )}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-white">{notification.title}</h3>
-                      <p className="text-slate-300 mt-1 text-sm">{notification.message}</p>
-                      {notification.car && (
-                        <p className="text-sm text-slate-400 mt-1">
-                          <FaCar className="inline mr-1" /> {notification.car.brand} {notification.car.model}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-sm text-slate-400 whitespace-nowrap ml-4">
-                      {format(new Date(notification.createdAt), 'dd MMM', { locale: ru })}
+                  <span
+                    className={cx(
+                      'flex h-6 w-6 items-center justify-center rounded-full text-caption',
+                      isCurrentDay
+                        ? 'bg-accent font-semibold text-white'
+                        : isCurrentMonth
+                          ? 'text-text-primary'
+                          : 'text-text-muted'
+                    )}
+                  >
+                    {format(day, 'd')}
+                  </span>
+
+                  {dayEvents.length > 0 ? (
+                    <span className="flex items-center gap-0.5">
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <span
+                          key={event.id}
+                          className={cx('h-1.5 w-1.5 rounded-full', EVENT_DOT[event.type])}
+                        />
+                      ))}
                     </span>
-                  </div>
-                </div>
-              ))}
-            {maintenanceNotifications.filter((n: any) => new Date(n.createdAt) >= new Date()).length === 0 && (
-              <p className="text-slate-400 text-center py-4">Нет предстоящих напоминаний</p>
-            )}
-          </div>
-        </div>
-
-        {/* Предстоящие записи */}
-        <div className="auto-card p-6">
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <FaCalendarAlt className="text-blue-500" />
-            Предстоящие записи
-          </h2>
-          <div className="space-y-3">
-            {bookings
-              ?.filter((b: Booking) => new Date(b.bookingDateTime) >= new Date())
-              .sort((a: Booking, b: Booking) => 
-                new Date(a.bookingDateTime).getTime() - new Date(b.bookingDateTime).getTime()
+                  ) : null}
+                </button>
               )
-              .slice(0, 5)
-              .map((booking: Booking) => (
-                <div
-                  key={booking.id}
-                  className="p-4 rounded-lg border-l-4 border-blue-500 bg-blue-900/20"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-white">
-                        {booking.serviceCenter?.name || 'Сервисный центр'}
-                      </h3>
-                      <p className="text-slate-300 mt-1 text-sm">
-                        {format(new Date(booking.bookingDateTime), 'dd MMMM yyyy, HH:mm', { locale: ru })}
-                      </p>
-                      {booking.car && (
-                        <p className="text-sm text-slate-400 mt-1">
-                          <FaCar className="inline mr-1" /> {booking.car.brand} {booking.car.model}
-                        </p>
-                      )}
-                      <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
-                        booking.status === 'CONFIRMED' ? 'auto-badge-success' :
-                        booking.status === 'PENDING' ? 'auto-badge-warning' :
-                        booking.status === 'CANCELLED' ? 'auto-badge-danger' :
-                        'auto-badge'
-                      }`}>
-                        {booking.status === 'CONFIRMED' ? (
-                          <span className="flex items-center gap-1"><FaCheckCircle /> Подтверждена</span>
-                        ) : booking.status === 'PENDING' ? (
-                          <span className="flex items-center gap-1"><FaClock /> Ожидает</span>
-                        ) : booking.status === 'CANCELLED' ? (
-                          <span className="flex items-center gap-1"><FaTimes /> Отменена</span>
-                        ) : (
-                          booking.status
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            {(!bookings || bookings.filter((b: Booking) => new Date(b.bookingDateTime) >= new Date()).length === 0) && (
-              <p className="text-slate-400 text-center py-4">Нет предстоящих записей</p>
-            )}
+            })}
           </div>
-        </div>
-      </div>
 
-      {/* Быстрые действия */}
-      <div className="mt-6 auto-card p-6">
-        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <FaBolt className="text-yellow-500" />
-          Быстрые действия
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            onClick={() => navigate('/service-centers')}
-            className="btn-primary"
-          >
-            <FaSearch className="inline mr-2" /> Найти сервисный центр
-          </button>
-          <button
-            onClick={() => navigate('/bookings')}
-            className="btn-secondary"
-          >
-            <FaCalendarAlt className="inline mr-2" /> Мои записи
-          </button>
-          <button
-            onClick={() => navigate('/maintenance-history')}
-            className="btn-secondary"
-          >
-            <FaClipboardList className="inline mr-2" /> История обслуживания
-          </button>
-        </div>
+          <div className="mt-4 flex flex-wrap gap-4 border-t border-border pt-4">
+            {LEGEND.map((item) => (
+              <div key={item.type} className="flex items-center gap-2 text-caption text-text-secondary">
+                <span className={cx('h-2 w-2 rounded-full', EVENT_DOT[item.type])} />
+                {item.label}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Agenda ── */}
+        <Section
+          title={selectedDay ? format(selectedDay, 'd MMMM', { locale: ru }) : 'Ближайшие события'}
+          actions={
+            selectedDay ? (
+              <button type="button" onClick={() => setSelectedDay(null)} className="btn-ghost text-sm">
+                Сбросить
+              </button>
+            ) : undefined
+          }
+        >
+          {panelEvents.length > 0 ? (
+            <div className="space-y-2">
+              {panelEvents.map((event) => {
+                const status = event.type === 'booking' && event.status ? bookingStatusMeta(event.status) : null
+
+                return (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onClick={() => handleEventClick(event)}
+                    className="flex w-full items-start gap-3 rounded-md border border-border bg-surface-3 p-3 text-left transition-colors hover:bg-surface-2"
+                  >
+                    <span className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full', EVENT_DOT[event.type])} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-body font-medium text-text-primary">{event.title}</p>
+                      {event.subtitle ? (
+                        <p className="mt-0.5 flex items-center gap-1.5 truncate text-caption text-text-secondary">
+                          {event.type !== 'notification' ? <FaCar className="shrink-0" /> : null}
+                          {event.subtitle}
+                        </p>
+                      ) : null}
+                      {status ? (
+                        <span className="mt-2 inline-block">
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 text-caption text-text-muted">
+                      {event.type === 'booking'
+                        ? format(event.date, 'dd MMM, HH:mm', { locale: ru })
+                        : format(event.date, 'dd MMM', { locale: ru })}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={FaCalendarAlt}
+              title={selectedDay ? 'В этот день событий нет' : 'Нет ближайших событий'}
+              description={selectedDay ? undefined : 'Запланируйте визит в сервис, чтобы он появился здесь.'}
+            />
+          )}
+        </Section>
       </div>
-    </div>
+    </Page>
   )
 }
