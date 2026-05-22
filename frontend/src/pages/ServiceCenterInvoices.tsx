@@ -496,7 +496,7 @@ export default function ServiceCenterInvoices() {
                 {items.map((item, index) => (
                   <div
                     key={`invoice-item-${index}`}
-                    className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
+                    className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-3 sm:grid-cols-2 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
                   >
                     <input
                       value={item.name}

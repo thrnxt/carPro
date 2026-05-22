@@ -543,7 +543,7 @@ function ServiceCenterDashboard() {
               {upcomingBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[8.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center"
+                  className="grid gap-2 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[8.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center"
                 >
                   <div>
                     <p className="section-label">Визит</p>
@@ -603,7 +603,7 @@ function ServiceCenterDashboard() {
                 return (
                   <div
                     key={operation.id}
-                    className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_7rem_auto] md:items-center"
+                    className="grid gap-2 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_7rem_auto] md:items-center"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-body font-medium text-text-primary">{operation.workType}</p>

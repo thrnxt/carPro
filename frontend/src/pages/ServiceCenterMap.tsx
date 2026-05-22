@@ -97,14 +97,14 @@ export default function ServiceCenterMap() {
       >
         <div className="overflow-hidden rounded-lg border border-white/10">
           {isLoading ? (
-            <div className="flex min-h-[34rem] items-center justify-center bg-slate-950/50">
+            <div className="flex min-h-[260px] sm:min-h-[34rem] items-center justify-center bg-slate-950/50">
               <div className="text-center">
                 <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
                 <p className="mt-3 text-sm text-slate-400">Загрузка карты...</p>
               </div>
             </div>
           ) : (
-            <div className="h-[34rem] w-full overflow-hidden rounded-lg">
+            <div className="h-[260px] sm:h-[34rem] w-full overflow-hidden rounded-lg">
               <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

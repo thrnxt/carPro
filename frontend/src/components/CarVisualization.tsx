@@ -103,9 +103,9 @@ export default function CarVisualization({ components, carBrand, carModel }: Car
         </p>
       )}
       
-      {/* Визуализация автомобиля с индикаторами */}
-      <div className="mb-8">
-        <div className="relative mx-auto bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-2xl p-16 md:p-20 border border-slate-700 shadow-2xl" style={{ maxWidth: '900px', minHeight: '600px' }}>
+      {/* Визуализация автомобиля с индикаторами — скрыта на мобильных */}
+      <div className="mb-8 hidden sm:block">
+        <div className="relative mx-auto bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-2xl p-12 md:p-16 lg:p-20 border border-slate-700 shadow-2xl" style={{ maxWidth: '900px', minHeight: '480px' }}>
           {/* Центральная иконка автомобиля - только одна, как фон */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
             <FaCarSide className="car-visualization-hero-icon text-slate-700 opacity-10 select-none" />

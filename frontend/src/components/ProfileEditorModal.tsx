@@ -319,7 +319,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
       <button
         type="button"
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
@@ -327,7 +327,7 @@ export default function ProfileEditorModal({ open, onClose }: ProfileEditorModal
         aria-label="Закрыть окно редактирования профиля"
       />
 
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-lg border border-border bg-surface-2">
+      <div className="relative my-auto w-full max-w-5xl overflow-hidden rounded-lg border border-border bg-surface-2">
         <div className="relative grid lg:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="border-b border-border bg-surface-3 p-6 sm:p-8 lg:border-b-0 lg:border-r">
             <p className="text-caption font-semibold text-slate-500">Profile</p>

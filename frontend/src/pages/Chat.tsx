@@ -358,9 +358,9 @@ export default function Chat() {
             </div>
           </Surface>
 
-          <div className={cx(showContacts ? 'hidden' : 'flex', 'min-h-[40rem] xl:flex')}>
+          <div className={cx(showContacts ? 'hidden' : 'flex', 'min-h-[28rem] sm:min-h-[40rem] xl:flex')}>
             <div className="w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950/35">
-              <div className="flex h-full min-h-[40rem] flex-col">
+              <div className="flex h-full min-h-[28rem] sm:min-h-[40rem] flex-col">
                 <div className="border-b border-white/10 px-5 py-4">
                   <div className="flex items-center gap-3">
                     <button

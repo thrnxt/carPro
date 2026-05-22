@@ -130,22 +130,22 @@ export default function AdminPanel() {
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Имя</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Роль</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-300">Статус</th>
+                <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-slate-300">ID</th>
+                <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-slate-300">Email</th>
+                <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-slate-300">Имя</th>
+                <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-slate-300">Роль</th>
+                <th className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium text-slate-300">Статус</th>
               </tr>
             </thead>
             <tbody className="bg-slate-800/50 divide-y divide-slate-700">
               {(users || []).map((user) => (
                 <tr key={user.id} className="hover:bg-slate-700/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{user.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-white">{user.id}</td>
+                  <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-white">{user.email}</td>
+                  <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-white">
                     {user.firstName} {user.lastName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
                     <span
                       className={`auto-badge ${
                         user.role === 'ADMIN'
@@ -158,7 +158,7 @@ export default function AdminPanel() {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
                     <span
                       className={`auto-badge ${
                         user.status === 'ACTIVE'

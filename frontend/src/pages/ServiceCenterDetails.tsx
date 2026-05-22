@@ -318,7 +318,7 @@ export default function ServiceCenterDetails() {
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-wrap gap-3 pt-4">
               <button
                 type="submit"
                 disabled={createBookingMutation.isPending}

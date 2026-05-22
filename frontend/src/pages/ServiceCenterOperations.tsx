@@ -273,7 +273,7 @@ export default function ServiceCenterOperations() {
         ) : (
           <>
             <div className="mb-6 rounded-lg border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-              <form onSubmit={handleApplyFilters} className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto_auto] 2xl:items-end">
+              <form onSubmit={handleApplyFilters} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto_auto] 2xl:items-end">
                 <div>
                   <label className="mb-2 block text-xs font-medium text-slate-500">
                     Клиент
