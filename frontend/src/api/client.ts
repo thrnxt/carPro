@@ -7,6 +7,7 @@ const apiClient = axios.create({
 })
 
 
+
 apiClient.interceptors.request.use((config) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
     if (typeof config.headers.delete === 'function') {
