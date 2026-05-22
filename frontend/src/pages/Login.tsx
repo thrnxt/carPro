@@ -1,159 +1,170 @@
-import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { FaArrowRight, FaCarSide, FaCheckCircle, FaClipboardList, FaShieldAlt } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { BRAND_NAME, BRAND_SUBTITLE, BRAND_TAGLINE } from '../config/branding'
+import { Button, Input } from '../components/ui'
+
+type LoginFields = {
+  email: string
+  password: string
+}
+
+const FEATURES = [
+  {
+    Icon: FaClipboardList,
+    title: 'Операционный центр',
+    description:
+      'Гараж, записи, сервисные операции, счета и документы — в едином цифровом паспорте автомобиля.',
+  },
+  {
+    Icon: FaShieldAlt,
+    title: 'Контроль и прозрачность',
+    description:
+      'История обслуживания, фотофиксация, статусы клиентов и электронные документы без ручного хаоса.',
+  },
+]
+
+const PROOF_POINTS = [
+  'Единый кабинет для владельцев и сервисных центров',
+  'Плотные рабочие экраны без лишних элементов',
+  'Структура под реальные SaaS-сценарии владения авто',
+]
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const setAuth = useAuthStore((state) => state.setAuth)
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFields>({
+    mode: 'onTouched',
+    defaultValues: { email: '', password: '' },
+  })
 
+  const onSubmit = async (data: LoginFields) => {
     try {
-      const response = await apiClient.post('/auth/login', { email, password })
+      const response = await apiClient.post('/auth/login', data)
       const { token, userId, ...user } = response.data
       setAuth(token, { ...user, id: userId })
-      toast.success('Вход выполнен успешно')
+      toast.success('Вход выполнен')
       navigate('/')
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Ошибка входа')
+      toast.error(error.response?.data?.message || 'Неверный email или пароль')
     }
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+
+        {/* ── Hero panel ── */}
         <section className="auto-card hidden p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <div className="page-eyebrow mb-5">{BRAND_SUBTITLE}</div>
+            <div className="page-eyebrow mb-6">{BRAND_SUBTITLE}</div>
+
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-white/10 text-3xl text-white">
+              <div className="app-brand-mark h-14 w-14 shrink-0 text-2xl">
                 <FaCarSide />
               </div>
               <div>
-                <h1 className="text-4xl font-extrabold text-white">{BRAND_NAME}</h1>
-                <p className="mt-1 text-base text-slate-400">
-                  {BRAND_TAGLINE}
-                </p>
+                <h1 className="text-h1 text-text-primary">{BRAND_NAME}</h1>
+                <p className="mt-1 text-body text-text-secondary">{BRAND_TAGLINE}</p>
               </div>
             </div>
 
-            <div className="mt-10 space-y-5">
-              <div className="glass-panel p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-text-muted">
-                    <FaClipboardList />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">Операционный cockpit</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-400">
-                      Гараж, записи, сервисные операции, счета и документы в едином цифровом паспорте автомобиля.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass-panel p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-sky-300">
-                    <FaShieldAlt />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">Контроль и прозрачность</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-400">
-                      История обслуживания, фотофиксация, статусы клиентов и электронные документы без ручного хаоса.
-                    </p>
+            <div className="mt-10 space-y-4">
+              {FEATURES.map(({ Icon, title, description }) => (
+                <div key={title} className="glass-panel p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="app-brand-mark h-11 w-11 shrink-0 text-base">
+                      <Icon />
+                    </div>
+                    <div>
+                      <h2 className="text-h3 text-text-primary">{title}</h2>
+                      <p className="mt-1.5 text-body leading-relaxed text-text-secondary">{description}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            {[
-              'Единый кабинет для владельцев и сервисов',
-              'Плотные рабочие экраны без учебной стилистики',
-              'Подготовлено под SaaS/fintech логику операций',
-            ].map((item) => (
-              <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-4">
+          <div className="grid gap-3 xl:grid-cols-3">
+            {PROOF_POINTS.map((point) => (
+              <div key={point} className="glass-panel p-4">
                 <div className="flex items-start gap-3">
-                  <FaCheckCircle className="mt-1 text-text-muted" />
-                  <p className="text-sm leading-6 text-slate-300">{item}</p>
+                  <FaCheckCircle className="mt-0.5 shrink-0 text-sm text-success" />
+                  <p className="text-body text-text-secondary">{point}</p>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
+        {/* ── Form panel ── */}
         <section className="auto-card flex items-center p-6 sm:p-8 lg:p-10">
           <div className="mx-auto w-full max-w-md">
-            <div className="lg:hidden">
-              <div className="page-eyebrow mb-4">{BRAND_NAME}</div>
-              <h1 className="text-3xl font-extrabold text-white">Вход в SteppePass</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
-                Управляйте автомобилями, обслуживанием, клиентскими визитами и документами из одного кабинета.
-              </p>
+            <div className="mb-6 lg:hidden">
+              <div className="page-eyebrow mb-3">{BRAND_NAME}</div>
             </div>
 
-            <div className="hidden lg:block">
-              <h2 className="text-4xl font-extrabold text-white">Вход в SteppePass</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
-                Возвращаем вас в рабочий контур: гараж, операции, сервисные записи и документы.
-              </p>
-            </div>
+            <h1 className="text-h1 text-text-primary">Вход в систему</h1>
+            <p className="mt-2 text-body text-text-secondary">
+              Гараж, операции и документы откроются после входа в ваш кабинет.
+            </p>
 
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-300">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="auto-input"
-                  placeholder="name@company.com"
-                />
-              </div>
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+              <Input
+                label="Email"
+                type="email"
+                placeholder="name@company.com"
+                autoComplete="email"
+                error={errors.email?.message}
+                {...register('email', {
+                  required: 'Введите email',
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: 'Некорректный формат email',
+                  },
+                })}
+              />
 
-              <div>
-                <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-300">
-                  Пароль
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="auto-input"
-                  placeholder="Введите пароль"
-                />
-              </div>
+              <Input
+                label="Пароль"
+                type="password"
+                placeholder="Введите пароль"
+                autoComplete="current-password"
+                error={errors.password?.message}
+                {...register('password', {
+                  required: 'Введите пароль',
+                  minLength: { value: 8, message: 'Минимум 8 символов' },
+                })}
+              />
 
-              <button type="submit" className="btn-primary w-full justify-center">
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isSubmitting}
+                className="w-full justify-center"
+              >
                 Войти
-                <FaArrowRight className="text-sm" />
-              </button>
+                {!isSubmitting ? <FaArrowRight className="text-sm" /> : null}
+              </Button>
 
-              <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
-                Вход открывает доступ к единому кабинету владельца, сервисного центра или администратора в зависимости от роли.
-              </div>
-
-              <div className="text-center text-sm text-slate-400">
+              <p className="text-center text-body text-text-secondary">
                 Нет аккаунта?{' '}
-                <Link to="/register" className="font-semibold text-text-muted transition-colors hover:text-text-primary">
+                <Link
+                  to="/register"
+                  className="font-medium text-text-primary underline-offset-4 hover:underline"
+                >
                   Создать профиль
                 </Link>
-              </div>
+              </p>
             </form>
           </div>
         </section>

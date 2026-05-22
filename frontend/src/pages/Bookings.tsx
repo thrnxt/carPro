@@ -1,11 +1,30 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import apiClient from '../api/client'
 import { format } from 'date-fns'
 import ru from 'date-fns/locale/ru'
 import toast from 'react-hot-toast'
-import { FaPlus, FaTimes, FaCalendarAlt, FaCar, FaPhone, FaMapMarkerAlt, FaCheck, FaClock, FaSpinner, FaTimesCircle, FaClipboardList } from 'react-icons/fa'
+import {
+  FaCalendarAlt,
+  FaCar,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaPlus,
+  FaTimes,
+} from 'react-icons/fa'
+import apiClient from '../api/client'
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FormField,
+  Input,
+  Page,
+  PageHeader,
+  Section,
+  Skeleton,
+} from '../components/ui'
 
 interface Booking {
   id: number
@@ -28,27 +47,58 @@ interface Booking {
   createdAt: string
 }
 
+type BookingFormFields = {
+  carId: string
+  serviceCenterId: string
+  bookingDateTime: string
+  contactPhone: string
+  description: string
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  CONFIRMED: 'Подтверждена',
+  PENDING: 'Ожидает',
+  IN_PROGRESS: 'В процессе',
+  COMPLETED: 'Завершена',
+  CANCELLED: 'Отменена',
+}
+
+const STATUS_TONE: Record<string, string> = {
+  CONFIRMED: 'auto-badge-success',
+  PENDING: 'auto-badge-warning',
+  IN_PROGRESS: 'auto-badge-info',
+  COMPLETED: 'auto-badge-success',
+  CANCELLED: 'auto-badge-danger',
+}
+
+function formatBookingDate(value: string) {
+  try {
+    return format(new Date(value), 'dd MMMM yyyy, HH:mm', { locale: ru })
+  } catch {
+    return value
+  }
+}
+
+const minDateTime = () => {
+  const d = new Date(Date.now() - 60_000)
+  return d.toISOString().slice(0, 16)
+}
+
 export default function Bookings() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [formData, setFormData] = useState({
-    carId: '',
-    serviceCenterId: '',
-    bookingDateTime: '',
-    description: '',
-    contactPhone: '',
-  })
+  const [confirmCancelId, setConfirmCancelId] = useState<number | null>(null)
 
-  const { data: bookings, isLoading } = useQuery({
+  const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
       const response = await apiClient.get('/bookings/my')
-      return response.data
+      return response.data as Booking[]
     },
   })
 
-  const { data: cars } = useQuery({
+  const { data: cars = [] } = useQuery({
     queryKey: ['cars'],
     queryFn: async () => {
       const response = await apiClient.get('/cars')
@@ -56,7 +106,7 @@ export default function Bookings() {
     },
   })
 
-  const { data: serviceCenters } = useQuery({
+  const { data: serviceCenters = [] } = useQuery({
     queryKey: ['service-centers'],
     queryFn: async () => {
       const response = await apiClient.get('/service-centers')
@@ -64,22 +114,32 @@ export default function Bookings() {
     },
   })
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<BookingFormFields>({
+    mode: 'onTouched',
+    defaultValues: {
+      carId: '',
+      serviceCenterId: '',
+      bookingDateTime: '',
+      contactPhone: '',
+      description: '',
+    },
+  })
+
   const createBookingMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Omit<BookingFormFields, 'carId' | 'serviceCenterId'> & { carId: number; serviceCenterId: number }) => {
       const response = await apiClient.post('/bookings', data)
       return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      toast.success('Запись создана успешно')
+      toast.success('Запись создана')
       setShowCreateForm(false)
-      setFormData({
-        carId: '',
-        serviceCenterId: '',
-        bookingDateTime: '',
-        description: '',
-        contactPhone: '',
-      })
+      reset()
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Ошибка создания записи')
@@ -89,433 +149,368 @@ export default function Bookings() {
   const cancelBookingMutation = useMutation({
     mutationFn: async (bookingId: number) => {
       const response = await apiClient.patch(`/bookings/${bookingId}/status`, null, {
-        params: { status: 'CANCELLED' }
+        params: { status: 'CANCELLED' },
       })
       return response.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
       toast.success('Запись отменена')
+      setConfirmCancelId(null)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Ошибка отмены записи')
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.carId || !formData.serviceCenterId || !formData.bookingDateTime || !formData.contactPhone) {
-      toast.error('Заполните все обязательные поля')
-      return
-    }
-
-    createBookingMutation.mutate({
-      carId: parseInt(formData.carId),
-      serviceCenterId: parseInt(formData.serviceCenterId),
-      bookingDateTime: formData.bookingDateTime,
-      description: formData.description,
-      contactPhone: formData.contactPhone,
-    })
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'auto-badge-success'
-      case 'PENDING':
-        return 'auto-badge-warning'
-      case 'IN_PROGRESS':
-        return 'auto-badge-info'
-      case 'COMPLETED':
-        return 'auto-badge-success'
-      case 'CANCELLED':
-        return 'auto-badge-danger'
-      default:
-        return 'auto-badge'
+  const onSubmit = async (data: BookingFormFields) => {
+    try {
+      await createBookingMutation.mutateAsync({
+        carId: parseInt(data.carId, 10),
+        serviceCenterId: parseInt(data.serviceCenterId, 10),
+        bookingDateTime: data.bookingDateTime,
+        description: data.description,
+        contactPhone: data.contactPhone,
+      })
+    } catch {
+      // handled by mutation onError
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return (
-          <span className="flex items-center gap-1">
-            <FaCheck />
-            Подтверждена
-          </span>
-        )
-      case 'PENDING':
-        return (
-          <span className="flex items-center gap-1">
-            <FaClock />
-            Ожидает подтверждения
-          </span>
-        )
-      case 'IN_PROGRESS':
-        return (
-          <span className="flex items-center gap-1">
-            <FaSpinner className="animate-spin" />
-            В процессе
-          </span>
-        )
-      case 'COMPLETED':
-        return (
-          <span className="flex items-center gap-1">
-            <FaCheck />
-            Завершена
-          </span>
-        )
-      case 'CANCELLED':
-        return (
-          <span className="flex items-center gap-1">
-            <FaTimesCircle />
-            Отменена
-          </span>
-        )
-      default:
-        return status
-    }
+  const handleCancelForm = () => {
+    setShowCreateForm(false)
+    reset()
   }
 
-  const upcomingBookings = bookings?.filter((b: Booking) => 
-    new Date(b.bookingDateTime) >= new Date() && b.status !== 'CANCELLED'
-  ) || []
+  const now = new Date()
+  const upcomingBookings = (bookings ?? [])
+    .filter((b) => new Date(b.bookingDateTime) >= now && b.status !== 'CANCELLED')
+    .sort((a, b) => new Date(a.bookingDateTime).getTime() - new Date(b.bookingDateTime).getTime())
 
-  const pastBookings = bookings?.filter((b: Booking) => 
-    new Date(b.bookingDateTime) < new Date() || b.status === 'CANCELLED'
-  ) || []
-
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка...</p>
-        </div>
-      </div>
-    )
-  }
+  const pastBookings = (bookings ?? [])
+    .filter((b) => new Date(b.bookingDateTime) < now || b.status === 'CANCELLED')
+    .sort((a, b) => new Date(b.bookingDateTime).getTime() - new Date(a.bookingDateTime).getTime())
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Мои записи</h1>
-          <p className="text-slate-400">Управление записями на обслуживание</p>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="btn-primary flex items-center gap-2"
-        >
-          {showCreateForm ? (
-            <>
-              <FaTimes />
-              Отмена
-            </>
+    <Page>
+      <PageHeader
+        eyebrow="Записи"
+        title="Мои записи"
+        description="Управление записями на обслуживание в сервисные центры."
+        actions={
+          <Button
+            variant={showCreateForm ? 'secondary' : 'primary'}
+            onClick={showCreateForm ? handleCancelForm : () => setShowCreateForm(true)}
+          >
+            {showCreateForm ? <><FaTimes /> Отмена</> : <><FaPlus /> Новая запись</>}
+          </Button>
+        }
+      />
+
+      {/* ── Create form ── */}
+      {showCreateForm && (
+        <Section title="Создать запись">
+          {cars.length === 0 ? (
+            <p className="text-body text-warning">
+              Для создания записи необходимо сначала добавить автомобиль в гараж.
+            </p>
           ) : (
-            <>
-              <FaPlus />
-              Новая запись
-            </>
+            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField label="Автомобиль" required error={errors.carId?.message}>
+                  <select
+                    className={`auto-select${errors.carId ? ' auto-input-error' : ''}`}
+                    {...register('carId', { required: 'Выберите автомобиль' })}
+                  >
+                    <option value="">Выберите автомобиль</option>
+                    {cars.map((car: any) => (
+                      <option key={car.id} value={car.id}>
+                        {car.brand} {car.model}
+                        {car.licensePlate ? ` (${car.licensePlate})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Сервисный центр" required error={errors.serviceCenterId?.message}>
+                  <select
+                    className={`auto-select${errors.serviceCenterId ? ' auto-input-error' : ''}`}
+                    {...register('serviceCenterId', { required: 'Выберите сервисный центр' })}
+                  >
+                    <option value="">Выберите сервисный центр</option>
+                    {serviceCenters.map((center: any) => (
+                      <option key={center.id} value={center.id}>
+                        {center.name}{center.city ? ` — ${center.city}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <Input
+                  label="Дата и время"
+                  type="datetime-local"
+                  required
+                  min={minDateTime()}
+                  error={errors.bookingDateTime?.message}
+                  {...register('bookingDateTime', {
+                    required: 'Выберите дату и время',
+                    validate: (v) =>
+                      new Date(v) > new Date() || 'Выберите дату в будущем',
+                  })}
+                />
+
+                <Input
+                  label="Контактный телефон"
+                  type="tel"
+                  placeholder="+7 (700) 000-00-00"
+                  required
+                  error={errors.contactPhone?.message}
+                  {...register('contactPhone', {
+                    required: 'Укажите контактный телефон',
+                    pattern: {
+                      value: /^[+]?[\d\s\-() ]{7,20}$/,
+                      message: 'Некорректный формат номера',
+                    },
+                  })}
+                />
+
+                <div className="md:col-span-2">
+                  <FormField
+                    label="Описание проблемы"
+                    hint="Необязательно — опишите работы или жалобы"
+                  >
+                    <textarea
+                      rows={3}
+                      placeholder="Плановое ТО, замена масла, стук в подвеске…"
+                      className="auto-textarea"
+                      {...register('description')}
+                    />
+                  </FormField>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <Button type="submit" variant="primary" loading={isSubmitting}>
+                  Создать запись
+                </Button>
+                <Button type="button" variant="secondary" onClick={handleCancelForm}>
+                  Отмена
+                </Button>
+              </div>
+            </form>
           )}
-        </button>
+        </Section>
+      )}
+
+      {/* ── Upcoming bookings ── */}
+      {bookingsLoading ? (
+        <Section title="Предстоящие записи">
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="rounded-md border border-border bg-surface-2 p-card space-y-3">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-1/4" />
+              </div>
+            ))}
+          </div>
+        </Section>
+      ) : upcomingBookings.length > 0 ? (
+        <Section
+          eyebrow={`${upcomingBookings.length} записей`}
+          title="Предстоящие записи"
+        >
+          <div className="space-y-4">
+            {upcomingBookings.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onViewCenter={() => navigate(`/service-centers/${booking.serviceCenter?.id}`)}
+                confirmCancelId={confirmCancelId}
+                onRequestCancel={() => setConfirmCancelId(booking.id)}
+                onConfirmCancel={() => cancelBookingMutation.mutate(booking.id)}
+                onDismissCancel={() => setConfirmCancelId(null)}
+                cancelPending={cancelBookingMutation.isPending}
+              />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/* ── Past bookings ── */}
+      {!bookingsLoading && pastBookings.length > 0 && (
+        <Section
+          eyebrow={`${pastBookings.length} записей`}
+          title="История записей"
+        >
+          <div className="overflow-hidden rounded-md border border-border bg-surface-2">
+            {pastBookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] md:items-center"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-body font-medium text-text-primary">
+                    {booking.serviceCenter?.name ?? 'Сервисный центр'}
+                  </p>
+                  <p className="mt-0.5 text-caption text-text-muted">
+                    {formatBookingDate(booking.bookingDateTime)}
+                  </p>
+                </div>
+
+                <p className="min-w-0 text-body text-text-secondary">
+                  {booking.car
+                    ? `${booking.car.brand} ${booking.car.model} (${booking.car.licensePlate})`
+                    : '—'}
+                </p>
+
+                <div className="md:justify-self-end">
+                  <Badge tone={STATUS_TONE[booking.status] ?? 'auto-badge'}>
+                    {STATUS_LABEL[booking.status] ?? booking.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* ── Empty state ── */}
+      {!bookingsLoading && !bookings?.length && !showCreateForm && (
+        <EmptyState
+          icon={FaCalendarAlt}
+          title="Записей пока нет"
+          description="Создайте первую запись на обслуживание, выбрав автомобиль и удобное время."
+          action={
+            <Button variant="primary" onClick={() => setShowCreateForm(true)}>
+              <FaPlus />
+              Создать первую запись
+            </Button>
+          }
+        />
+      )}
+    </Page>
+  )
+}
+
+function BookingCard({
+  booking,
+  onViewCenter,
+  confirmCancelId,
+  onRequestCancel,
+  onConfirmCancel,
+  onDismissCancel,
+  cancelPending,
+}: {
+  booking: Booking
+  onViewCenter: () => void
+  confirmCancelId: number | null
+  onRequestCancel: () => void
+  onConfirmCancel: () => void
+  onDismissCancel: () => void
+  cancelPending: boolean
+}) {
+  const isPending = booking.status === 'PENDING'
+  const isConfirming = confirmCancelId === booking.id
+
+  return (
+    <div className="auto-card p-card">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h3 className="text-h2 text-text-primary">
+            {booking.serviceCenter?.name ?? 'Сервисный центр'}
+          </h3>
+          <Badge tone={STATUS_TONE[booking.status] ?? 'auto-badge'}>
+            {STATUS_LABEL[booking.status] ?? booking.status}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {booking.serviceCenter && (
+            <Button variant="secondary" onClick={onViewCenter}>
+              Подробнее
+            </Button>
+          )}
+          {isPending && (
+            isConfirming ? (
+              <>
+                <span className="text-caption text-text-muted">Отменить запись?</span>
+                <Button
+                  variant="secondary"
+                  className="text-danger"
+                  loading={cancelPending}
+                  onClick={onConfirmCancel}
+                >
+                  Да, отменить
+                </Button>
+                <Button variant="secondary" onClick={onDismissCancel}>
+                  Нет
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" className="text-danger" onClick={onRequestCancel}>
+                <FaTimes />
+                Отменить
+              </Button>
+            )
+          )}
+        </div>
       </div>
 
-      {/* Форма создания записи */}
-      {showCreateForm && (
-        <div className="auto-card p-6 mb-6">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <FaCalendarAlt />
-            Создать новую запись
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <FaCar />
-                  Автомобиль *
-                </label>
-                <select
-                  value={formData.carId}
-                  onChange={(e) => setFormData({ ...formData, carId: e.target.value })}
-                  required
-                  className="auto-select"
-                >
-                  <option value="">Выберите автомобиль</option>
-                  {cars?.map((car: any) => (
-                    <option key={car.id} value={car.id}>
-                      {car.brand} {car.model} ({car.licensePlate})
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <div className="flex items-start gap-3">
+          <FaCalendarAlt className="mt-0.5 shrink-0 text-text-muted" />
+          <div>
+            <p className="section-label">Дата и время</p>
+            <p className="mt-1 text-body font-medium text-text-primary">
+              {formatBookingDate(booking.bookingDateTime)}
+            </p>
+          </div>
+        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Сервисный центр *
-                </label>
-                <select
-                  value={formData.serviceCenterId}
-                  onChange={(e) => setFormData({ ...formData, serviceCenterId: e.target.value })}
-                  required
-                  className="auto-select"
-                >
-                  <option value="">Выберите сервисный центр</option>
-                  {serviceCenters?.map((center: any) => (
-                    <option key={center.id} value={center.id}>
-                      {center.name} - {center.city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <FaCalendarAlt />
-                  Дата и время *
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.bookingDateTime}
-                  onChange={(e) => setFormData({ ...formData, bookingDateTime: e.target.value })}
-                  required
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="auto-input"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <FaPhone />
-                  Контактный телефон *
-                </label>
-                <input
-                  type="tel"
-                  value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                  required
-                  placeholder="+7 (XXX) XXX-XX-XX"
-                  className="auto-input"
-                />
-              </div>
-            </div>
-
+        {booking.car && (
+          <div className="flex items-start gap-3">
+            <FaCar className="mt-0.5 shrink-0 text-text-muted" />
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Описание проблемы/работы
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Опишите проблему или необходимые работы..."
-                rows={4}
-                className="auto-textarea"
-              />
+              <p className="section-label">Автомобиль</p>
+              <p className="mt-1 text-body font-medium text-text-primary">
+                {booking.car.brand} {booking.car.model}
+              </p>
+              <p className="font-mono text-caption text-info">{booking.car.licensePlate}</p>
             </div>
+          </div>
+        )}
 
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                disabled={createBookingMutation.isPending}
-                className="btn-primary flex items-center gap-2"
-              >
-                {createBookingMutation.isPending ? (
-                  <>
-                    <FaSpinner className="animate-spin" />
-                    Создание...
-                  </>
-                ) : (
-                  <>
-                    <FaCheck />
-                    Создать запись
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateForm(false)
-                  setFormData({
-                    carId: '',
-                    serviceCenterId: '',
-                    bookingDateTime: '',
-                    description: '',
-                    contactPhone: '',
-                  })
-                }}
-                className="btn-secondary"
-              >
-                Отмена
-              </button>
+        {booking.serviceCenter?.address && (
+          <div className="flex items-start gap-3">
+            <FaMapMarkerAlt className="mt-0.5 shrink-0 text-text-muted" />
+            <div>
+              <p className="section-label">Адрес</p>
+              <p className="mt-1 text-body text-text-primary">{booking.serviceCenter.address}</p>
             </div>
-          </form>
-        </div>
-      )}
-
-      {/* Предстоящие записи */}
-      {upcomingBookings.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <FaCalendarAlt />
-            Предстоящие записи
-          </h2>
-          <div className="space-y-4">
-            {upcomingBookings
-              .sort((a: Booking, b: Booking) => 
-                new Date(a.bookingDateTime).getTime() - new Date(b.bookingDateTime).getTime()
-              )
-              .map((booking: Booking) => (
-                <div key={booking.id} className="auto-card p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <h3 className="text-2xl font-bold text-white">
-                          {booking.serviceCenter?.name || 'Сервисный центр'}
-                        </h3>
-                        <span className={getStatusBadge(booking.status)}>
-                          {getStatusText(booking.status)}
-                        </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="flex items-start gap-2">
-                          <FaCalendarAlt className="text-slate-400 mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-slate-400 text-sm mb-1">Дата и время</p>
-                            <p className="text-white font-semibold">
-                              {format(new Date(booking.bookingDateTime), 'dd MMMM yyyy, HH:mm', { locale: ru })}
-                            </p>
-                          </div>
-                        </div>
-                        {booking.car && (
-                          <div className="flex items-start gap-2">
-                            <FaCar className="text-slate-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <p className="text-slate-400 text-sm mb-1">Автомобиль</p>
-                              <p className="text-white font-semibold">
-                                {booking.car.brand} {booking.car.model}
-                              </p>
-                              <p className="text-info font-mono text-sm">{booking.car.licensePlate}</p>
-                            </div>
-                          </div>
-                        )}
-                        {booking.serviceCenter?.address && (
-                          <div className="flex items-start gap-2">
-                            <FaMapMarkerAlt className="text-slate-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <p className="text-slate-400 text-sm mb-1">Адрес</p>
-                              <p className="text-white">{booking.serviceCenter.address}</p>
-                            </div>
-                          </div>
-                        )}
-                        {booking.serviceCenter?.phoneNumber && (
-                          <div className="flex items-start gap-2">
-                            <FaPhone className="text-slate-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <p className="text-slate-400 text-sm mb-1">Телефон</p>
-                              <a href={`tel:${booking.serviceCenter.phoneNumber}`} className="text-red-400 hover:text-red-300">
-                                {booking.serviceCenter.phoneNumber}
-                              </a>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {booking.description && (
-                        <div className="mb-4">
-                          <p className="text-slate-400 text-sm mb-1">Описание</p>
-                          <p className="text-white">{booking.description}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="ml-4 flex flex-col gap-2">
-                      {booking.serviceCenter && (
-                        <button
-                          onClick={() => navigate(`/service-centers/${booking.serviceCenter?.id}`)}
-                          className="btn-secondary text-sm whitespace-nowrap"
-                        >
-                          Подробнее
-                        </button>
-                      )}
-                      {booking.status === 'PENDING' && (
-                        <button
-                          onClick={() => {
-                            if (confirm('Вы уверены, что хотите отменить запись?')) {
-                              cancelBookingMutation.mutate(booking.id)
-                            }
-                          }}
-                          className="btn-secondary text-danger text-sm whitespace-nowrap flex items-center gap-2"
-                        >
-                          <FaTimes />
-                          Отменить
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Прошлые записи */}
-      {pastBookings.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            <FaClipboardList />
-            История записей
-          </h2>
-          <div className="space-y-4">
-            {pastBookings
-              .sort((a: Booking, b: Booking) => 
-                new Date(b.bookingDateTime).getTime() - new Date(a.bookingDateTime).getTime()
-              )
-              .map((booking: Booking) => (
-                <div key={booking.id} className="auto-card p-6 opacity-75">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-bold text-white">
-                          {booking.serviceCenter?.name || 'Сервисный центр'}
-                        </h3>
-                        <span className={getStatusBadge(booking.status)}>
-                          {getStatusText(booking.status)}
-                        </span>
-                      </div>
-                      
-                      <p className="text-slate-400 mb-2">
-                        {format(new Date(booking.bookingDateTime), 'dd MMMM yyyy, HH:mm', { locale: ru })}
-                      </p>
-                      {booking.car && (
-                        <p className="text-slate-300">
-                          {booking.car.brand} {booking.car.model} ({booking.car.licensePlate})
-                        </p>
-                      )}
-                      {booking.description && (
-                        <p className="text-slate-400 mt-2 text-sm">{booking.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {booking.serviceCenter?.phoneNumber && (
+          <div className="flex items-start gap-3">
+            <FaPhone className="mt-0.5 shrink-0 text-text-muted" />
+            <div>
+              <p className="section-label">Телефон сервиса</p>
+              <a
+                href={`tel:${booking.serviceCenter.phoneNumber}`}
+                className="mt-1 block text-body font-medium text-accent hover:text-accent-hover transition-colors"
+              >
+                {booking.serviceCenter.phoneNumber}
+              </a>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Пустое состояние */}
-      {(!bookings || bookings.length === 0) && !showCreateForm && (
-        <div className="auto-card p-12 text-center">
-          <FaCalendarAlt className="text-6xl text-red-500 mx-auto mb-4 opacity-50" />
-          <h3 className="text-2xl font-bold text-white mb-4">Нет записей</h3>
-          <p className="text-slate-400 mb-6">Создайте первую запись на обслуживание</p>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="btn-primary flex items-center gap-2 mx-auto"
-          >
-            <FaPlus />
-            Создать первую запись
-          </button>
+      {booking.description && (
+        <div className="mt-4 rounded-md border border-border bg-surface-3 px-4 py-3">
+          <p className="section-label">Описание</p>
+          <p className="mt-1 text-body text-text-secondary">{booking.description}</p>
         </div>
       )}
     </div>

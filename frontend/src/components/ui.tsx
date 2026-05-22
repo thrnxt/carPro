@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { forwardRef } from 'react'
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import type { IconType } from 'react-icons'
 
 export function cx(...values: Array<string | false | null | undefined>) {
@@ -38,11 +39,30 @@ export function Button({
   variant = 'secondary',
   className,
   type = 'button',
+  loading,
+  children,
+  disabled,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant
+  loading?: boolean
 }) {
-  return <button type={type} className={cx(`btn-${variant}`, className)} {...props} />
+  return (
+    <button
+      type={type}
+      className={cx(`btn-${variant}`, className)}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? (
+        <span
+          className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-b-transparent"
+          aria-hidden="true"
+        />
+      ) : null}
+      {children}
+    </button>
+  )
 }
 
 export function NextActionCard({
@@ -144,6 +164,13 @@ export function Section({
   )
 }
 
+const toneValueColors: Record<string, string> = {
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
+  info: 'text-info',
+}
+
 export function StatCard({
   icon: Icon,
   label,
@@ -155,16 +182,16 @@ export function StatCard({
   label: ReactNode
   value: ReactNode
   meta?: ReactNode
-  tone?: string
+  tone?: 'success' | 'warning' | 'danger' | 'info'
 }) {
-  void tone
+  const valueColor = tone ? toneValueColors[tone] : 'text-text-primary'
 
   return (
     <div className="metric-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="metric-label">{label}</p>
-          <p className="metric-value">{value}</p>
+          <p className={cx('metric-value', valueColor)}>{value}</p>
           {meta ? <p className="metric-meta">{meta}</p> : null}
         </div>
         {Icon ? (
@@ -213,6 +240,48 @@ export function LoadingState({
     <div className={cx('loading-state', className)} role="status" aria-live="polite">
       <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border border-b-info" />
       <p className="mt-3 text-body text-text-secondary">{label}</p>
+    </div>
+  )
+}
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cx('skeleton', className)} aria-hidden="true" />
+}
+
+export function SkeletonCard({ lines = 2, className }: { lines?: number; className?: string }) {
+  return (
+    <div className={cx('auto-card p-card', className)} aria-hidden="true">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-5 w-2/3" />
+        </div>
+        <Skeleton className="h-5 w-5 shrink-0" />
+      </div>
+      <div className="space-y-2 rounded-md border border-border bg-surface-3 p-4">
+        {Array.from({ length: lines }).map((_, i) => (
+          <Skeleton key={i} className="h-4 w-full" />
+        ))}
+      </div>
+      <div className="mt-4 flex items-center justify-between">
+        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-4 w-12" />
+      </div>
+    </div>
+  )
+}
+
+export function SkeletonStatCard({ className }: { className?: string }) {
+  return (
+    <div className={cx('metric-card', className)} aria-hidden="true">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-3">
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+        <Skeleton className="h-5 w-5 shrink-0" />
+      </div>
     </div>
   )
 }
@@ -295,7 +364,7 @@ export function Badge({
   children: ReactNode
   tone?: string
 }) {
-  return <span className={cx('btn-chip', tone)}>{children}</span>
+  return <span className={tone}>{children}</span>
 }
 
 export function TableShell({
@@ -314,4 +383,76 @@ export function TableShell({
       </div>
     </Section>
   )
+}
+
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & {
+    label?: string
+    error?: string
+    hint?: string
+  }
+>(function Input({ label, error, hint, id, className, required, ...props }, ref) {
+  const inputId = id || (label ? `input-${String(label).toLowerCase().replace(/\s+/g, '-')}` : undefined)
+  return (
+    <div className="flex flex-col gap-1.5">
+      {label ? (
+        <label htmlFor={inputId} className="section-label">
+          {label}
+          {required ? <span className="ml-1 text-danger" aria-hidden="true">*</span> : null}
+        </label>
+      ) : null}
+      <input
+        ref={ref}
+        id={inputId}
+        className={cx('auto-input', error ? 'auto-input-error' : '', className)}
+        required={required}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+        {...props}
+      />
+      {error ? (
+        <p id={`${inputId}-error`} className="text-caption text-danger" role="alert">{error}</p>
+      ) : hint ? (
+        <p id={`${inputId}-hint`} className="text-caption text-text-muted">{hint}</p>
+      ) : null}
+    </div>
+  )
+})
+
+export function FormField({
+  label,
+  error,
+  hint,
+  required,
+  children,
+  className,
+}: {
+  label?: string
+  error?: string
+  hint?: string
+  required?: boolean
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cx('flex flex-col gap-1.5', className)}>
+      {label ? (
+        <p className="section-label">
+          {label}
+          {required ? <span className="ml-1 text-danger" aria-hidden="true">*</span> : null}
+        </p>
+      ) : null}
+      {children}
+      {error ? (
+        <p className="text-caption text-danger" role="alert">{error}</p>
+      ) : hint ? (
+        <p className="text-caption text-text-muted">{hint}</p>
+      ) : null}
+    </div>
+  )
+}
+
+export function Divider({ className }: { className?: string }) {
+  return <hr className={cx('border-border', className)} />
 }

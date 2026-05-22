@@ -263,7 +263,7 @@ export default function Layout() {
 
           <div className="app-sidebar-body space-y-6">
             <div className="space-y-3">
-              <div className="app-sidebar-label">Navigation</div>
+              <div className="app-sidebar-label">Навигация</div>
               <NavigationList
                 items={navItems}
                 pathname={location.pathname}
@@ -273,7 +273,7 @@ export default function Layout() {
 
             {isAdmin && (
               <div className="space-y-3">
-                <div className="app-sidebar-label">Control</div>
+                <div className="app-sidebar-label">Управление</div>
                 <NavigationList
                   items={[
                     {
@@ -397,7 +397,7 @@ export default function Layout() {
 
             <div className="space-y-6 overflow-y-auto pb-6">
               <div className="space-y-3">
-                <div className="app-sidebar-label">Navigation</div>
+                <div className="app-sidebar-label">Навигация</div>
                 <NavigationList
                   items={navItems}
                   pathname={location.pathname}
@@ -408,7 +408,7 @@ export default function Layout() {
 
               {isAdmin && (
                 <div className="space-y-3">
-                  <div className="app-sidebar-label">Control</div>
+                  <div className="app-sidebar-label">Управление</div>
                   <NavigationList
                     items={[
                       {

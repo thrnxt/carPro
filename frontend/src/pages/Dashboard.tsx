@@ -24,6 +24,9 @@ import {
   PageHeader,
   Section,
   SectionGrid,
+  Skeleton,
+  SkeletonCard,
+  SkeletonStatCard,
   StatCard,
 } from '../components/ui'
 import { type ServiceOperationCardData } from '../components/ServiceOperationCard'
@@ -165,7 +168,7 @@ export default function Dashboard() {
 function ClientDashboard() {
   const { user } = useAuthStore()
 
-  const { data: cars = [] } = useQuery({
+  const { data: cars = [], isLoading: carsLoading } = useQuery({
     queryKey: ['cars'],
     queryFn: async () => {
       const response = await apiClient.get('/cars')
@@ -173,13 +176,15 @@ function ClientDashboard() {
     },
   })
 
-  const { data: unreadCount = 0 } = useQuery({
+  const { data: unreadCount = 0, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: async () => {
       const response = await apiClient.get('/notifications/unread-count')
       return response.data
     },
   })
+
+  const isLoading = carsLoading || notificationsLoading
 
   const hasCars = cars.length > 0
   const nextAction = !hasCars
@@ -256,32 +261,40 @@ function ClientDashboard() {
         }
       />
 
-      <SectionGrid className="xl:grid-cols-4">
-        <StatCard
-          icon={FaCar}
-          label="Автомобили"
-          value={cars.length}
-          meta="Подключены к вашему гаражу"
-        />
-        <StatCard
-          icon={FaBell}
-          label="Уведомления"
-          value={unreadCount}
-          meta="Непрочитанные напоминания и обновления"
-        />
-        <StatCard
-          icon={FaCalendarAlt}
-          label="Обслуживание"
-          value={hasCars ? 'Готово' : 'Ожидает'}
-          meta={hasCars ? 'Можно создавать записи и напоминания' : 'Нужен первый автомобиль'}
-        />
-        <StatCard
-          icon={FaFileInvoiceDollar}
-          label="Документы"
-          value={hasCars ? 'Доступны' : 'После авто'}
-          meta="Счета, операции и история обслуживания"
-        />
-      </SectionGrid>
+      {isLoading ? (
+        <SectionGrid className="xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonStatCard key={i} />)}
+        </SectionGrid>
+      ) : (
+        <SectionGrid className="xl:grid-cols-4">
+          <StatCard
+            icon={FaCar}
+            label="Автомобили"
+            value={cars.length}
+            meta="Подключены к вашему гаражу"
+            tone={cars.length > 0 ? 'success' : undefined}
+          />
+          <StatCard
+            icon={FaBell}
+            label="Уведомлений"
+            value={unreadCount}
+            meta="Непрочитанные напоминания и обновления"
+            tone={unreadCount > 0 ? 'warning' : undefined}
+          />
+          <StatCard
+            icon={FaCalendarAlt}
+            label="Сервисных записей"
+            value={hasCars ? 'Активно' : 'Нет авто'}
+            meta={hasCars ? 'Можно создавать записи и напоминания' : 'Нужен первый автомобиль'}
+          />
+          <StatCard
+            icon={FaFileInvoiceDollar}
+            label="Документы"
+            value={hasCars ? 'Доступны' : 'Закрыто'}
+            meta="Счета, операции и история обслуживания"
+          />
+        </SectionGrid>
+      )}
 
       <Section
         title="Автомобили в гараже"
@@ -292,19 +305,23 @@ function ClientDashboard() {
           </Link>
         }
       >
-        {cars.length > 0 ? (
+        {carsLoading ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} lines={3} />)}
+          </div>
+        ) : cars.length > 0 ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {cars.map((car: any) => (
-              <Link key={car.id} to={`/cars/${car.id}`} className="auto-card p-card">
+              <Link key={car.id} to={`/cars/${car.id}`} className="auto-card p-card block">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="section-label">Автомобиль</p>
                     <h3 className="truncate text-h2 text-text-primary">
                       {car.brand} {car.model}
                     </h3>
-                    <p className="mt-1 text-body text-text-secondary">{car.year} год выпуска</p>
+                    <p className="mt-1 text-body text-text-secondary">{car.year} г.в.</p>
                   </div>
-                  <div className="metric-icon">
+                  <div className="metric-icon shrink-0">
                     <FaCar />
                   </div>
                 </div>
@@ -313,7 +330,7 @@ function ClientDashboard() {
                   <KeyValue label="Пробег" value={`${car.mileage?.toLocaleString('ru-RU') || 0} км`} />
                   <KeyValue
                     label="Гос. номер"
-                    value={car.licensePlate ? <span className="font-mono text-info">{car.licensePlate}</span> : 'Не указан'}
+                    value={car.licensePlate ? <span className="font-mono text-info">{car.licensePlate}</span> : '—'}
                   />
                   <KeyValue
                     label="Последнее ТО"
@@ -327,7 +344,7 @@ function ClientDashboard() {
 
                 <div className="mt-5 flex items-center justify-between">
                   <Badge tone="auto-badge-info">Карточка автомобиля</Badge>
-                  <span className="text-body font-medium text-text-secondary">Открыть</span>
+                  <span className="text-caption text-text-muted">Открыть →</span>
                 </div>
               </Link>
             ))}
@@ -351,7 +368,7 @@ function ClientDashboard() {
 }
 
 function ServiceCenterDashboard() {
-  const { data: serviceCenter } = useQuery<ServiceCenterProfile>({
+  const { data: serviceCenter, isLoading: scLoading } = useQuery<ServiceCenterProfile>({
     queryKey: ['service-center', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/service-centers/my')
@@ -359,7 +376,7 @@ function ServiceCenterDashboard() {
     },
   })
 
-  const { data: bookings = [] } = useQuery<ServiceCenterBooking[]>({
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<ServiceCenterBooking[]>({
     queryKey: ['service-center-bookings', serviceCenter?.id],
     queryFn: async () => {
       const response = await apiClient.get(`/bookings/service-center/${serviceCenter?.id}`)
@@ -377,7 +394,7 @@ function ServiceCenterDashboard() {
     enabled: !!serviceCenter?.id,
   })
 
-  const { data: operations = [] } = useQuery<ServiceOperationCardData[]>({
+  const { data: operations = [], isLoading: operationsLoading } = useQuery<ServiceOperationCardData[]>({
     queryKey: ['service-center-operations', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/maintenance-records/service-center/my')
@@ -385,6 +402,8 @@ function ServiceCenterDashboard() {
     },
     enabled: !!serviceCenter?.id,
   })
+
+  const isLoading = scLoading || bookingsLoading || operationsLoading
 
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -527,24 +546,39 @@ function ServiceCenterDashboard() {
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {overviewMetrics.map((metric) => (
-          <StatCard
-            key={metric.label}
-            icon={metric.icon}
-            label={metric.label}
-            value={metric.value}
-            meta={metric.meta}
-          />
-        ))}
-      </section>
+      {isLoading ? (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => <SkeletonStatCard key={i} />)}
+        </section>
+      ) : (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {overviewMetrics.map((metric) => (
+            <StatCard
+              key={metric.label}
+              icon={metric.icon}
+              label={metric.label}
+              value={metric.value}
+              meta={metric.meta}
+            />
+          ))}
+        </section>
+      )}
 
       <div className="grid gap-3 xl:grid-cols-[0.95fr_1.05fr]">
         <Section
           title="Ближайшие записи"
           description="Короткий список ближайших визитов."
         >
-          {upcomingBookings.length > 0 ? (
+          {bookingsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-md border border-border bg-surface-2 px-4 py-3 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : upcomingBookings.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border bg-surface-2">
               {upcomingBookings.map((booking) => (
                 <div
@@ -552,9 +586,7 @@ function ServiceCenterDashboard() {
                   className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[8.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center"
                 >
                   <div>
-                    <p className="section-label">
-                      Визит
-                    </p>
+                    <p className="section-label">Визит</p>
                     <p className="mt-1 text-body font-medium text-text-primary">
                       {formatCompactDateTime(booking.bookingDateTime)}
                     </p>
@@ -582,9 +614,11 @@ function ServiceCenterDashboard() {
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-border bg-surface-2 px-4 py-5 text-body text-text-secondary">
-              Предстоящих записей пока нет.
-            </div>
+            <EmptyState
+              icon={FaCalendarAlt}
+              title="Записей пока нет"
+              description="Предстоящие визиты клиентов появятся здесь."
+            />
           )}
         </Section>
 
@@ -592,7 +626,16 @@ function ServiceCenterDashboard() {
           title="Последние операции"
           description="Последние зафиксированные работы в компактном виде."
         >
-          {recentOperations.length > 0 ? (
+          {operationsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-md border border-border bg-surface-2 px-4 py-3 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              ))}
+            </div>
+          ) : recentOperations.length > 0 ? (
             <div className="overflow-hidden rounded-md border border-border bg-surface-2">
               {recentOperations.map((operation) => {
                 const statusMeta = getOperationStatusMeta(operation.status)
@@ -630,9 +673,11 @@ function ServiceCenterDashboard() {
               })}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-border bg-surface-2 px-4 py-5 text-body text-text-secondary">
-              Операций пока нет.
-            </div>
+            <EmptyState
+              icon={FaTools}
+              title="Операций пока нет"
+              description="Последние зафиксированные работы появятся здесь."
+            />
           )}
         </Section>
       </div>

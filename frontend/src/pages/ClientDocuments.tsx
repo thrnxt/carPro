@@ -1,8 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FaClipboardList, FaFileInvoiceDollar } from 'react-icons/fa'
+import { FaClipboardList, FaFileInvoiceDollar, FaCar } from 'react-icons/fa'
 import apiClient from '../api/client'
 import { normalizeCollectionResponse } from '../utils/normalizeCollectionResponse'
+import {
+  Badge,
+  EmptyState,
+  FilterBar,
+  Page,
+  PageHeader,
+  SegmentedControl,
+  Skeleton,
+} from '../components/ui'
 
 interface CarSummary {
   id: number
@@ -18,10 +27,7 @@ interface OperationRecord {
   serviceDate: string
   mileageAtService: number
   cost?: number
-  serviceCenter?: {
-    id?: number
-    name?: string
-  }
+  serviceCenter?: { id?: number; name?: string }
   car: CarSummary
 }
 
@@ -40,184 +46,249 @@ interface InvoiceRecord {
   serviceCenterName?: string
 }
 
-const INVOICE_STATUS_LABELS: Record<InvoiceRecord['status'], string> = {
+type Tab = 'operations' | 'invoices'
+
+const INVOICE_STATUS_LABEL: Record<InvoiceRecord['status'], string> = {
   CREATED: 'Создан',
   PAID: 'Оплачен',
-  CANCELLED: 'Отменен',
+  CANCELLED: 'Отменён',
+}
+
+const INVOICE_STATUS_TONE: Record<InvoiceRecord['status'], string> = {
+  CREATED: 'auto-badge auto-badge-warning',
+  PAID: 'auto-badge auto-badge-success',
+  CANCELLED: 'auto-badge auto-badge-danger',
+}
+
+function RowSkeleton() {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 last:border-0">
+      <div className="flex-1 space-y-1.5">
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+      <Skeleton className="h-4 w-20 shrink-0" />
+    </div>
+  )
+}
+
+function OperationRow({ record }: { record: OperationRecord }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/50 transition-colors">
+      <div className="min-w-0">
+        <p className="truncate text-body font-medium text-text-primary">{record.workType}</p>
+        <p className="mt-0.5 text-caption text-text-muted">
+          {new Date(record.serviceDate).toLocaleDateString('ru-RU')}
+          {' · '}
+          {record.car.brand} {record.car.model}
+          {record.car.licensePlate ? ` (${record.car.licensePlate})` : ''}
+          {record.serviceCenter?.name ? ` · ${record.serviceCenter.name}` : ''}
+        </p>
+        {record.description && (
+          <p className="mt-1 truncate text-caption text-text-secondary">{record.description}</p>
+        )}
+      </div>
+      <div className="shrink-0 text-right">
+        {record.cost != null ? (
+          <p className="text-body font-semibold text-success">
+            {record.cost.toLocaleString('ru-RU')} ₸
+          </p>
+        ) : (
+          <p className="text-caption text-text-muted">—</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function InvoiceRow({ invoice }: { invoice: InvoiceRecord }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-border px-4 py-3 last:border-0 hover:bg-surface-2/50 transition-colors">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-body font-medium text-text-primary">{invoice.invoiceNumber}</p>
+          <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>
+            {INVOICE_STATUS_LABEL[invoice.status]}
+          </Badge>
+        </div>
+        <p className="mt-0.5 text-caption text-text-muted">
+          {new Date(invoice.issueDate).toLocaleDateString('ru-RU')}
+          {invoice.carTitle ? ` · ${invoice.carTitle}` : ''}
+          {invoice.serviceCenterName ? ` · ${invoice.serviceCenterName}` : ''}
+        </p>
+        {invoice.notes && (
+          <p className="mt-1 truncate text-caption text-text-secondary">{invoice.notes}</p>
+        )}
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-body font-semibold text-success">
+          {invoice.totalAmount.toLocaleString('ru-RU')} {invoice.currency}
+        </p>
+        {invoice.taxAmount != null && (
+          <p className="text-caption text-text-muted">
+            НДС: {invoice.taxAmount.toLocaleString('ru-RU')}
+          </p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function ClientDocuments() {
   const [selectedCarId, setSelectedCarId] = useState('')
+  const [tab, setTab] = useState<Tab>('operations')
 
-  const { data: cars, isLoading: carsLoading } = useQuery<CarSummary[]>({
+  const { data: cars = [], isLoading: carsLoading } = useQuery<CarSummary[]>({
     queryKey: ['cars'],
     queryFn: async () => {
       const response = await apiClient.get('/cars')
-      return response.data
+      return response.data as CarSummary[]
     },
   })
 
-  const { data: operations, isLoading: operationsLoading } = useQuery<OperationRecord[]>({
-    queryKey: ['client-operations', (cars || []).map((car) => car.id).join(',')],
+  const { data: operations = [], isLoading: operationsLoading } = useQuery<OperationRecord[]>({
+    queryKey: ['client-operations', cars.map((c) => c.id).join(',')],
     queryFn: async () => {
-      if (!cars || cars.length === 0) {
-        return []
-      }
-
-      const allRecords = await Promise.all(
+      if (cars.length === 0) return []
+      const all = await Promise.all(
         cars.map(async (car) => {
           const response = await apiClient.get(`/maintenance-records/car/${car.id}`)
           const records = normalizeCollectionResponse<Omit<OperationRecord, 'car'>>(response.data)
-          return records.map((record) => ({
-            ...record,
-            car,
-          }))
+          return records.map((r) => ({ ...r, car }))
         })
       )
-
-      return allRecords
-        .flat()
-        .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+      return all.flat().sort(
+        (a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime()
+      )
     },
-    enabled: !!cars,
+    enabled: !carsLoading,
   })
 
-  const { data: invoices, isLoading: invoicesLoading } = useQuery<InvoiceRecord[]>({
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<InvoiceRecord[]>({
     queryKey: ['invoices', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/invoices/my')
-      return response.data
+      return response.data as InvoiceRecord[]
     },
   })
 
-  const filteredOperations = useMemo(() => {
-    if (!selectedCarId) {
-      return operations || []
-    }
-    return (operations || []).filter((record) => String(record.car.id) === selectedCarId)
-  }, [operations, selectedCarId])
+  const filteredOperations = useMemo(
+    () =>
+      selectedCarId
+        ? operations.filter((r) => String(r.car.id) === selectedCarId)
+        : operations,
+    [operations, selectedCarId]
+  )
 
-  const filteredInvoices = useMemo(() => {
-    if (!selectedCarId) {
-      return invoices || []
-    }
-    return (invoices || []).filter((invoice) => String(invoice.carId) === selectedCarId)
-  }, [invoices, selectedCarId])
+  const filteredInvoices = useMemo(
+    () =>
+      selectedCarId
+        ? invoices.filter((inv) => String(inv.carId) === selectedCarId)
+        : invoices,
+    [invoices, selectedCarId]
+  )
 
-  if (carsLoading || operationsLoading || invoicesLoading) {
-    return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка данных...</p>
-        </div>
-      </div>
-    )
-  }
+  const unpaidTotal = useMemo(
+    () =>
+      filteredInvoices
+        .filter((inv) => inv.status === 'CREATED')
+        .reduce((sum, inv) => sum + inv.totalAmount, 0),
+    [filteredInvoices]
+  )
+
+  const isLoading = carsLoading || operationsLoading || invoicesLoading
+
+  const tabOptions: Array<{ value: Tab; label: string }> = [
+    {
+      value: 'operations',
+      label: isLoading ? 'Операции' : `Операции · ${filteredOperations.length}`,
+    },
+    {
+      value: 'invoices',
+      label: isLoading
+        ? 'Счета'
+        : `Счета · ${filteredInvoices.length}${unpaidTotal > 0 ? ' · к оплате' : ''}`,
+    },
+  ]
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Операции и счета</h1>
-        <p className="text-slate-400">Просмотр операций и электронных счетов по вашим автомобилям</p>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Документы"
+        title="Операции и счета"
+        description={
+          !isLoading && unpaidTotal > 0
+            ? `К оплате: ${unpaidTotal.toLocaleString('ru-RU')} ₸`
+            : 'История обслуживания и электронные счета по вашим автомобилям'
+        }
+      />
 
-      <div className="auto-card p-6">
-        <label className="block text-sm text-slate-300 mb-2">Фильтр по автомобилю</label>
-        <select
-          value={selectedCarId}
-          onChange={(event) => setSelectedCarId(event.target.value)}
-          className="auto-select"
-        >
-          <option value="">Все автомобили</option>
-          {(cars || []).map((car) => (
-            <option key={car.id} value={car.id}>
-              {car.brand} {car.model}
-              {car.licensePlate ? ` (${car.licensePlate})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
+      <FilterBar className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SegmentedControl<Tab>
+          value={tab}
+          onChange={setTab}
+          options={tabOptions}
+        />
 
-      <div className="auto-card p-6">
-        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaClipboardList className="text-red-500" />
-          Сервисные операции
-        </h2>
+        {cars.length > 0 && (
+          <div className="flex items-center gap-2">
+            <FaCar className="shrink-0 text-text-muted" />
+            <select
+              value={selectedCarId}
+              onChange={(e) => setSelectedCarId(e.target.value)}
+              className="auto-select"
+            >
+              <option value="">Все автомобили</option>
+              {cars.map((car) => (
+                <option key={car.id} value={car.id}>
+                  {car.brand} {car.model}
+                  {car.licensePlate ? ` (${car.licensePlate})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </FilterBar>
 
-        {filteredOperations.length === 0 ? (
-          <p className="text-slate-400">Операции не найдены</p>
+      <div className="auto-card overflow-hidden">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)
+        ) : tab === 'operations' ? (
+          filteredOperations.length > 0 ? (
+            filteredOperations.map((record) => (
+              <OperationRow key={record.id} record={record} />
+            ))
+          ) : (
+            <div className="p-8">
+              <EmptyState
+                icon={FaClipboardList}
+                title="Нет операций"
+                description={
+                  selectedCarId
+                    ? 'По выбранному автомобилю операций не найдено'
+                    : 'История сервисных операций появится здесь после первого обслуживания'
+                }
+              />
+            </div>
+          )
+        ) : filteredInvoices.length > 0 ? (
+          filteredInvoices.map((invoice) => (
+            <InvoiceRow key={invoice.id} invoice={invoice} />
+          ))
         ) : (
-          <div className="space-y-4">
-            {filteredOperations.map((record) => (
-              <div key={record.id} className="border border-slate-700 rounded-lg p-4 bg-slate-900/40">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                  <div>
-                    <p className="text-white font-semibold text-lg">{record.workType}</p>
-                    <p className="text-slate-300 text-sm mt-1">
-                      Авто: {record.car.brand} {record.car.model}
-                      {record.car.licensePlate ? ` (${record.car.licensePlate})` : ''}
-                    </p>
-                    <p className="text-slate-400 text-sm">Дата: {record.serviceDate}</p>
-                    <p className="text-slate-400 text-sm">
-                      Пробег: {record.mileageAtService?.toLocaleString('ru-RU')} км
-                    </p>
-                    <p className="text-slate-300 text-sm">
-                      Сервис: {record.serviceCenter?.name || 'Не указан'}
-                    </p>
-                    {record.description && <p className="text-slate-300 mt-1">{record.description}</p>}
-                  </div>
-
-                  {record.cost != null && (
-                    <p className="text-emerald-400 font-semibold">
-                      {record.cost.toLocaleString('ru-RU')} ₸
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="p-8">
+            <EmptyState
+              icon={FaFileInvoiceDollar}
+              title="Нет счетов"
+              description={
+                selectedCarId
+                  ? 'По выбранному автомобилю счетов не найдено'
+                  : 'Электронные счета от сервисных центров появятся здесь'
+              }
+            />
           </div>
         )}
       </div>
-
-      <div className="auto-card p-6">
-        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaFileInvoiceDollar className="text-red-500" />
-          Электронные счета
-        </h2>
-
-        {filteredInvoices.length === 0 ? (
-          <p className="text-slate-400">Счета не найдены</p>
-        ) : (
-          <div className="space-y-4">
-            {filteredInvoices.map((invoice) => (
-              <div key={invoice.id} className="border border-slate-700 rounded-lg p-4 bg-slate-900/40">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                  <div>
-                    <p className="text-white font-semibold text-lg">
-                      {invoice.invoiceNumber} ({invoice.issueDate})
-                    </p>
-                    <p className="text-slate-300 text-sm mt-1">
-                      Авто: {invoice.carTitle || 'Не указано'}
-                    </p>
-                    <p className="text-slate-300 text-sm">
-                      Сервис: {invoice.serviceCenterName || 'Не указан'}
-                    </p>
-                    {invoice.notes && <p className="text-slate-300 mt-1">{invoice.notes}</p>}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-emerald-400 font-semibold">
-                      {invoice.totalAmount.toLocaleString('ru-RU')} {invoice.currency}
-                    </p>
-                    <span className="auto-badge auto-badge-info">{INVOICE_STATUS_LABELS[invoice.status]}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </Page>
   )
 }

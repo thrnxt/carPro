@@ -1,10 +1,29 @@
 import type { AxiosError } from 'axios'
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import apiClient from '../api/client'
-import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
-import { FaPlus, FaTimes, FaSave, FaEdit, FaTrash, FaCarSide, FaArrowRight } from 'react-icons/fa'
+import toast from 'react-hot-toast'
+import {
+  FaArrowRight,
+  FaCarSide,
+  FaEdit,
+  FaPlus,
+  FaSave,
+  FaTimes,
+  FaTrash,
+} from 'react-icons/fa'
+import apiClient from '../api/client'
+import {
+  Button,
+  EmptyState,
+  Input,
+  KeyValue,
+  Page,
+  PageHeader,
+  Section,
+  SkeletonCard,
+} from '../components/ui'
 
 type Car = {
   id: number
@@ -38,9 +57,7 @@ type CatalogCar = {
   mileage: number
 }
 
-type ApiErrorResponse = {
-  message?: string
-}
+type ApiErrorResponse = { message?: string }
 
 const createEmptyFormData = (): CarFormData => ({
   brand: '',
@@ -52,20 +69,23 @@ const createEmptyFormData = (): CarFormData => ({
   mileage: 0,
 })
 
-const sanitizeVin = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 17)
+const sanitizeVin = (value: string) =>
+  value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 17)
 
 export default function Garage() {
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState<CarFormData>(createEmptyFormData)
-  const [vinInput, setVinInput] = useState('')
   const queryClient = useQueryClient()
+  const [showForm, setShowForm] = useState(false)
+  const [editingCar, setEditingCar] = useState<Car | null>(null)
+  const [vinInput, setVinInput] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+
   const currentVin = sanitizeVin(vinInput)
   const isCurrentVinComplete = currentVin.length === 17
   const deferredVin = useDeferredValue(vinInput)
   const normalizedVin = sanitizeVin(deferredVin)
   const isVinLookupReady = normalizedVin.length === 17
 
-  const { data: cars, isLoading } = useQuery<Car[]>({
+  const { data: cars = [], isLoading } = useQuery<Car[]>({
     queryKey: ['cars'],
     queryFn: async () => {
       const response = await apiClient.get('/cars')
@@ -73,7 +93,28 @@ export default function Garage() {
     },
   })
 
-  const [editingCar, setEditingCar] = useState<Car | null>(null)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CarFormData>({ mode: 'onTouched' })
+
+  useEffect(() => {
+    if (editingCar) {
+      reset({
+        brand: editingCar.brand,
+        model: editingCar.model,
+        year: editingCar.year,
+        vin: editingCar.vin ?? '',
+        licensePlate: editingCar.licensePlate ?? '',
+        color: editingCar.color ?? '',
+        mileage: editingCar.mileage,
+      })
+    } else {
+      reset(createEmptyFormData())
+    }
+  }, [editingCar, reset])
 
   const lookupCarQuery = useQuery<CatalogCar, AxiosError<ApiErrorResponse>>({
     queryKey: ['vehicle-catalog', normalizedVin],
@@ -81,447 +122,389 @@ export default function Garage() {
       const response = await apiClient.get(`/cars/lookup/${normalizedVin}`)
       return response.data as CatalogCar
     },
-    enabled: showAddForm && !editingCar && isVinLookupReady,
+    enabled: showForm && !editingCar && isVinLookupReady,
     retry: false,
   })
   const catalogCar = lookupCarQuery.data?.vin === currentVin ? lookupCarQuery.data : null
 
   const addCarMutation = useMutation<Car, AxiosError<ApiErrorResponse>, string>({
-    mutationFn: async (vin: string) => {
+    mutationFn: async (vin) => {
       const response = await apiClient.post('/cars/by-vin', { vin })
       return response.data as Car
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cars'] })
       toast.success('Автомобиль добавлен')
-      setShowAddForm(false)
-      setVinInput('')
-      setFormData(createEmptyFormData())
+      handleCancel()
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error) => {
       toast.error(error.response?.data?.message || 'Ошибка добавления автомобиля')
     },
   })
 
   const updateCarMutation = useMutation<Car, AxiosError<ApiErrorResponse>, { id: number; data: CarFormData }>({
-    mutationFn: async ({ id, data }: { id: number; data: CarFormData }) => {
+    mutationFn: async ({ id, data }) => {
       const response = await apiClient.put(`/cars/${id}`, data)
       return response.data as Car
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cars'] })
-      toast.success('Автомобиль обновлен')
-      setEditingCar(null)
-      setShowAddForm(false)
+      toast.success('Автомобиль обновлён')
+      handleCancel()
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error) => {
       toast.error(error.response?.data?.message || 'Ошибка обновления автомобиля')
     },
   })
 
   const deleteCarMutation = useMutation<void, AxiosError<ApiErrorResponse>, number>({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id) => {
       await apiClient.delete(`/cars/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cars'] })
-      toast.success('Автомобиль удален')
+      toast.success('Автомобиль удалён')
     },
-    onError: (error: AxiosError<ApiErrorResponse>) => {
+    onError: (error) => {
       toast.error(error.response?.data?.message || 'Ошибка удаления автомобиля')
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingCar) {
-      updateCarMutation.mutate({ id: editingCar.id, data: formData })
-    } else {
-      const vin = currentVin
-      if (vin.length !== 17) {
-        toast.error('Введите корректный 17-значный VIN')
-        return
-      }
-
-      if (!catalogCar || catalogCar.vin !== vin) {
-        toast.error('Автомобиль по этому VIN не найден')
-        return
-      }
-
-      addCarMutation.mutate(vin)
+  const onEditSubmit = async (data: CarFormData) => {
+    if (!editingCar) return
+    try {
+      await updateCarMutation.mutateAsync({ id: editingCar.id, data })
+    } catch {
+      // handled by mutation onError
     }
+  }
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!catalogCar || catalogCar.vin !== currentVin) return
+    addCarMutation.mutate(currentVin)
   }
 
   const handleEdit = (car: Car) => {
     setEditingCar(car)
-    setFormData({
-      brand: car.brand,
-      model: car.model,
-      year: car.year,
-      vin: car.vin || '',
-      licensePlate: car.licensePlate || '',
-      color: car.color || '',
-      mileage: car.mileage,
-    })
+    setShowForm(true)
     setVinInput('')
-    setShowAddForm(true)
-  }
-
-  const handleDelete = (id: number) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
-      deleteCarMutation.mutate(id)
-    }
+    setConfirmDeleteId(null)
   }
 
   const handleCancel = () => {
-    setShowAddForm(false)
+    setShowForm(false)
     setEditingCar(null)
     setVinInput('')
-    setFormData(createEmptyFormData())
+    reset(createEmptyFormData())
   }
 
   const openAddForm = () => {
     setEditingCar(null)
-    setShowAddForm(true)
+    setShowForm(true)
     setVinInput('')
-    setFormData(createEmptyFormData())
+    setConfirmDeleteId(null)
+    reset(createEmptyFormData())
   }
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <p className="mt-2 text-slate-400">Загрузка...</p>
+      <Page>
+        <PageHeader eyebrow="Гараж" title="Мой гараж" />
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} lines={4} />)}
         </div>
-      </div>
+      </Page>
     )
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Мой гараж</h1>
-          <p className="text-slate-400">Управление вашими автомобилями</p>
-        </div>
-        <button
-          onClick={() => {
-            if (!showAddForm) {
-              openAddForm()
-            } else {
-              handleCancel()
-            }
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          {showAddForm ? (
-            <>
-              <FaTimes />
-              Отмена
-            </>
-          ) : (
-            <>
-              <FaPlus />
-              Добавить автомобиль
-            </>
-          )}
-        </button>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="Гараж"
+        title="Мой гараж"
+        description="Управление автомобилями и VIN-паспортами."
+        actions={
+          <Button
+            variant={showForm ? 'secondary' : 'primary'}
+            onClick={showForm ? handleCancel : openAddForm}
+          >
+            {showForm ? <><FaTimes /> Отмена</> : <><FaPlus /> Добавить автомобиль</>}
+          </Button>
+        }
+      />
 
-      {showAddForm && (
-        <div className="auto-card p-6 mb-6">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-            {editingCar ? (
-              <>
-                <FaEdit />
-                Редактировать автомобиль
-              </>
-            ) : (
-              <>
-                <FaPlus />
-                Добавить новый автомобиль
-              </>
-            )}
-          </h2>
+      {showForm && (
+        <Section title={editingCar ? 'Редактировать автомобиль' : 'Добавить автомобиль'}>
           {editingCar ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Марка *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="auto-input"
-                    placeholder="Toyota"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Модель *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.model}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    className="auto-input"
-                    placeholder="Camry"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Год выпуска *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1900"
-                    max={new Date().getFullYear() + 1}
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value, 10) || new Date().getFullYear() })}
-                    className="auto-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Гос. номер *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.licensePlate}
-                    onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.toUpperCase() })}
-                    className="auto-input font-mono"
-                    placeholder="01ABC123"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">VIN номер</label>
-                  <input
-                    type="text"
-                    value={formData.vin}
-                    onChange={(e) => setFormData({ ...formData, vin: sanitizeVin(e.target.value) })}
-                    className="auto-input font-mono"
-                    placeholder="17-значный номер"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Цвет</label>
-                  <input
-                    type="text"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="auto-input"
-                    placeholder="Черный"
-                  />
-                </div>
+            <form onSubmit={handleSubmit(onEditSubmit)} noValidate>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  label="Марка"
+                  placeholder="Toyota"
+                  required
+                  error={errors.brand?.message}
+                  {...register('brand', { required: 'Укажите марку' })}
+                />
+                <Input
+                  label="Модель"
+                  placeholder="Camry"
+                  required
+                  error={errors.model?.message}
+                  {...register('model', { required: 'Укажите модель' })}
+                />
+                <Input
+                  label="Год выпуска"
+                  type="number"
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                  required
+                  error={errors.year?.message}
+                  {...register('year', {
+                    required: 'Укажите год',
+                    valueAsNumber: true,
+                    min: { value: 1900, message: 'Год не может быть раньше 1900' },
+                    max: {
+                      value: new Date().getFullYear() + 1,
+                      message: 'Некорректный год',
+                    },
+                  })}
+                />
+                <Input
+                  label="Гос. номер"
+                  placeholder="01ABC123"
+                  required
+                  className="font-mono uppercase"
+                  error={errors.licensePlate?.message}
+                  {...register('licensePlate', { required: 'Укажите гос. номер' })}
+                />
+                <Input
+                  label="VIN номер"
+                  placeholder="17-значный VIN"
+                  className="font-mono"
+                  hint="Необязательно"
+                  {...register('vin')}
+                />
+                <Input
+                  label="Цвет"
+                  placeholder="Чёрный"
+                  hint="Необязательно"
+                  {...register('color')}
+                />
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Пробег (км) *</label>
-                  <input
+                  <Input
+                    label="Пробег (км)"
                     type="number"
+                    min={0}
                     required
-                    min="0"
-                    value={formData.mileage}
-                    onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value, 10) || 0 })}
-                    className="auto-input"
-                    placeholder="0"
+                    error={errors.mileage?.message}
+                    {...register('mileage', {
+                      required: 'Укажите пробег',
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Пробег не может быть отрицательным' },
+                    })}
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button
+
+              <div className="mt-6 flex gap-3">
+                <Button
                   type="submit"
-                  className="btn-primary flex items-center gap-2"
-                  disabled={updateCarMutation.isPending}
+                  variant="primary"
+                  loading={updateCarMutation.isPending}
                 >
                   <FaSave />
                   Сохранить изменения
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="btn-secondary"
-                >
+                </Button>
+                <Button type="button" variant="secondary" onClick={handleCancel}>
                   Отмена
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">VIN номер *</label>
-                <input
-                  type="text"
-                  required
-                  value={vinInput}
-                  onChange={(e) => setVinInput(sanitizeVin(e.target.value))}
-                  className="auto-input font-mono"
-                  placeholder="Введите 17-значный VIN"
-                />
-                <p className="text-sm text-slate-400 mt-2">
-                  Введите VIN из каталога, остальные данные автомобиля подтянутся автоматически.
-                </p>
-              </div>
-
-              {vinInput.length > 0 && currentVin.length < 17 && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                  VIN должен содержать 17 символов.
-                </div>
-              )}
+            <form onSubmit={handleAddSubmit}>
+              <Input
+                label="VIN номер"
+                className="font-mono"
+                placeholder="Введите 17-значный VIN"
+                value={vinInput}
+                onChange={(e) => setVinInput(sanitizeVin(e.target.value))}
+                hint={
+                  vinInput.length === 0
+                    ? 'Введите VIN — остальные данные подтянутся автоматически'
+                    : `${currentVin.length} / 17 символов`
+                }
+                error={
+                  isCurrentVinComplete && lookupCarQuery.error
+                    ? (lookupCarQuery.error.response?.data?.message ?? 'Автомобиль по этому VIN не найден')
+                    : undefined
+                }
+              />
 
               {isCurrentVinComplete && lookupCarQuery.isFetching && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
-                  Поиск автомобиля по VIN...
-                </div>
-              )}
-
-              {isCurrentVinComplete && lookupCarQuery.error && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                  {lookupCarQuery.error.response?.data?.message || 'Автомобиль по этому VIN не найден'}
-                </div>
+                <p className="mt-3 text-body text-text-secondary">Поиск в базе данных…</p>
               )}
 
               {catalogCar && (
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-emerald-300 mb-1">Автомобиль найден</p>
-                      <h3 className="text-2xl font-bold text-white">
-                        {catalogCar.brand} {catalogCar.model}
-                      </h3>
-                    </div>
-                    <FaCarSide className="text-4xl text-emerald-400" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="rounded-xl bg-slate-900/60 px-4 py-3">
-                      <p className="text-slate-400 mb-1">VIN</p>
-                      <p className="text-white font-mono">{catalogCar.vin}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-900/60 px-4 py-3">
-                      <p className="text-slate-400 mb-1">Год выпуска</p>
-                      <p className="text-white">{catalogCar.year}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-900/60 px-4 py-3">
-                      <p className="text-slate-400 mb-1">Цвет</p>
-                      <p className="text-white">{catalogCar.color || 'Не указан'}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-900/60 px-4 py-3">
-                      <p className="text-slate-400 mb-1">Гос. номер</p>
-                      <p className="text-white font-mono">{catalogCar.licensePlate}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-900/60 px-4 py-3 md:col-span-2">
-                      <p className="text-slate-400 mb-1">Пробег</p>
-                      <p className="text-white">{catalogCar.mileage.toLocaleString('ru-RU')} км</p>
-                    </div>
+                <div className="mt-4 glass-panel p-5 border border-success/20">
+                  <p className="section-label mb-4 text-success">Автомобиль найден</p>
+                  <div className="grid gap-2 rounded-md border border-border bg-surface-3 p-4 md:grid-cols-2">
+                    <KeyValue
+                      label="Марка и модель"
+                      value={`${catalogCar.brand} ${catalogCar.model}`}
+                    />
+                    <KeyValue label="Год" value={catalogCar.year} />
+                    <KeyValue
+                      label="VIN"
+                      value={<span className="font-mono text-caption">{catalogCar.vin}</span>}
+                    />
+                    <KeyValue
+                      label="Гос. номер"
+                      value={
+                        <span className="font-mono text-info">{catalogCar.licensePlate}</span>
+                      }
+                    />
+                    <KeyValue label="Цвет" value={catalogCar.color ?? '—'} />
+                    <KeyValue
+                      label="Пробег"
+                      value={`${catalogCar.mileage.toLocaleString('ru-RU')} км`}
+                    />
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
-                <button
+              <div className="mt-6 flex gap-3">
+                <Button
                   type="submit"
-                  className="btn-primary flex items-center gap-2"
-                  disabled={!catalogCar || lookupCarQuery.isFetching || addCarMutation.isPending}
+                  variant="primary"
+                  loading={addCarMutation.isPending}
+                  disabled={!catalogCar || lookupCarQuery.isFetching}
                 >
                   <FaPlus />
                   Добавить автомобиль
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="btn-secondary"
-                >
+                </Button>
+                <Button type="button" variant="secondary" onClick={handleCancel}>
                   Отмена
-                </button>
+                </Button>
               </div>
             </form>
           )}
-        </div>
+        </Section>
       )}
 
-      {cars && cars.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {cars.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {cars.map((car) => (
-            <div key={car.id} className="auto-card p-6 relative group">
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleEdit(car)
-                  }}
-                  className="p-2 bg-slate-700 hover:bg-blue-600 rounded-lg text-white transition-colors"
-                  title="Редактировать"
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleDelete(car.id)
-                  }}
-                  className="p-2 bg-slate-700 hover:bg-red-600 rounded-lg text-white transition-colors"
-                  title="Удалить"
-                >
-                  <FaTrash />
-                </button>
-              </div>
-              <Link to={`/cars/${car.id}`} className="block">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-white mb-1">
-                      {car.brand} {car.model}
-                    </h3>
-                    <p className="text-slate-400 text-sm">{car.year} год выпуска</p>
-                  </div>
-                  <FaCarSide className="text-4xl text-red-500" />
+            <div key={car.id} className="auto-card p-card flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="section-label">Автомобиль</p>
+                  <h3 className="mt-1 truncate text-h2 text-text-primary">
+                    {car.brand} {car.model}
+                  </h3>
+                  <p className="mt-0.5 text-body text-text-secondary">{car.year} г.в.</p>
                 </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-400">Пробег:</span>
-                    <span className="text-white font-semibold">{car.mileage?.toLocaleString()} км</span>
-                  </div>
-                  {car.licensePlate && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">Гос. номер:</span>
-                      <span className="text-info font-mono font-bold">{car.licensePlate}</span>
-                    </div>
-                  )}
-                  {car.color && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">Цвет:</span>
-                      <span className="text-white">{car.color}</span>
-                    </div>
-                  )}
-                  {car.lastServiceDate && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">Последнее ТО:</span>
-                      <span className="text-emerald-400">
+                <div className="metric-icon shrink-0">
+                  <FaCarSide />
+                </div>
+              </div>
+
+              <div className="grid gap-2 rounded-md border border-border bg-surface-3 p-4 text-body">
+                <KeyValue
+                  label="Пробег"
+                  value={`${car.mileage?.toLocaleString('ru-RU') ?? 0} км`}
+                />
+                <KeyValue
+                  label="Гос. номер"
+                  value={
+                    car.licensePlate ? (
+                      <span className="font-mono text-info">{car.licensePlate}</span>
+                    ) : '—'
+                  }
+                />
+                {car.color && <KeyValue label="Цвет" value={car.color} />}
+                {car.lastServiceDate && (
+                  <KeyValue
+                    label="Последнее ТО"
+                    value={
+                      <span className="text-success">
                         {new Date(car.lastServiceDate).toLocaleDateString('ru-RU')}
                       </span>
-                    </div>
+                    }
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Link
+                  to={`/cars/${car.id}`}
+                  className="flex items-center gap-2 text-body font-medium text-text-secondary transition-colors hover:text-text-primary"
+                >
+                  Открыть карточку
+                  <FaArrowRight className="text-xs" />
+                </Link>
+
+                <div className="flex items-center gap-2">
+                  {confirmDeleteId === car.id ? (
+                    <>
+                      <span className="text-caption text-text-muted">Удалить?</span>
+                      <Button
+                        variant="secondary"
+                        className="h-8 px-3 text-sm text-danger"
+                        loading={deleteCarMutation.isPending}
+                        onClick={() => {
+                          deleteCarMutation.mutate(car.id)
+                          setConfirmDeleteId(null)
+                        }}
+                      >
+                        Да
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="h-8 px-3 text-sm"
+                        onClick={() => setConfirmDeleteId(null)}
+                      >
+                        Нет
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        className="h-8 w-8 p-0"
+                        title="Редактировать"
+                        onClick={() => handleEdit(car)}
+                      >
+                        <FaEdit className="text-xs" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="h-8 w-8 p-0 text-danger"
+                        title="Удалить"
+                        onClick={() => setConfirmDeleteId(car.id)}
+                      >
+                        <FaTrash className="text-xs" />
+                      </Button>
+                    </>
                   )}
                 </div>
-                <div className="pt-4 border-t border-slate-700">
-                  <span className="text-red-400 text-sm font-medium flex items-center gap-2">
-                    Подробнее
-                    <FaArrowRight />
-                  </span>
-                </div>
-              </Link>
+              </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="auto-card p-12 text-center">
-          <FaCarSide className="text-8xl text-red-500 mx-auto mb-6 opacity-50" />
-          <h3 className="text-2xl font-bold text-white mb-4">Гараж пуст</h3>
-          <p className="text-slate-400 mb-6">Добавьте свой первый автомобиль для начала работы</p>
-          <button
-            onClick={openAddForm}
-            className="btn-primary flex items-center gap-2 mx-auto"
-          >
-            <FaPlus />
-            Добавить автомобиль
-          </button>
-        </div>
-      )}
-    </div>
+      ) : !showForm ? (
+        <EmptyState
+          icon={FaCarSide}
+          title="Гараж пуст"
+          description="Добавьте первый автомобиль по VIN, чтобы открыть историю обслуживания, записи и документы."
+          action={
+            <Button variant="primary" onClick={openAddForm}>
+              <FaPlus />
+              Добавить автомобиль
+            </Button>
+          }
+        />
+      ) : null}
+    </Page>
   )
 }
