@@ -6,7 +6,6 @@ import {
   FaBell,
   FaBookOpen,
   FaCalendar,
-  FaCalendarAlt,
   FaCar,
   FaCarSide,
   FaChartBar,
@@ -43,10 +42,9 @@ const userNavItems: NavigationItem[] = [
   { path: '/', label: 'Главная', icon: FaHome, description: 'Обзор аккаунта' },
   { path: '/garage', label: 'Гараж', icon: FaCar, description: 'Автомобили и VIN' },
   { path: '/service-centers', label: 'Сервисы', icon: FaWrench, description: 'Поиск партнеров' },
-  { path: '/bookings', label: 'Записи', icon: FaCalendar, description: 'Активные визиты' },
+  { path: '/bookings', label: 'Записи', icon: FaCalendar, description: 'Записи, история и календарь' },
   { path: '/my-documents', label: 'Документы', icon: FaFileInvoiceDollar, description: 'Операции и счета' },
-  { path: '/maintenance-calendar', label: 'Календарь', icon: FaCalendarAlt, description: 'План обслуживания' },
-  { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList, description: 'Архив работ' },
+  { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList, description: 'Архив выполненных работ' },
   { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации' },
 ]
 

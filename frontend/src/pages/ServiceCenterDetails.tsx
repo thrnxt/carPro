@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
@@ -9,6 +9,7 @@ import ru from 'date-fns/locale/ru'
 import {
   FaCalendarAlt,
   FaClock,
+  FaComments,
   FaEdit,
   FaEnvelope,
   FaGlobe,
@@ -18,11 +19,12 @@ import {
   FaStar,
   FaTimes,
 } from 'react-icons/fa'
-import { Page, PageHeader } from '../components/ui'
+import { Button, Page, PageHeader } from '../components/ui'
 
 export default function ServiceCenterDetails() {
   const { id } = useParams()
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [showBookingForm, setShowBookingForm] = useState(false)
@@ -138,9 +140,20 @@ export default function ServiceCenterDetails() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Marketplace"
+        eyebrow="Сервисы"
         title={serviceCenter.name}
-        description="Карточка сервиса объединяет публичную информацию, рейтинг, отзывы и быстрый переход к записи на обслуживание."
+        description={[serviceCenter.city, serviceCenter.region].filter(Boolean).join(', ')}
+        actions={
+          user && user.role === 'USER' && serviceCenter.user?.id ? (
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/chat/${serviceCenter.user.id}`)}
+            >
+              <FaComments />
+              Написать в чат
+            </Button>
+          ) : null
+        }
       />
 
       <div className="auto-card p-6 mb-6">
@@ -215,6 +228,15 @@ export default function ServiceCenterDetails() {
                 <FaMapMarkerAlt className="inline mr-2" />
                 Показать на карте
               </Link>
+              {user && user.role === 'USER' && serviceCenter.user?.id && (
+                <button
+                  onClick={() => navigate(`/chat/${serviceCenter.user.id}`)}
+                  className="btn-secondary flex items-center justify-center gap-2"
+                >
+                  <FaComments />
+                  Написать в чат
+                </button>
+              )}
               {user && cars && cars.length > 0 && (
                 <button
                   onClick={() => setShowBookingForm(!showBookingForm)}

@@ -456,3 +456,86 @@ export function FormField({
 export function Divider({ className }: { className?: string }) {
   return <hr className={cx('border-border', className)} />
 }
+
+export function Pagination({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  className,
+}: {
+  page: number          // 0-indexed
+  totalPages: number
+  totalItems: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  className?: string
+}) {
+  if (totalPages <= 1) return null
+
+  const from = page * pageSize + 1
+  const to = Math.min((page + 1) * pageSize, totalItems)
+
+  // Видимые страницы: всегда первая, последняя и ±1 от текущей
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i)
+  const visible = pageNumbers.filter(
+    (p) => p === 0 || p === totalPages - 1 || Math.abs(p - page) <= 1
+  )
+
+  return (
+    <div className={cx('glass-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between', className)}>
+      <p className="text-body text-text-secondary">
+        <span className="font-medium text-text-primary">{from}–{to}</span>
+        {' '}из {totalItems}
+      </p>
+
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page === 0}
+          onClick={() => onPageChange(page - 1)}
+          className="btn-secondary h-8 w-8 p-0 disabled:opacity-40"
+          aria-label="Предыдущая страница"
+        >
+          ‹
+        </button>
+
+        {visible.map((p, idx) => {
+          const prevVisible = visible[idx - 1]
+          const showEllipsis = prevVisible !== undefined && p - prevVisible > 1
+          return (
+            <span key={p} className="flex items-center gap-1">
+              {showEllipsis && (
+                <span className="px-1 text-text-muted text-sm">…</span>
+              )}
+              <button
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={cx(
+                  'h-8 min-w-[2rem] rounded-md px-2 text-sm font-medium transition-colors',
+                  p === page
+                    ? 'bg-accent text-white'
+                    : 'btn-secondary'
+                )}
+                aria-current={p === page ? 'page' : undefined}
+              >
+                {p + 1}
+              </button>
+            </span>
+          )
+        })}
+
+        <button
+          type="button"
+          disabled={page === totalPages - 1}
+          onClick={() => onPageChange(page + 1)}
+          className="btn-secondary h-8 w-8 p-0 disabled:opacity-40"
+          aria-label="Следующая страница"
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  )
+}

@@ -10,6 +10,7 @@ import {
   FaEdit,
   FaPlus,
   FaSave,
+  FaTachometerAlt,
   FaTimes,
   FaTrash,
 } from 'react-icons/fa'
@@ -24,6 +25,10 @@ import {
   Section,
   SkeletonCard,
 } from '../components/ui'
+import DrivingFrequencyModal from '../components/DrivingFrequencyModal'
+import MileageConfirmModal from '../components/MileageConfirmModal'
+
+type DrivingFrequency = 'RARELY' | 'NORMAL' | 'ACTIVE'
 
 type Car = {
   id: number
@@ -34,6 +39,12 @@ type Car = {
   licensePlate?: string | null
   color?: string | null
   mileage: number
+  estimatedMileage?: number | null
+  displayMileage?: number | null
+  mileageIsEstimated?: boolean | null
+  drivingFrequency?: DrivingFrequency | null
+  confirmedMileageAt?: string | null
+  needsDrivingFrequencySetup?: boolean
   lastServiceDate?: string | null
 }
 
@@ -78,6 +89,9 @@ export default function Garage() {
   const [editingCar, setEditingCar] = useState<Car | null>(null)
   const [vinInput, setVinInput] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  // Модальные окна трекинга пробега
+  const [frequencyModalCar, setFrequencyModalCar] = useState<Car | null>(null)
+  const [mileageModalCar, setMileageModalCar] = useState<Car | null>(null)
 
   const currentVin = sanitizeVin(vinInput)
   const isCurrentVinComplete = currentVin.length === 17
@@ -92,6 +106,18 @@ export default function Garage() {
       return response.data as Car[]
     },
   })
+
+  // Показываем модал «Как часто ездите?» если есть машина без настройки частоты.
+  // Срабатывает при загрузке гаража — не только при добавлении.
+  useEffect(() => {
+    console.log('[FrequencyModal] effect run — isLoading:', isLoading, 'cars:', cars.length, 'frequencyModalCar:', !!frequencyModalCar)
+    if (isLoading || frequencyModalCar) return
+    const carNeedingSetup = cars.find((c) => c.needsDrivingFrequencySetup === true)
+    console.log('[FrequencyModal] carNeedingSetup:', carNeedingSetup?.id, 'needsSetup values:', cars.map(c => c.needsDrivingFrequencySetup))
+    if (carNeedingSetup) {
+      setFrequencyModalCar(carNeedingSetup)
+    }
+  }, [cars, isLoading])
 
   const {
     register,
@@ -132,10 +158,14 @@ export default function Garage() {
       const response = await apiClient.post('/cars/by-vin', { vin })
       return response.data as Car
     },
-    onSuccess: () => {
+    onSuccess: (newCar) => {
       queryClient.invalidateQueries({ queryKey: ['cars'] })
       toast.success('Автомобиль добавлен')
       handleCancel()
+      // Показываем модал «Как часто вы ездите?» если бэкенд просит
+      if (newCar.needsDrivingFrequencySetup) {
+        setFrequencyModalCar(newCar)
+      }
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Ошибка добавления автомобиля')
@@ -412,7 +442,17 @@ export default function Garage() {
               <div className="grid gap-2 rounded-md border border-border bg-surface-3 p-4 text-body">
                 <KeyValue
                   label="Пробег"
-                  value={`${car.mileage?.toLocaleString('ru-RU') ?? 0} км`}
+                  value={
+                    <span className="flex items-center gap-2">
+                      <span className={car.mileageIsEstimated ? 'text-warning' : 'text-text-primary'}>
+                        {car.mileageIsEstimated ? '~' : ''}
+                        {(car.displayMileage ?? car.mileage)?.toLocaleString('ru-RU')} км
+                      </span>
+                      {car.mileageIsEstimated && (
+                        <span className="text-caption text-text-muted">(расчётный)</span>
+                      )}
+                    </span>
+                  }
                 />
                 <KeyValue
                   label="Гос. номер"
@@ -445,6 +485,17 @@ export default function Garage() {
                 </Link>
 
                 <div className="flex items-center gap-2">
+                  {/* Кнопка «Уточнить пробег» — видна всегда */}
+                  <Button
+                    variant="secondary"
+                    className="h-8 px-3 text-xs"
+                    title="Уточнить пробег"
+                    onClick={() => setMileageModalCar(car)}
+                  >
+                    <FaTachometerAlt className="text-xs" />
+                    Уточнить пробег
+                  </Button>
+
                   {confirmDeleteId === car.id ? (
                     <>
                       <span className="text-caption text-text-muted">Удалить?</span>
@@ -505,6 +556,25 @@ export default function Garage() {
           }
         />
       ) : null}
+
+      {/* Модал «Как часто вы ездите?» — появляется после добавления авто */}
+      {frequencyModalCar && (
+        <DrivingFrequencyModal
+          carId={frequencyModalCar.id}
+          carLabel={`${frequencyModalCar.brand} ${frequencyModalCar.model} ${frequencyModalCar.year}`}
+          onClose={() => setFrequencyModalCar(null)}
+        />
+      )}
+
+      {/* Модал «Уточнить пробег» */}
+      {mileageModalCar && (
+        <MileageConfirmModal
+          carId={mileageModalCar.id}
+          carLabel={`${mileageModalCar.brand} ${mileageModalCar.model} ${mileageModalCar.year}`}
+          estimatedMileage={mileageModalCar.displayMileage ?? mileageModalCar.mileage}
+          onClose={() => setMileageModalCar(null)}
+        />
+      )}
     </Page>
   )
 }

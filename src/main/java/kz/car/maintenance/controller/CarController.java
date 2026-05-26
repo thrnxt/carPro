@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import kz.car.maintenance.dto.CarVinRequest;
 import kz.car.maintenance.dto.CarCreateRequest;
 import kz.car.maintenance.dto.CarDto;
+import kz.car.maintenance.dto.DrivingFrequencyRequest;
+import kz.car.maintenance.dto.MileageUpdateRequest;
 import kz.car.maintenance.dto.VehicleCatalogDto;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.service.CarService;
@@ -19,7 +21,7 @@ import java.util.List;
 @RequestMapping("/cars")
 @RequiredArgsConstructor
 public class CarController {
-    
+
     private final CarService carService;
     private final VehicleCatalogService vehicleCatalogService;
 
@@ -68,5 +70,37 @@ public class CarController {
             @PathVariable Long id) {
         carService.deleteCar(user.getId(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ─── Трекинг пробега ──────────────────────────────────────────────────────
+
+    /**
+     * Устанавливает частоту использования авто.
+     * Вызывается после модального окна «Как часто вы ездите?» на фронте.
+     *
+     * PATCH /api/cars/{id}/driving-frequency
+     * Body: { "drivingFrequency": "NORMAL" }
+     */
+    @PatchMapping("/{id}/driving-frequency")
+    public ResponseEntity<CarDto> updateDrivingFrequency(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody DrivingFrequencyRequest request) {
+        return ResponseEntity.ok(carService.updateDrivingFrequency(user.getId(), id, request));
+    }
+
+    /**
+     * Подтверждение / ручное уточнение пробега.
+     * Вызывается когда пользователь вводит реальный пробег (кнопка «Уточнить пробег»).
+     *
+     * PATCH /api/cars/{id}/mileage/confirm
+     * Body: { "currentMileage": 87500 }
+     */
+    @PatchMapping("/{id}/mileage/confirm")
+    public ResponseEntity<CarDto> confirmMileage(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody MileageUpdateRequest request) {
+        return ResponseEntity.ok(carService.confirmMileage(user.getId(), id, request));
     }
 }

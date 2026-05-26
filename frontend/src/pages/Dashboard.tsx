@@ -287,7 +287,15 @@ function ClientDashboard() {
                 </div>
 
                 <div className="mt-6 grid gap-3 rounded-md border border-border bg-surface-3 p-4 text-body">
-                  <KeyValue label="Пробег" value={`${car.mileage?.toLocaleString('ru-RU') || 0} км`} />
+                  <KeyValue
+                    label="Пробег"
+                    value={
+                      <span className={car.mileageIsEstimated ? 'text-warning' : 'text-text-primary'}>
+                        {car.mileageIsEstimated ? '~' : ''}
+                        {(car.displayMileage ?? car.mileage)?.toLocaleString('ru-RU') || 0} км
+                      </span>
+                    }
+                  />
                   <KeyValue
                     label="Гос. номер"
                     value={car.licensePlate ? <span className="font-mono text-info">{car.licensePlate}</span> : '—'}

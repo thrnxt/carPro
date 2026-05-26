@@ -16,7 +16,6 @@ import Bookings from './pages/Bookings'
 import Notifications from './pages/Notifications'
 import EducationalContent from './pages/EducationalContent'
 import MaintenanceHistory from './pages/MaintenanceHistory'
-import MaintenanceCalendar from './pages/MaintenanceCalendar'
 import ComponentsView from './pages/ComponentsView'
 import Chat from './pages/Chat'
 import QuizPage from './pages/QuizPage'
@@ -103,7 +102,7 @@ function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="educational-content" element={<EducationalContent />} />
             <Route path="quizzes/:id" element={<QuizPage />} />
-            <Route path="maintenance-calendar" element={<MaintenanceCalendar />} />
+            <Route path="maintenance-calendar" element={<Navigate to="/bookings?tab=calendar" replace />} />
             <Route path="chat/:receiverId?" element={<Chat />} />
             <Route
               path="admin"

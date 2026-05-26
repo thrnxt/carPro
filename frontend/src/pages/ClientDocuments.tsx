@@ -9,10 +9,13 @@ import {
   FilterBar,
   Page,
   PageHeader,
+  Pagination,
   SegmentedControl,
   Skeleton,
 } from '../components/ui'
 import { invoiceStatusMeta } from '../utils/statusMeta'
+
+const PAGE_SIZE = 15
 
 interface CarSummary {
   id: number
@@ -126,6 +129,7 @@ function InvoiceRow({ invoice }: { invoice: InvoiceRecord }) {
 export default function ClientDocuments() {
   const [selectedCarId, setSelectedCarId] = useState('')
   const [tab, setTab] = useState<Tab>('operations')
+  const [page, setPage] = useState(0)
 
   const { data: cars = [], isLoading: carsLoading } = useQuery<CarSummary[]>({
     queryKey: ['cars'],
@@ -177,6 +181,11 @@ export default function ClientDocuments() {
     [invoices, selectedCarId]
   )
 
+  const activeList = tab === 'operations' ? filteredOperations : filteredInvoices
+  const totalPages = Math.ceil(activeList.length / PAGE_SIZE)
+  const pagedOperations = filteredOperations.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const pagedInvoices   = filteredInvoices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
   const unpaidTotal = useMemo(
     () =>
       filteredInvoices
@@ -200,6 +209,9 @@ export default function ClientDocuments() {
     },
   ]
 
+  const handleTabChange = (v: Tab) => { setTab(v); setPage(0) }
+  const handleCarChange = (v: string) => { setSelectedCarId(v); setPage(0) }
+
   return (
     <Page>
       <PageHeader
@@ -215,7 +227,7 @@ export default function ClientDocuments() {
       <FilterBar className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SegmentedControl<Tab>
           value={tab}
-          onChange={setTab}
+          onChange={handleTabChange}
           options={tabOptions}
         />
 
@@ -224,7 +236,7 @@ export default function ClientDocuments() {
             <FaCar className="shrink-0 text-text-muted" />
             <select
               value={selectedCarId}
-              onChange={(e) => setSelectedCarId(e.target.value)}
+              onChange={(e) => handleCarChange(e.target.value)}
               className="auto-select"
             >
               <option value="">Все автомобили</option>
@@ -243,8 +255,8 @@ export default function ClientDocuments() {
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)
         ) : tab === 'operations' ? (
-          filteredOperations.length > 0 ? (
-            filteredOperations.map((record) => (
+          pagedOperations.length > 0 ? (
+            pagedOperations.map((record) => (
               <OperationRow key={record.id} record={record} />
             ))
           ) : (
@@ -260,8 +272,8 @@ export default function ClientDocuments() {
               />
             </div>
           )
-        ) : filteredInvoices.length > 0 ? (
-          filteredInvoices.map((invoice) => (
+        ) : pagedInvoices.length > 0 ? (
+          pagedInvoices.map((invoice) => (
             <InvoiceRow key={invoice.id} invoice={invoice} />
           ))
         ) : (
@@ -278,6 +290,14 @@ export default function ClientDocuments() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={activeList.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+      />
     </Page>
   )
 }

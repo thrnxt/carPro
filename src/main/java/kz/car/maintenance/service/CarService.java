@@ -2,6 +2,8 @@ package kz.car.maintenance.service;
 
 import kz.car.maintenance.dto.CarCreateRequest;
 import kz.car.maintenance.dto.CarDto;
+import kz.car.maintenance.dto.DrivingFrequencyRequest;
+import kz.car.maintenance.dto.MileageUpdateRequest;
 import kz.car.maintenance.exception.BadRequestException;
 import kz.car.maintenance.exception.NotFoundException;
 import kz.car.maintenance.model.Car;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -137,8 +140,75 @@ public class CarService {
                 .orElseThrow(() -> new NotFoundException("Car not found"));
         carRepository.delete(car);
     }
-    
-    private CarDto toDto(Car car) {
+
+    // ─── Трекинг пробега ──────────────────────────────────────────────────────
+
+    /**
+     * Устанавливает частоту использования авто.
+     * Вызывается после модального окна «Как часто вы ездите?»
+     */
+    @Transactional
+    public CarDto updateDrivingFrequency(Long userId, Long carId, DrivingFrequencyRequest request) {
+        User owner = userService.findById(userId);
+        Car car = carRepository.findByIdAndOwner(carId, owner)
+                .orElseThrow(() -> new NotFoundException("Car not found"));
+
+        car.setDrivingFrequency(request.getDrivingFrequency());
+
+        // Если confirmedMileageAt не задан — считаем, что начало отсчёта сейчас
+        if (car.getConfirmedMileageAt() == null) {
+            car.setConfirmedMileageAt(LocalDateTime.now());
+        }
+
+        // Сразу считаем первичный estimatedMileage (пока = mileage, т.к. только что задали частоту)
+        car.setEstimatedMileage(car.getMileage());
+        car.setMileageIsEstimated(false);
+
+        car = carRepository.save(car);
+        return toDto(car);
+    }
+
+    /**
+     * Подтверждение / ручное уточнение пробега пользователем.
+     * Сбрасывает расчёт и начинает накопление заново с указанного значения.
+     */
+    @Transactional
+    public CarDto confirmMileage(Long userId, Long carId, MileageUpdateRequest request) {
+        User owner = userService.findById(userId);
+        Car car = carRepository.findByIdAndOwner(carId, owner)
+                .orElseThrow(() -> new NotFoundException("Car not found"));
+
+        Long newMileage = request.getCurrentMileage();
+        Long oldMileage = car.getMileage();
+
+        car.setMileage(newMileage);
+        car.setEstimatedMileage(newMileage);
+        car.setMileageIsEstimated(false);
+        car.setConfirmedMileageAt(LocalDateTime.now());
+
+        car = carRepository.save(car);
+
+        // Пересчитываем износ компонентов при изменении пробега
+        if (oldMileage != null && !oldMileage.equals(newMileage)) {
+            carComponentService.updateComponentWear(car);
+        }
+
+        return toDto(car);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public CarDto toDto(Car car) {
+        Long displayMileage = car.getEstimatedMileage() != null
+                ? car.getEstimatedMileage()
+                : car.getMileage();
+
+        boolean isEstimated = Boolean.TRUE.equals(car.getMileageIsEstimated())
+                && car.getEstimatedMileage() != null;
+
+        // Показывать модальное окно «Как часто вы ездите?», если частота не задана
+        boolean needsSetup = car.getDrivingFrequency() == null;
+
         return CarDto.builder()
                 .id(car.getId())
                 .brand(car.getBrand())
@@ -148,6 +218,12 @@ public class CarService {
                 .licensePlate(car.getLicensePlate())
                 .color(car.getColor())
                 .mileage(car.getMileage())
+                .estimatedMileage(car.getEstimatedMileage())
+                .displayMileage(displayMileage)
+                .mileageIsEstimated(isEstimated)
+                .drivingFrequency(car.getDrivingFrequency())
+                .confirmedMileageAt(car.getConfirmedMileageAt())
+                .needsDrivingFrequencySetup(needsSetup)
                 .drivingStyle(car.getDrivingStyle())
                 .lastServiceDate(car.getLastServiceDate())
                 .imageUrl(car.getImageUrl())

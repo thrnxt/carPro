@@ -6,8 +6,6 @@ import ru from 'date-fns/locale/ru'
 import {
   FaCamera,
   FaChevronDown,
-  FaChevronLeft,
-  FaChevronRight,
   FaChevronUp,
   FaFilePdf,
   FaWrench,
@@ -16,10 +14,10 @@ import apiClient from '../api/client'
 import OperationAttachments from '../components/OperationAttachments'
 import {
   Badge,
-  Button,
   EmptyState,
   Page,
   PageHeader,
+  Pagination,
   Section,
   Skeleton,
   cx,
@@ -173,8 +171,6 @@ export default function MaintenanceHistory() {
   const totalRecords = recordsPage?.totalElements ?? 0
   const totalPages = recordsPage?.totalPages ?? 0
   const currentPage = recordsPage?.page ?? page
-  const pageStart = totalRecords > 0 ? currentPage * JOURNAL_PAGE_SIZE + 1 : 0
-  const pageEnd = totalRecords > 0 ? currentPage * JOURNAL_PAGE_SIZE + records.length : 0
 
   if (carsLoading || recordsLoading) {
     return (
@@ -446,45 +442,17 @@ export default function MaintenanceHistory() {
             })}
           </div>
 
-          {/* ── Pagination ── */}
-          {totalPages > 1 && (
-            <div className="flex flex-col gap-3 glass-panel p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-body text-text-secondary">
-                <span className="font-medium text-text-primary">{pageStart}–{pageEnd}</span>
-                {' '}из {totalRecords}
-              </p>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={recordsPage?.first ?? currentPage === 0}
-                  onClick={() => {
-                    setPage((p) => Math.max(p - 1, 0))
-                    setExpandedRecordKey(null)
-                  }}
-                >
-                  <FaChevronLeft />
-                  Назад
-                </Button>
-
-                <span className="auto-badge px-4">
-                  {currentPage + 1} / {totalPages}
-                </span>
-
-                <Button
-                  variant="secondary"
-                  disabled={recordsPage?.last ?? true}
-                  onClick={() => {
-                    setPage((p) => p + 1)
-                    setExpandedRecordKey(null)
-                  }}
-                >
-                  Далее
-                  <FaChevronRight />
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalItems={totalRecords}
+            pageSize={JOURNAL_PAGE_SIZE}
+            onPageChange={(p) => {
+              setPage(p)
+              setExpandedRecordKey(null)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+          />
         </>
       ) : (
         <div className="auto-card p-8">
