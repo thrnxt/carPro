@@ -215,8 +215,7 @@ export default function ClientDocuments() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Документы"
-        title="Операции и счета"
+        title="Документы"
         description={
           !isLoading && unpaidTotal > 0
             ? `К оплате: ${unpaidTotal.toLocaleString('ru-RU')} ₸`

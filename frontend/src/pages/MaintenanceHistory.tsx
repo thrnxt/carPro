@@ -175,7 +175,7 @@ export default function MaintenanceHistory() {
   if (carsLoading || recordsLoading) {
     return (
       <Page>
-        <PageHeader eyebrow="История ТО" title="История обслуживания" />
+        <PageHeader title="История ТО" />
         <div className="auto-card overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => <RecordSkeleton key={i} />)}
         </div>
@@ -187,8 +187,7 @@ export default function MaintenanceHistory() {
     return (
       <Page>
         <PageHeader
-          eyebrow="История ТО"
-          title="История обслуживания"
+          title="История ТО"
           description="Раздел показывает все работы по вашим автомобилям. Сначала добавьте хотя бы один автомобиль в гараж."
         />
         <Section>
@@ -229,12 +228,11 @@ export default function MaintenanceHistory() {
   return (
     <Page>
       <PageHeader
-        eyebrow="История ТО"
-        title={id && selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : 'История обслуживания'}
+        title={id && selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : 'История ТО'}
         description={
           id && selectedCar
-            ? 'Фильтрованный журнал работ по выбранному автомобилю.'
-            : 'Единый журнал всех сервисных работ по вашему гаражу.'
+            ? 'Журнал работ по выбранному автомобилю.'
+            : 'Все сервисные работы по вашему гаражу.'
         }
         actions={
           id ? (

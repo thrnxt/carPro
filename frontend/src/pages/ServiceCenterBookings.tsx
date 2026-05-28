@@ -217,9 +217,8 @@ export default function ServiceCenterBookings() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Service bookings"
         title="Записи"
-        description={serviceCenter?.name ? `Сервис: ${serviceCenter.name}` : undefined}
+        description={serviceCenter?.name ? serviceCenter.name : undefined}
       />
 
       <Section

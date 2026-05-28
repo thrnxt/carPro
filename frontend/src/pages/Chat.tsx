@@ -243,7 +243,7 @@ export default function Chat() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Чат" title="Чат" />
+      <PageHeader title="Чат" description="Переписка с сервисными центрами" />
 
       <Section>
         <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">

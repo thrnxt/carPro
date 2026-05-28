@@ -165,7 +165,7 @@ export default function EducationalContent() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Знания" title="Знания" />
+      <PageHeader title="Знания" />
 
       <FilterBar>
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">

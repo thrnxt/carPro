@@ -340,7 +340,6 @@ export default function ServiceCenterInvoices() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Service invoices"
         title="Счета"
         actions={
           <button

@@ -110,10 +110,8 @@ export default function Garage() {
   // Показываем модал «Как часто ездите?» если есть машина без настройки частоты.
   // Срабатывает при загрузке гаража — не только при добавлении.
   useEffect(() => {
-    console.log('[FrequencyModal] effect run — isLoading:', isLoading, 'cars:', cars.length, 'frequencyModalCar:', !!frequencyModalCar)
     if (isLoading || frequencyModalCar) return
     const carNeedingSetup = cars.find((c) => c.needsDrivingFrequencySetup === true)
-    console.log('[FrequencyModal] carNeedingSetup:', carNeedingSetup?.id, 'needsSetup values:', cars.map(c => c.needsDrivingFrequencySetup))
     if (carNeedingSetup) {
       setFrequencyModalCar(carNeedingSetup)
     }
@@ -240,7 +238,7 @@ export default function Garage() {
   if (isLoading) {
     return (
       <Page>
-        <PageHeader eyebrow="Гараж" title="Мой гараж" />
+        <PageHeader title="Гараж" />
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} lines={4} />)}
         </div>
@@ -251,8 +249,7 @@ export default function Garage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Гараж"
-        title="Мой гараж"
+        title="Гараж"
         description="Управление автомобилями и VIN-паспортами."
         actions={
           <Button

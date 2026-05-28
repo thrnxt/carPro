@@ -246,7 +246,7 @@ export default function Notifications() {
   if (isLoading) {
     return (
       <Page>
-        <PageHeader eyebrow="Уведомления" title="Уведомления" />
+        <PageHeader title="Уведомления" />
         <div className="auto-card overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => <NotificationSkeleton key={i} />)}
         </div>
@@ -257,7 +257,6 @@ export default function Notifications() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Уведомления"
         title="Уведомления"
         description={
           unreadCount > 0

@@ -212,7 +212,6 @@ export default function ServiceCenterClients() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Service clients"
         title="Клиенты"
         description="База клиентов, автомобилей и сервисной истории."
       />

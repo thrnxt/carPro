@@ -258,7 +258,6 @@ export default function Bookings() {
     <Page>
       {/* ── Page header ── */}
       <PageHeader
-        eyebrow="Сервис"
         title="Записи"
         description="Ваши визиты в сервисные центры и план обслуживания."
         actions={

@@ -94,7 +94,7 @@ export default function QuizPage() {
     return (
       <Page className="max-w-4xl mx-auto">
         <PageHeader
-          eyebrow="Knowledge"
+          eyebrow="Знания"
           title="Результаты квиза"
           description="Проверка знаний оформлена как часть основного продукта, а не как отдельный учебный экран."
         />

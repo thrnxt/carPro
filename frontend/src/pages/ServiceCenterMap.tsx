@@ -68,7 +68,6 @@ export default function ServiceCenterMap() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Nearby search"
         title="Карта сервисных центров"
         description="Локальный поиск и карта собраны в одном экране: радиус поиска, текущее положение и список найденных центров доступны без отдельного режима."
         actions={
