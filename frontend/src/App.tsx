@@ -8,7 +8,9 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Garage from './pages/Garage'
+import CarLayout from './pages/CarLayout'
 import CarDetails from './pages/CarDetails'
+import CarCalendar from './pages/CarCalendar'
 import ServiceCenters from './pages/ServiceCenters'
 import ServiceCenterMap from './pages/ServiceCenterMap'
 import ServiceCenterDetails from './pages/ServiceCenterDetails'
@@ -83,9 +85,12 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="garage" element={<Garage />} />
-            <Route path="cars/:id" element={<CarDetails />} />
-            <Route path="cars/:id/components" element={<ComponentsView />} />
-            <Route path="cars/:id/history" element={<MaintenanceHistory />} />
+            <Route path="cars/:id" element={<CarLayout />}>
+              <Route index element={<CarDetails />} />
+              <Route path="components" element={<ComponentsView />} />
+              <Route path="history" element={<MaintenanceHistory />} />
+              <Route path="calendar" element={<CarCalendar />} />
+            </Route>
             <Route path="maintenance-history" element={<MaintenanceHistory />} />
             <Route path="service-centers" element={<ServiceCenters />} />
             <Route path="service-centers/:id" element={<ServiceCenterDetails />} />

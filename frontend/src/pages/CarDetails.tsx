@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  FaArrowLeft,
   FaCalendarAlt,
   FaCheckCircle,
   FaClipboardList,
@@ -13,7 +12,8 @@ import {
   FaWrench,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
-import { Button, KeyValue, Page, PageHeader, Section, StatCard } from '../components/ui'
+import { Button, KeyValue, Section, StatCard } from '../components/ui'
+import type { CarOutletContext } from './CarLayout'
 import DrivingFrequencyModal from '../components/DrivingFrequencyModal'
 import MileageConfirmModal from '../components/MileageConfirmModal'
 
@@ -38,17 +38,9 @@ function formatDaysSince(n: number | null): string {
 
 export default function CarDetails() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const { car } = useOutletContext<CarOutletContext>()
   const [showFrequencyModal, setShowFrequencyModal] = useState(false)
   const [showMileageModal, setShowMileageModal] = useState(false)
-
-  const { data: car, isLoading } = useQuery({
-    queryKey: ['car', id],
-    queryFn: async () => {
-      const res = await apiClient.get(`/cars/${id}`)
-      return res.data
-    },
-  })
 
   const { data: components = [] } = useQuery<any[]>({
     queryKey: ['car-components', id],
@@ -59,79 +51,13 @@ export default function CarDetails() {
     enabled: !!id,
   })
 
-  /* ── Loading ── */
-  if (isLoading) {
-    return (
-      <Page>
-        <PageHeader
-          eyebrow={
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-text-muted hover:text-text-primary transition-colors">
-              <FaArrowLeft className="text-xs" /> Назад
-            </button>
-          }
-          title="Загрузка…"
-        />
-        <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-b-transparent" />
-        </div>
-      </Page>
-    )
-  }
-
-  /* ── Not found ── */
-  if (!car) {
-    return (
-      <Page>
-        <PageHeader
-          eyebrow={
-            <Link to="/garage" className="flex items-center gap-1.5 text-text-muted hover:text-text-primary transition-colors">
-              <FaArrowLeft className="text-xs" /> Гараж
-            </Link>
-          }
-          title="Автомобиль не найден"
-        />
-      </Page>
-    )
-  }
-
   const days = daysSince(car.confirmedMileageAt)
   const critical = components.filter((c: any) => c.wearLevel >= 90).length
   const warning = components.filter((c: any) => c.wearLevel >= 70 && c.wearLevel < 90).length
   const good = components.filter((c: any) => c.wearLevel < 70).length
 
   return (
-    <Page>
-      {/* ── Header ── */}
-      <PageHeader
-        eyebrow={
-          <Link
-            to="/garage"
-            className="flex items-center gap-1.5 text-text-muted hover:text-text-primary transition-colors"
-          >
-            <FaArrowLeft className="text-xs" />
-            Гараж
-          </Link>
-        }
-        title={`${car.brand} ${car.model} ${car.year}`}
-        description={[car.licensePlate, car.color].filter(Boolean).join(' · ')}
-        actions={
-          <>
-            <Link to={`/cars/${id}/components`} className="btn-secondary flex items-center gap-2">
-              <FaWrench />
-              Детали
-            </Link>
-            <Link to={`/cars/${id}/history`} className="btn-secondary flex items-center gap-2">
-              <FaClipboardList />
-              История ТО
-            </Link>
-            <Link to="/maintenance-calendar" className="btn-secondary flex items-center gap-2">
-              <FaCalendarAlt />
-              Календарь
-            </Link>
-          </>
-        }
-      />
-
+    <>
       {/* ── Stat strip ── */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
@@ -299,7 +225,7 @@ export default function CarDetails() {
             </div>
           </Link>
           <Link
-            to="/maintenance-calendar"
+            to={`/cars/${id}/calendar`}
             className="auto-card p-4 flex items-center gap-3 hover:border-accent transition-colors group"
           >
             <div className="metric-icon shrink-0">
@@ -329,6 +255,6 @@ export default function CarDetails() {
           onClose={() => setShowMileageModal(false)}
         />
       )}
-    </Page>
+    </>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -172,13 +172,24 @@ export default function MaintenanceHistory() {
   const totalPages = recordsPage?.totalPages ?? 0
   const currentPage = recordsPage?.page ?? page
 
+  // Встраиваемый режим: страница открыта внутри карточки авто (/cars/:id/history),
+  // где общий заголовок и навигация уже отрисованы CarLayout.
+  const embedded = !!id
+  const Wrapper = embedded ? Fragment : Page
+
   if (carsLoading || recordsLoading) {
+    const skeleton = (
+      <div className="auto-card overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => <RecordSkeleton key={i} />)}
+      </div>
+    )
+    if (embedded) {
+      return skeleton
+    }
     return (
       <Page>
         <PageHeader title="История ТО" />
-        <div className="auto-card overflow-hidden">
-          {Array.from({ length: 6 }).map((_, i) => <RecordSkeleton key={i} />)}
-        </div>
+        {skeleton}
       </Page>
     )
   }
@@ -208,40 +219,27 @@ export default function MaintenanceHistory() {
 
   if (id && !selectedCar) {
     return (
-      <Page>
-        <Section title="Автомобиль не найден">
-          <EmptyState
-            icon={FaWrench}
-            title="Не удалось определить автомобиль"
-            description="Вероятно, автомобиль удалён или у вас больше нет к нему доступа."
-            action={
-              <Link to="/maintenance-history" className="btn-primary">
-                Открыть всю историю
-              </Link>
-            }
-          />
-        </Section>
-      </Page>
+      <EmptyState
+        icon={FaWrench}
+        title="Не удалось определить автомобиль"
+        description="Вероятно, автомобиль удалён или у вас больше нет к нему доступа."
+        action={
+          <Link to="/garage" className="btn-primary">
+            Вернуться в гараж
+          </Link>
+        }
+      />
     )
   }
 
   return (
-    <Page>
-      <PageHeader
-        title={id && selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : 'История ТО'}
-        description={
-          id && selectedCar
-            ? 'Журнал работ по выбранному автомобилю.'
-            : 'Все сервисные работы по вашему гаражу.'
-        }
-        actions={
-          id ? (
-            <Link to="/maintenance-history" className="btn-secondary">
-              Все автомобили
-            </Link>
-          ) : undefined
-        }
-      />
+    <Wrapper>
+      {!embedded && (
+        <PageHeader
+          title="История ТО"
+          description="Все сервисные работы по вашему гаражу."
+        />
+      )}
 
       {/* ── Filter bar ── */}
       {!id && (
@@ -488,6 +486,6 @@ export default function MaintenanceHistory() {
           />
         </div>
       )}
-    </Page>
+    </Wrapper>
   )
 }

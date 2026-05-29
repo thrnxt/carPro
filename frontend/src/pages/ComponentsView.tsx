@@ -1,8 +1,7 @@
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import {
-  FaArrowLeft,
   FaBolt,
   FaCar,
   FaCarSide,
@@ -23,8 +22,6 @@ import {
   EmptyState,
   KeyValue,
   LoadingState,
-  Page,
-  PageHeader,
   cx,
 } from '../components/ui'
 
@@ -190,28 +187,20 @@ export default function ComponentsView() {
   }, [filteredGroupedComponents, selectedCategory, selectedSubcategory])
 
   if (isLoading) {
-    return (
-      <Page>
-        <PageHeader eyebrow="Детали" title="Детали автомобиля" />
-        <LoadingState />
-      </Page>
-    )
+    return <LoadingState />
   }
 
   if (error) {
     return (
-      <Page>
-        <PageHeader eyebrow="Детали" title="Детали автомобиля" />
-        <EmptyState
-          icon={FaExclamationTriangle}
-          title="Не удалось загрузить детали"
-          description={
-            error instanceof Error
-              ? error.message
-              : 'Убедитесь, что вы авторизованы и имеете доступ к этому автомобилю.'
-          }
-        />
-      </Page>
+      <EmptyState
+        icon={FaExclamationTriangle}
+        title="Не удалось загрузить детали"
+        description={
+          error instanceof Error
+            ? error.message
+            : 'Убедитесь, что вы авторизованы и имеете доступ к этому автомобилю.'
+        }
+      />
     )
   }
 
@@ -228,21 +217,7 @@ export default function ComponentsView() {
   }
 
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Детали"
-        title="Детали автомобиля"
-        description="Полный список компонентов автомобиля и их состояние."
-        actions={
-          id ? (
-            <Link to={`/cars/${id}`} className="btn-secondary">
-              <FaArrowLeft />
-              Назад к авто
-            </Link>
-          ) : undefined
-        }
-      />
-
+    <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statusCards.map((card) => {
           const isActive = activeStatusFilter === card.key
@@ -435,6 +410,6 @@ export default function ComponentsView() {
           })}
         </div>
       )}
-    </Page>
+    </>
   )
 }

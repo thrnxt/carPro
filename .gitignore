@@ -55,8 +55,15 @@ uploads/
 # Environment variables
 .env
 .env.local
+.env.*
+# Local Spring overrides with machine-specific secrets
+src/main/resources/application-local.yml
+src/main/resources/application-*.local.yml
 
 # Node modules (if frontend in same repo)
 node_modules/
 dist/
 build/
+
+
+/src/main/resources/application.yml

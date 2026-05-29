@@ -10,6 +10,7 @@ import {
   FaCarSide,
   FaChartBar,
   FaChevronDown,
+  FaChevronLeft,
   FaChevronRight,
   FaClipboardList,
   FaCog,
@@ -26,6 +27,7 @@ import {
   FaWrench,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
+import { cx } from './ui'
 import ProfileEditorModal from './ProfileEditorModal'
 import { useAuthStore } from '../store/authStore'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
@@ -70,12 +72,10 @@ const isGarageProductActive = (pathname: string) =>
   pathname.startsWith('/maintenance-history/')
 
 const isGarageOverviewActive = (pathname: string) =>
-  pathname === '/garage' || (pathname.startsWith('/cars/') && !pathname.includes('/history'))
+  pathname === '/garage' || pathname.startsWith('/cars/')
 
 const isMaintenanceHistoryActive = (pathname: string) =>
-  pathname === '/maintenance-history' ||
-  pathname.startsWith('/maintenance-history/') ||
-  (pathname.startsWith('/cars/') && pathname.includes('/history'))
+  pathname === '/maintenance-history' || pathname.startsWith('/maintenance-history/')
 
 const isServiceProductActive = (pathname: string) =>
   pathname === '/service-centers' ||
@@ -192,6 +192,14 @@ const aliasTitles = [
   { test: (pathname: string) => pathname.startsWith('/service-centers/'), title: 'Карточка сервиса', group: 'Обслуживание' },
   { test: (pathname: string) => pathname.startsWith('/quizzes/'), title: 'Квиз', group: 'Знания' },
 ]
+
+// Корни разделов, на которые ведёт верхний уровень хлебных крошек.
+const GROUP_ROOT: Record<string, string> = {
+  'Гараж': '/garage',
+  'Обслуживание': '/service-centers',
+}
+
+type Crumb = { label: string; to?: string }
 
 const roleLabels: Record<string, string> = {
   USER: 'Кабинет владельца',
@@ -393,6 +401,66 @@ function TopNavButton({
   )
 }
 
+function BreadcrumbTrail({ items }: { items: Crumb[] }) {
+  if (items.length === 0) {
+    return null
+  }
+
+  const current = items[items.length - 1]
+  const parent = items.length > 1 ? items[items.length - 2] : null
+
+  return (
+    <ol className="flex items-center gap-2 text-sm">
+      {/* Мобильный вид: ссылка на родителя + текущая страница */}
+      {parent?.to ? (
+        <li className="flex min-w-0 items-center gap-1 sm:hidden">
+          <Link
+            to={parent.to}
+            className="flex shrink-0 items-center gap-1 text-text-muted transition-colors hover:text-text-primary"
+          >
+            <FaChevronLeft className="text-[10px]" />
+            <span className="max-w-[32vw] truncate">{parent.label}</span>
+          </Link>
+          <FaChevronRight className="shrink-0 text-[10px] text-text-muted" aria-hidden="true" />
+        </li>
+      ) : null}
+      <li className="min-w-0 truncate font-medium text-text-primary sm:hidden" aria-current="page">
+        {current.label}
+      </li>
+
+      {/* Десктоп: полная цепочка */}
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1
+
+        return (
+          <li key={`${item.label}-${index}`} className="hidden min-w-0 items-center gap-2 sm:flex">
+            {index > 0 ? (
+              <FaChevronRight className="shrink-0 text-[10px] text-text-muted" aria-hidden="true" />
+            ) : null}
+            {item.to && !isLast ? (
+              <Link
+                to={item.to}
+                className="shrink-0 text-text-muted transition-colors hover:text-text-primary"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <span
+                className={cx(
+                  isLast ? 'min-w-0 truncate font-medium text-text-primary' : 'shrink-0 text-text-muted'
+                )}
+                aria-current={isLast ? 'page' : undefined}
+              >
+                {item.label}
+              </span>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -500,6 +568,39 @@ export default function Layout() {
     return getFallbackSection(location.pathname)
   }, [isAdmin, isServiceCenter, location.pathname])
 
+  // Имя автомобиля для крошек берём из того же кэша, что и CarLayout (ключ ['car', id]),
+  // поэтому дополнительного запроса не происходит.
+  const carIdMatch = location.pathname.match(/^\/cars\/(\d+)/)
+  const carId = carIdMatch?.[1]
+  const { data: breadcrumbCar } = useQuery<{ brand: string; model: string }>({
+    queryKey: ['car', carId],
+    queryFn: async () => (await apiClient.get(`/cars/${carId}`)).data,
+    enabled: !!carId,
+  })
+
+  const breadcrumbs = useMemo<Crumb[]>(() => {
+    const path = location.pathname
+
+    if (carId) {
+      const carName = breadcrumbCar ? `${breadcrumbCar.brand} ${breadcrumbCar.model}` : 'Автомобиль'
+      const base: Crumb[] = [
+        { label: 'Гараж', to: '/garage' },
+        { label: carName, to: `/cars/${carId}` },
+      ]
+
+      if (path.endsWith('/components')) return [...base, { label: 'Детали' }]
+      if (path.endsWith('/history')) return [...base, { label: 'История ТО' }]
+      if (path.endsWith('/calendar')) return [...base, { label: 'Календарь' }]
+      return [{ label: 'Гараж', to: '/garage' }, { label: carName }]
+    }
+
+    const groupRoot = GROUP_ROOT[currentSection.group]
+    return [
+      { label: currentSection.group, ...(groupRoot ? { to: groupRoot } : {}) },
+      { label: currentSection.title },
+    ]
+  }, [location.pathname, carId, breadcrumbCar, currentSection])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -564,15 +665,7 @@ export default function Layout() {
               </button>
 
               <nav aria-label="Хлебные крошки" className="min-w-0">
-                <ol className="flex items-center gap-2 text-sm">
-                  <li className="hidden shrink-0 text-text-muted sm:block">{currentSection.group}</li>
-                  <li className="hidden shrink-0 text-text-muted sm:block" aria-hidden="true">
-                    <FaChevronRight className="text-[10px]" />
-                  </li>
-                  <li className="min-w-0 truncate font-medium text-text-primary" aria-current="page">
-                    {currentSection.title}
-                  </li>
-                </ol>
+                <BreadcrumbTrail items={breadcrumbs} />
               </nav>
             </div>
 

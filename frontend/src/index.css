@@ -927,6 +927,269 @@
     font-size: 128px;
   }
 
+  /* --- Car sub-navigation tabs --- */
+  .car-tabs {
+    display: flex;
+    gap: var(--spacing-1);
+    overflow-x: auto;
+    border-bottom: 1px solid var(--color-border);
+    scrollbar-width: none;
+  }
+
+  .car-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .car-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-bottom: -1px;
+    padding: var(--spacing-3) var(--spacing-3);
+    border-bottom: 2px solid transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      color 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .car-tab svg {
+    color: var(--color-text-muted);
+    transition: color 0.16s ease;
+  }
+
+  .car-tab:hover {
+    color: var(--color-text-primary);
+  }
+
+  .car-tab:hover svg {
+    color: var(--color-text-secondary);
+  }
+
+  .car-tab-active {
+    color: var(--color-text-primary);
+    border-bottom-color: var(--color-accent);
+  }
+
+  .car-tab-active svg {
+    color: var(--color-accent);
+  }
+
+  /* --- Clients section --- */
+  .toolbar-search {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toolbar-search svg {
+    position: absolute;
+    left: var(--spacing-4);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+    font-size: 14px;
+  }
+
+  .toolbar-search .auto-input {
+    padding-left: 2.6rem;
+  }
+
+  .toolbar-search .auto-input:focus {
+    border-color: rgba(232, 84, 26, 0.55);
+    box-shadow: 0 0 0 4px rgba(232, 84, 26, 0.12);
+  }
+
+  .control-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--text-caption);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .client-list {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+  }
+
+  .client-row {
+    position: relative;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--spacing-4) var(--spacing-card);
+    transition: background-color 0.16s ease;
+  }
+
+  .client-row:last-child {
+    border-bottom: 0;
+  }
+
+  .client-row:first-child {
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+  }
+
+  .client-row:last-child {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+
+  .client-row:hover {
+    background: var(--color-surface-3);
+  }
+
+  .client-row-selected {
+    background: rgba(232, 84, 26, 0.07);
+  }
+
+  .client-row-selected:hover {
+    background: rgba(232, 84, 26, 0.1);
+  }
+
+  .client-avatar {
+    display: flex;
+    height: 42px;
+    width: 42px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: #fff;
+  }
+
+  .client-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    min-height: 24px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-1);
+    color: var(--color-text-secondary);
+    padding: 2px var(--spacing-2);
+    font-size: var(--text-caption);
+    white-space: nowrap;
+  }
+
+  .client-chip svg {
+    color: var(--color-text-muted);
+    font-size: 11px;
+  }
+
+  .client-check {
+    height: 18px;
+    width: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    accent-color: var(--color-accent);
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    height: 36px;
+    width: 36px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-secondary);
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .icon-btn:hover,
+  .icon-btn-active {
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
+  }
+
+  .menu-panel {
+    position: absolute;
+    z-index: 50;
+    min-width: 13.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-strong);
+    background: var(--color-surface-2);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    padding: var(--spacing-1);
+    animation: fade-in 0.14s ease both;
+  }
+
+  .menu-label {
+    padding: var(--spacing-2) var(--spacing-3) var(--spacing-1);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: var(--spacing-2);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    text-align: left;
+    transition:
+      background-color 0.14s ease,
+      color 0.14s ease;
+  }
+
+  .menu-item:hover {
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
+  }
+
+  .menu-item-active {
+    color: var(--color-text-primary);
+  }
+
+  .menu-item-danger {
+    color: var(--color-danger);
+  }
+
+  .menu-item-danger:hover {
+    background: rgba(226, 75, 74, 0.12);
+    color: var(--color-danger);
+  }
+
+  .menu-divider {
+    height: 1px;
+    margin: var(--spacing-1) 0;
+    background: var(--color-border);
+  }
+
+  .bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-3);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(232, 84, 26, 0.28);
+    background: rgba(232, 84, 26, 0.07);
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
   .next-action-card {
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-border);
