@@ -1,5 +1,6 @@
 package kz.car.maintenance.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import java.util.Set;
 @Entity
 @Table(name = "maintenance_records")
 @Data
-@EqualsAndHashCode(exclude = {"car", "serviceCenter", "photos", "replacedComponents", "invoice"})
+@EqualsAndHashCode(exclude = {"car", "serviceCenter", "booking", "photos", "replacedComponents", "invoice"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,6 +33,11 @@ public class MaintenanceRecord {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_center_id")
     private ServiceCenter serviceCenter;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "car", "serviceCenter"})
+    private Booking booking;
     
     @Column(nullable = false)
     private String workType; // Тип работы (например, "Замена масла", "Ремонт подвески")

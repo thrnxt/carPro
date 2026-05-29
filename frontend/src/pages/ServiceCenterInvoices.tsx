@@ -19,6 +19,7 @@ interface MaintenanceOperationOption {
   id: number
   serviceDate: string
   workType: string
+  description?: string
   cost?: number
   car?: {
     id: number
@@ -209,18 +210,20 @@ export default function ServiceCenterInvoices() {
         maintenanceRecordId: formData.maintenanceRecordId ? Number(formData.maintenanceRecordId) : null,
         clientId: formData.clientId ? Number(formData.clientId) : null,
         carId: formData.carId ? Number(formData.carId) : null,
-        amount: Number(formData.amount),
+        amount: formData.amount ? Number(formData.amount) : null,
         taxAmount: formData.taxAmount ? Number(formData.taxAmount) : null,
         currency: formData.currency || 'KZT',
         notes: formData.notes || null,
-        items: items
-          .filter((item) => item.name.trim())
-          .map((item) => ({
-            name: item.name,
-            description: item.description || null,
-            quantity: Number(item.quantity),
-            unitPrice: Number(item.unitPrice),
-          })),
+        items: formData.maintenanceRecordId
+          ? []
+          : items
+              .filter((item) => item.name.trim())
+              .map((item) => ({
+                name: item.name,
+                description: item.description || null,
+                quantity: Number(item.quantity),
+                unitPrice: Number(item.unitPrice),
+              })),
       }
       const response = await apiClient.post('/invoices/service-center', payload)
       return response.data
@@ -256,6 +259,14 @@ export default function ServiceCenterInvoices() {
     const invoicedOperationIds = new Set(invoices.map((invoice) => invoice.maintenanceRecordId))
     return operations.filter((operation) => !invoicedOperationIds.has(operation.id))
   }, [invoices, operations])
+
+  const selectedOperation = useMemo(
+    () =>
+      availableOperations.find(
+        (operation) => String(operation.id) === formData.maintenanceRecordId
+      ) || null,
+    [availableOperations, formData.maintenanceRecordId]
+  )
 
   const sortedInvoices = useMemo(
     () =>
@@ -303,7 +314,7 @@ export default function ServiceCenterInvoices() {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!formData.amount) {
+    if (!formData.maintenanceRecordId && !formData.amount) {
       toast.error('Укажите сумму счета')
       return
     }
@@ -313,10 +324,17 @@ export default function ServiceCenterInvoices() {
       return
     }
 
-    const invalidItem = items.find(
-      (item) =>
-        item.name.trim() && (!item.quantity || !item.unitPrice || Number(item.quantity) <= 0)
-    )
+    if (formData.maintenanceRecordId && selectedOperation?.cost == null) {
+      toast.error('У выбранной операции не указана стоимость. Добавьте ее в операцию перед созданием счета')
+      return
+    }
+
+    const invalidItem = formData.maintenanceRecordId
+      ? null
+      : items.find(
+          (item) =>
+            item.name.trim() && (!item.quantity || !item.unitPrice || Number(item.quantity) <= 0)
+        )
 
     if (invalidItem) {
       toast.error('Проверьте позиции счета: количество и цена должны быть больше 0')
@@ -361,13 +379,21 @@ export default function ServiceCenterInvoices() {
                 <label className="mb-2 block text-sm text-slate-300">Операция</label>
                 <select
                   value={formData.maintenanceRecordId}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const maintenanceRecordId = event.target.value
+                    const operation = availableOperations.find(
+                      (item) => String(item.id) === maintenanceRecordId
+                    )
+
                     setFormData((currentValue) => ({
                       ...currentValue,
-                      maintenanceRecordId: event.target.value,
-                      ...(event.target.value ? { clientId: '', carId: '' } : {}),
+                      maintenanceRecordId,
+                      clientId: maintenanceRecordId ? '' : currentValue.clientId,
+                      carId: maintenanceRecordId ? '' : currentValue.carId,
+                      amount: operation?.cost != null ? String(operation.cost) : '',
                     }))
-                  }
+                    setItems([{ name: '', description: '', quantity: '1', unitPrice: '' }])
+                  }}
                   className="auto-select"
                 >
                   <option value="">Без привязки к операции</option>
@@ -378,7 +404,7 @@ export default function ServiceCenterInvoices() {
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
-                  Если операция еще не создана, счет можно выставить вручную по клиенту и автомобилю.
+                  При выборе операции клиент, автомобиль и сумма берутся из нее. Ручной счет остается для нестандартных случаев.
                 </p>
               </div>
 
@@ -425,20 +451,36 @@ export default function ServiceCenterInvoices() {
                 </select>
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Сумма</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(event) =>
-                    setFormData((currentValue) => ({ ...currentValue, amount: event.target.value }))
-                  }
-                  className="auto-input"
-                  required
-                />
-              </div>
+              {formData.maintenanceRecordId ? (
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Сумма из операции</label>
+                  <div className="auto-input flex min-h-[46px] items-center justify-between">
+                    <span className="truncate text-text-secondary">
+                      {selectedOperation?.workType || 'Операция'}
+                    </span>
+                    <span className="pl-3 font-semibold text-emerald-300">
+                      {selectedOperation?.cost != null
+                        ? formatMoney(selectedOperation.cost, formData.currency || 'KZT')
+                        : 'Не указана'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Сумма</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={(event) =>
+                      setFormData((currentValue) => ({ ...currentValue, amount: event.target.value }))
+                    }
+                    className="auto-input"
+                    required
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="mb-2 block text-sm text-slate-300">Налог</label>
@@ -482,62 +524,72 @@ export default function ServiceCenterInvoices() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-white">Позиции счета</h3>
-                <button type="button" onClick={addItem} className="btn-secondary px-3 py-2 text-sm">
-                  <FaPlus />
-                  Добавить позицию
-                </button>
+            {formData.maintenanceRecordId ? (
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <h3 className="text-sm font-semibold text-white">Позиция счета</h3>
+                <p className="mt-3 text-sm text-slate-400">
+                  Система автоматически создаст позицию по операции
+                  {selectedOperation ? ` «${selectedOperation.workType}»` : ''} и возьмет стоимость из нее.
+                </p>
               </div>
+            ) : (
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-white">Позиции счета</h3>
+                  <button type="button" onClick={addItem} className="btn-secondary px-3 py-2 text-sm">
+                    <FaPlus />
+                    Добавить позицию
+                  </button>
+                </div>
 
-              <div className="mt-4 space-y-3">
-                {items.map((item, index) => (
-                  <div
-                    key={`invoice-item-${index}`}
-                    className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-3 sm:grid-cols-2 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
-                  >
-                    <input
-                      value={item.name}
-                      onChange={(event) => updateItem(index, 'name', event.target.value)}
-                      className="auto-input"
-                      placeholder="Название"
-                    />
-                    <input
-                      value={item.description}
-                      onChange={(event) => updateItem(index, 'description', event.target.value)}
-                      className="auto-input"
-                      placeholder="Описание"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(event) => updateItem(index, 'quantity', event.target.value)}
-                      className="auto-input"
-                      placeholder="Кол-во"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.unitPrice}
-                      onChange={(event) => updateItem(index, 'unitPrice', event.target.value)}
-                      className="auto-input"
-                      placeholder="Цена"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      disabled={items.length === 1}
-                      className="btn-secondary text-danger px-3 py-2 text-sm"
+                <div className="mt-4 space-y-3">
+                  {items.map((item, index) => (
+                    <div
+                      key={`invoice-item-${index}`}
+                      className="grid gap-3 rounded-lg border border-white/10 bg-slate-950/25 p-3 sm:grid-cols-2 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_7rem_9rem_auto]"
                     >
-                      Удалить
-                    </button>
-                  </div>
-                ))}
+                      <input
+                        value={item.name}
+                        onChange={(event) => updateItem(index, 'name', event.target.value)}
+                        className="auto-input"
+                        placeholder="Название"
+                      />
+                      <input
+                        value={item.description}
+                        onChange={(event) => updateItem(index, 'description', event.target.value)}
+                        className="auto-input"
+                        placeholder="Описание"
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(event) => updateItem(index, 'quantity', event.target.value)}
+                        className="auto-input"
+                        placeholder="Кол-во"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(event) => updateItem(index, 'unitPrice', event.target.value)}
+                        className="auto-input"
+                        placeholder="Цена"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        disabled={items.length === 1}
+                        className="btn-secondary text-danger px-3 py-2 text-sm"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex flex-wrap gap-3">
               <button

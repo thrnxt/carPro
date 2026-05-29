@@ -1,26 +1,33 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { FaArrowLeft, FaCamera, FaPlus, FaTimes, FaTools } from 'react-icons/fa'
+import {
+  FaArrowLeft,
+  FaCalendarAlt,
+  FaCamera,
+  FaCar,
+  FaPhoneAlt,
+  FaPlus,
+  FaTimes,
+  FaTools,
+  FaUser,
+} from 'react-icons/fa'
 import apiClient from '../api/client'
-import { Page, PageHeader, Section } from '../components/ui'
+import { EmptyState, Page, PageHeader, Section } from '../components/ui'
 
 interface ServiceCenterProfile {
   id: number
   name: string
 }
 
-interface ServiceCenterClient {
-  clientId: number
-  firstName: string
-  lastName: string
-  status: 'NEW' | 'REGULAR' | 'VIP' | 'BLOCKED'
-}
-
 interface Booking {
   id: number
   status: string
+  bookingDateTime: string
+  createdAt?: string
+  description?: string
+  contactPhone?: string
   car?: {
     id: number
     brand?: string
@@ -31,16 +38,16 @@ interface Booking {
       id?: number
       firstName?: string
       lastName?: string
+      phoneNumber?: string
     }
   }
 }
 
-interface CarSummary {
+interface ExistingOperationSummary {
   id: number
-  brand: string
-  model: string
-  licensePlate?: string
-  mileage?: number
+  booking?: {
+    id?: number
+  }
 }
 
 interface ComponentSummary {
@@ -50,18 +57,6 @@ interface ComponentSummary {
   wearLevel: number
 }
 
-interface CandidateClient {
-  id: number
-  fullName: string
-  source: 'serviced' | 'booking'
-}
-
-interface CandidateCar {
-  id: number
-  title: string
-  mileage?: number
-}
-
 interface ReplacedPartFormRow {
   componentId: string
   partNumber: string
@@ -69,6 +64,7 @@ interface ReplacedPartFormRow {
 }
 
 interface CreateOperationPayload {
+  bookingId: number
   carId: number
   workType: string
   description: string | null
@@ -82,21 +78,52 @@ interface CreateOperationPayload {
   }>
 }
 
-const CLIENT_STATUS_LABELS: Record<ServiceCenterClient['status'], string> = {
-  NEW: 'Новый',
-  REGULAR: 'Постоянный',
-  VIP: 'VIP',
-  BLOCKED: 'Заблокирован',
+const OPERATION_SOURCE_STATUSES = new Set(['COMPLETED'])
+
+function formatBookingDateTime(value: string) {
+  try {
+    return new Date(value).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return value
+  }
 }
 
-const BOOKING_READY_STATUSES = new Set(['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'])
+function getBookingSortTime(booking: Booking) {
+  const primaryDate = booking.createdAt || booking.bookingDateTime
+  const parsed = new Date(primaryDate).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function getBookingClientName(booking: Booking) {
+  return `${booking.car?.owner?.firstName || ''} ${booking.car?.owner?.lastName || ''}`.trim() || 'Клиент не указан'
+}
+
+function getBookingCarTitle(booking: Booking) {
+  const carTitle = `${booking.car?.brand || ''} ${booking.car?.model || ''}`.trim()
+  return carTitle
+    ? `${carTitle}${booking.car?.licensePlate ? ` (${booking.car.licensePlate})` : ''}`
+    : 'Автомобиль не указан'
+}
+
+function getBookingPhone(booking: Booking) {
+  return booking.contactPhone?.trim() || booking.car?.owner?.phoneNumber?.trim() || 'Не указан'
+}
 
 export default function ServiceCenterOperationCreate() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const preselectedBookingAppliedRef = useRef(false)
+  const requestedBookingId = searchParams.get('bookingId')?.trim() || ''
   const [formData, setFormData] = useState({
-    clientId: '',
+    bookingId: '',
     carId: '',
     workType: '',
     description: '',
@@ -107,7 +134,7 @@ export default function ServiceCenterOperationCreate() {
   const [replacedParts, setReplacedParts] = useState<ReplacedPartFormRow[]>([])
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
-  const { data: serviceCenter } = useQuery<ServiceCenterProfile>({
+  const { data: serviceCenter, isLoading: serviceCenterLoading } = useQuery<ServiceCenterProfile>({
     queryKey: ['service-center', 'my'],
     queryFn: async () => {
       const response = await apiClient.get('/service-centers/my')
@@ -115,15 +142,7 @@ export default function ServiceCenterOperationCreate() {
     },
   })
 
-  const { data: clients } = useQuery<ServiceCenterClient[]>({
-    queryKey: ['service-center-clients', 'my'],
-    queryFn: async () => {
-      const response = await apiClient.get('/service-center-clients/my')
-      return response.data
-    },
-  })
-
-  const { data: bookings } = useQuery<Booking[]>({
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ['service-center-bookings', serviceCenter?.id],
     queryFn: async () => {
       const response = await apiClient.get(`/bookings/service-center/${serviceCenter?.id}`)
@@ -132,94 +151,83 @@ export default function ServiceCenterOperationCreate() {
     enabled: !!serviceCenter?.id,
   })
 
-  const availableClients = useMemo<CandidateClient[]>(() => {
-    const merged = new Map<number, CandidateClient>()
-
-    for (const client of clients || []) {
-      merged.set(client.clientId, {
-        id: client.clientId,
-        fullName: `${client.firstName} ${client.lastName}`.trim(),
-        source: 'serviced',
-      })
-    }
-
-    for (const booking of bookings || []) {
-      if (!BOOKING_READY_STATUSES.has(booking.status)) {
-        continue
-      }
-
-      const owner = booking.car?.owner
-      if (!owner?.id || merged.has(owner.id)) {
-        continue
-      }
-
-      merged.set(owner.id, {
-        id: owner.id,
-        fullName: `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || `Клиент #${owner.id}`,
-        source: 'booking',
-      })
-    }
-
-    return Array.from(merged.values()).sort((left, right) => left.fullName.localeCompare(right.fullName, 'ru'))
-  }, [bookings, clients])
-
-  const selectedClientId = formData.clientId ? Number(formData.clientId) : null
-
-  const { data: servicedCars } = useQuery<CarSummary[]>({
-    queryKey: ['service-center-client-cars', selectedClientId],
+  const { data: operations = [], isLoading: operationsLoading } = useQuery<ExistingOperationSummary[]>({
+    queryKey: ['service-center-operations', 'my'],
     queryFn: async () => {
-      const response = await apiClient.get(`/service-center-clients/${selectedClientId}/cars`)
+      const response = await apiClient.get('/maintenance-records/service-center/my')
       return response.data
     },
-    enabled: !!selectedClientId,
+    enabled: !!serviceCenter?.id,
   })
 
-  const candidateCars = useMemo<CandidateCar[]>(() => {
-    const cars = new Map<number, CandidateCar>()
+  const usedBookingIds = useMemo(
+    () =>
+      new Set(
+        operations
+          .map((operation) => operation.booking?.id)
+          .filter((bookingId): bookingId is number => typeof bookingId === 'number')
+      ),
+    [operations]
+  )
 
-    for (const car of servicedCars || []) {
-      cars.set(car.id, {
-        id: car.id,
-        title: `${car.brand} ${car.model}${car.licensePlate ? ` (${car.licensePlate})` : ''}`,
-        mileage: car.mileage,
-      })
-    }
+  const availableBookings = useMemo(
+    () =>
+      bookings
+        .filter((booking) => OPERATION_SOURCE_STATUSES.has(booking.status) && !usedBookingIds.has(booking.id))
+        .sort((left, right) => getBookingSortTime(right) - getBookingSortTime(left)),
+    [bookings, usedBookingIds]
+  )
 
-    for (const booking of bookings || []) {
-      if (!BOOKING_READY_STATUSES.has(booking.status)) {
-        continue
-      }
-
-      const ownerId = booking.car?.owner?.id
-      const carId = booking.car?.id
-      if (!selectedClientId || !ownerId || ownerId !== selectedClientId || !carId || cars.has(carId)) {
-        continue
-      }
-
-      cars.set(carId, {
-        id: carId,
-        title: `${booking.car?.brand || ''} ${booking.car?.model || ''}${
-          booking.car?.licensePlate ? ` (${booking.car.licensePlate})` : ''
-        }`.trim(),
-        mileage: booking.car?.mileage,
-      })
-    }
-
-    return Array.from(cars.values())
-  }, [bookings, servicedCars, selectedClientId])
+  const selectedBooking = useMemo(
+    () => availableBookings.find((booking) => String(booking.id) === formData.bookingId) || null,
+    [availableBookings, formData.bookingId]
+  )
 
   const selectedCarId = formData.carId ? Number(formData.carId) : null
 
   const { data: carComponents } = useQuery<ComponentSummary[]>({
-    queryKey: ['service-center-client-car-components', selectedClientId, selectedCarId],
+    queryKey: ['service-center-booking-car-components', selectedBooking?.car?.owner?.id, selectedCarId],
     queryFn: async () => {
       const response = await apiClient.get(
-        `/service-center-clients/${selectedClientId}/cars/${selectedCarId}/components`
+        `/service-center-clients/${selectedBooking?.car?.owner?.id}/cars/${selectedCarId}/components`
       )
       return response.data
     },
-    enabled: !!selectedClientId && !!selectedCarId,
+    enabled: !!selectedCarId && !!selectedBooking?.car?.owner?.id,
   })
+
+  const applyBookingSelection = (bookingId: string) => {
+    const nextBooking = availableBookings.find((booking) => String(booking.id) === bookingId) || null
+
+    setFormData((currentValue) => ({
+      ...currentValue,
+      bookingId,
+      carId: nextBooking?.car?.id ? String(nextBooking.car.id) : '',
+      description: nextBooking?.description || '',
+      serviceDate: nextBooking?.bookingDateTime?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+      mileageAtService: nextBooking?.car?.mileage != null ? String(nextBooking.car.mileage) : '',
+      workType: '',
+      cost: '',
+    }))
+    setReplacedParts([])
+  }
+
+  useEffect(() => {
+    if (!requestedBookingId || !availableBookings.length || preselectedBookingAppliedRef.current) {
+      return
+    }
+
+    const hasRequestedBooking = availableBookings.some(
+      (booking) => String(booking.id) === requestedBookingId
+    )
+
+    if (!hasRequestedBooking) {
+      return
+    }
+
+    applyBookingSelection(requestedBookingId)
+    preselectedBookingAppliedRef.current = true
+  }, [availableBookings, requestedBookingId])
 
   const addReplacedPartRow = () => {
     setReplacedParts((currentValue) => [...currentValue, { componentId: '', partNumber: '', manufacturer: '' }])
@@ -259,7 +267,7 @@ export default function ServiceCenterOperationCreate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-center-operations'] })
       queryClient.invalidateQueries({ queryKey: ['service-center-clients', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['service-center-client-car-components'] })
+      queryClient.invalidateQueries({ queryKey: ['service-center-bookings', serviceCenter?.id] })
       toast.success('Операция добавлена')
       navigate('/service-center/operations')
     },
@@ -271,7 +279,12 @@ export default function ServiceCenterOperationCreate() {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!formData.clientId || !formData.carId || !formData.workType || !formData.mileageAtService) {
+    if (!formData.bookingId) {
+      toast.error('Выберите завершенную запись')
+      return
+    }
+
+    if (!formData.carId || !formData.workType || !formData.mileageAtService) {
       toast.error('Заполните обязательные поля')
       return
     }
@@ -291,12 +304,12 @@ export default function ServiceCenterOperationCreate() {
       .filter((row) => row.componentId || row.partNumber || row.manufacturer)
 
     if (preparedReplacedParts.some((row) => !row.componentId)) {
-      toast.error('Укажите компонент для каждой добавленной заменённой детали')
+      toast.error('Укажите компонент для каждой добавленной замененной детали')
       return
     }
 
     if (preparedReplacedParts.some((row) => !/^\d+$/.test(row.componentId))) {
-      toast.error('Компонент должен быть выбран из списка или указан числовым ID')
+      toast.error('Компонент должен быть выбран из списка')
       return
     }
 
@@ -307,6 +320,7 @@ export default function ServiceCenterOperationCreate() {
     }
 
     createOperationMutation.mutate({
+      bookingId: Number(formData.bookingId),
       carId: Number(formData.carId),
       workType: formData.workType.trim(),
       description: formData.description.trim() || null,
@@ -321,12 +335,14 @@ export default function ServiceCenterOperationCreate() {
     })
   }
 
+  const isSourceLoading = serviceCenterLoading || bookingsLoading || operationsLoading
+
   return (
     <Page>
       <PageHeader
         eyebrow="Service operations"
         title="Создание операции"
-        description="Фиксируйте выполненные работы отдельно от журнала, чтобы история оставалась чистой и сканируемой."
+        description="Операция создается из завершенной записи, чтобы обслуживание, замены и счет жили в одной цепочке."
         actions={
           <Link to="/service-center/operations" className="btn-secondary">
             <FaArrowLeft />
@@ -335,243 +351,288 @@ export default function ServiceCenterOperationCreate() {
         }
       />
 
-      <Section title="Новая операция" description="Оформление работы, замен деталей и подтверждающих материалов в отдельном рабочем потоке.">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Клиент *</label>
+      <Section
+        title="Новая операция"
+        description="Сначала выберите завершенную запись, затем зафиксируйте выполненные работы, замененные детали и стоимость."
+      >
+        {isSourceLoading ? (
+          <div className="py-12 text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info" />
+            <p className="mt-2 text-slate-400">Подготавливаем завершенные записи...</p>
+          </div>
+        ) : availableBookings.length === 0 ? (
+          <EmptyState
+            icon={FaCalendarAlt}
+            title="Нет завершенных записей"
+            description="Сначала завершите запись в потоке сервиса. После этого она появится как источник для новой операции."
+            action={
+              <Link to="/service-center/bookings" className="btn-primary">
+                Открыть записи
+              </Link>
+            }
+          />
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+              <label className="mb-2 block text-sm text-slate-300">Завершенная запись *</label>
               <select
-                value={formData.clientId}
-                onChange={(event) =>
-                  setFormData((currentValue) => ({ ...currentValue, clientId: event.target.value, carId: '' }))
-                }
+                value={formData.bookingId}
+                onChange={(event) => applyBookingSelection(event.target.value)}
                 className="auto-select"
                 required
               >
-                <option value="">Выберите клиента</option>
-                {availableClients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.fullName}
-                    {client.source === 'booking' ? ' (из записи)' : ''}
-                    {client.source === 'serviced'
-                      ? `, статус: ${CLIENT_STATUS_LABELS[(clients || []).find((item) => item.clientId === client.id)?.status || 'NEW']}`
-                      : ''}
+                <option value="">Выберите запись</option>
+                {availableBookings.map((booking) => (
+                  <option key={booking.id} value={booking.id}>
+                    #{booking.id} • {formatBookingDateTime(booking.bookingDateTime)} • {getBookingClientName(booking)} • {getBookingCarTitle(booking)}
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Автомобиль *</label>
-              <select
-                value={formData.carId}
-                onChange={(event) => setFormData((currentValue) => ({ ...currentValue, carId: event.target.value }))}
-                className="auto-select"
-                required
-                disabled={!formData.clientId}
-              >
-                <option value="">Выберите автомобиль</option>
-                {candidateCars.map((car) => (
-                  <option key={car.id} value={car.id}>
-                    {car.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Тип работы *</label>
-              <input
-                value={formData.workType}
-                onChange={(event) => setFormData((currentValue) => ({ ...currentValue, workType: event.target.value }))}
-                className="auto-input"
-                placeholder="Например: Замена масла"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Дата *</label>
-              <input
-                type="date"
-                value={formData.serviceDate}
-                onChange={(event) =>
-                  setFormData((currentValue) => ({ ...currentValue, serviceDate: event.target.value }))
-                }
-                className="auto-input"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Пробег, км *</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.mileageAtService}
-                onChange={(event) =>
-                  setFormData((currentValue) => ({ ...currentValue, mileageAtService: event.target.value }))
-                }
-                className="auto-input"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Стоимость, ₸</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={formData.cost}
-                onChange={(event) => setFormData((currentValue) => ({ ...currentValue, cost: event.target.value }))}
-                className="auto-input"
-                placeholder="Например: 89999.95"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm text-slate-300">Описание</label>
-              <textarea
-                value={formData.description}
-                onChange={(event) =>
-                  setFormData((currentValue) => ({ ...currentValue, description: event.target.value }))
-                }
-                className="auto-textarea"
-                rows={4}
-                placeholder="Что было сделано и какие замечания оставил мастер"
-              />
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 pt-6">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
-                <FaTools className="text-text-muted" />
-                Замененные детали
-              </h3>
-              <button type="button" className="btn-secondary text-sm" onClick={addReplacedPartRow}>
-                <FaPlus />
-                Добавить деталь
-              </button>
-            </div>
-
-            {replacedParts.length === 0 ? (
-              <p className="text-sm text-slate-400">Детали не добавлены</p>
-            ) : (
-              <div className="space-y-3">
-                {replacedParts.map((row, index) => (
-                  <div key={`replaced-part-${index}`} className="grid gap-3 md:grid-cols-4">
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Компонент</label>
-                      {carComponents && carComponents.length > 0 ? (
-                        <select
-                          value={row.componentId}
-                          onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
-                          className="auto-select"
-                        >
-                          <option value="">Выберите компонент</option>
-                          {carComponents.map((component) => (
-                            <option key={component.id} value={component.id}>
-                              {component.name} ({component.status}, {component.wearLevel}%)
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          value={row.componentId}
-                          onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
-                          className="auto-input"
-                          placeholder="ID компонента"
-                        />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Номер детали</label>
-                      <input
-                        value={row.partNumber}
-                        onChange={(event) => updateReplacedPartRow(index, 'partNumber', event.target.value)}
-                        className="auto-input"
-                        placeholder="Part number"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-400">Производитель</label>
-                      <input
-                        value={row.manufacturer}
-                        onChange={(event) => updateReplacedPartRow(index, 'manufacturer', event.target.value)}
-                        className="auto-input"
-                        placeholder="OEM"
-                      />
-                    </div>
-
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        className="btn-secondary text-danger text-sm"
-                        onClick={() => removeReplacedPartRow(index)}
-                      >
-                        <FaTimes />
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-white/10 pt-6">
-            <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
-              <FaCamera className="text-text-muted" />
-              Подтверждающие фото и документы
-            </h3>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
-              className="hidden"
-            />
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary">
-                <FaCamera />
-                Добавить файлы
-              </button>
-              {selectedFiles.length > 0 ? (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">
-                  Выбрано: {selectedFiles.length}
-                </span>
+              <p className="mt-2 text-xs text-slate-500">
+                В списке только завершенные записи без уже созданной операции.
+              </p>
+              {requestedBookingId && !selectedBooking ? (
+                <p className="mt-2 text-xs text-amber-300">
+                  Запись из ссылки недоступна: возможно, она еще не завершена или по ней уже создана операция.
+                </p>
               ) : null}
             </div>
-            <p className="mt-2 text-xs text-slate-400">Поддерживаются JPG, PNG, WEBP и PDF до 10 МБ</p>
-            {selectedFiles.length > 0 ? (
-              <ul className="mt-3 space-y-1 text-sm text-slate-300">
-                {selectedFiles.map((file) => (
-                  <li key={`${file.name}-${file.size}`}>{file.name}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-6">
-            <p className="text-sm text-slate-500">После сохранения операция вернется в журнал и появится в истории сервиса.</p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/service-center/operations" className="btn-secondary">
-                Отмена
-              </Link>
-              <button
-                type="submit"
-                disabled={createOperationMutation.isPending}
-                className="btn-primary"
-              >
-                {createOperationMutation.isPending ? 'Сохранение...' : 'Сохранить операцию'}
-              </button>
+            {selectedBooking ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <FaUser className="text-text-muted" />
+                    Клиент и запись
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-300">
+                    <p>{getBookingClientName(selectedBooking)}</p>
+                    <p>{formatBookingDateTime(selectedBooking.bookingDateTime)}</p>
+                    <p className="inline-flex items-center gap-2 text-slate-400">
+                      <FaPhoneAlt className="text-caption" />
+                      <span>{getBookingPhone(selectedBooking)}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <FaCar className="text-text-muted" />
+                    Автомобиль
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-slate-300">
+                    <p>{getBookingCarTitle(selectedBooking)}</p>
+                    <p>
+                      Текущий пробег:{' '}
+                      {selectedBooking.car?.mileage != null
+                        ? `${selectedBooking.car.mileage.toLocaleString('ru-RU')} км`
+                        : 'Не указан'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">Тип работы *</label>
+                <input
+                  value={formData.workType}
+                  onChange={(event) => setFormData((currentValue) => ({ ...currentValue, workType: event.target.value }))}
+                  className="auto-input"
+                  placeholder="Например: Замена масла и фильтра"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">Дата операции *</label>
+                <input
+                  type="date"
+                  value={formData.serviceDate}
+                  onChange={(event) =>
+                    setFormData((currentValue) => ({ ...currentValue, serviceDate: event.target.value }))
+                  }
+                  className="auto-input"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">Пробег, км *</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.mileageAtService}
+                  onChange={(event) =>
+                    setFormData((currentValue) => ({ ...currentValue, mileageAtService: event.target.value }))
+                  }
+                  className="auto-input"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">Стоимость операции, ₸</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.cost}
+                  onChange={(event) => setFormData((currentValue) => ({ ...currentValue, cost: event.target.value }))}
+                  className="auto-input"
+                  placeholder="Например: 89999.95"
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Эта сумма будет использована как базовая стоимость при создании счета.
+                </p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm text-slate-300">Описание работ</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(event) =>
+                    setFormData((currentValue) => ({ ...currentValue, description: event.target.value }))
+                  }
+                  className="auto-textarea"
+                  rows={4}
+                  placeholder="Что было сделано и какие замечания оставил мастер"
+                />
+              </div>
             </div>
-          </div>
-        </form>
+
+            <div className="border-t border-white/10 pt-6">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+                  <FaTools className="text-text-muted" />
+                  Замененные детали
+                </h3>
+                <button type="button" className="btn-secondary text-sm" onClick={addReplacedPartRow}>
+                  <FaPlus />
+                  Добавить деталь
+                </button>
+              </div>
+
+              {replacedParts.length === 0 ? (
+                <p className="text-sm text-slate-400">Детали не добавлены</p>
+              ) : (
+                <div className="space-y-3">
+                  {replacedParts.map((row, index) => (
+                    <div key={`replaced-part-${index}`} className="grid gap-3 md:grid-cols-4">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-400">Компонент</label>
+                        {carComponents && carComponents.length > 0 ? (
+                          <select
+                            value={row.componentId}
+                            onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
+                            className="auto-select"
+                          >
+                            <option value="">Выберите компонент</option>
+                            {carComponents.map((component) => (
+                              <option key={component.id} value={component.id}>
+                                {component.name} ({component.status}, {component.wearLevel}%)
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            value={row.componentId}
+                            onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
+                            className="auto-input"
+                            placeholder="ID компонента"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-400">Номер детали</label>
+                        <input
+                          value={row.partNumber}
+                          onChange={(event) => updateReplacedPartRow(index, 'partNumber', event.target.value)}
+                          className="auto-input"
+                          placeholder="Part number"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-400">Производитель</label>
+                        <input
+                          value={row.manufacturer}
+                          onChange={(event) => updateReplacedPartRow(index, 'manufacturer', event.target.value)}
+                          className="auto-input"
+                          placeholder="OEM"
+                        />
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          className="btn-secondary text-danger text-sm"
+                          onClick={() => removeReplacedPartRow(index)}
+                        >
+                          <FaTimes />
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
+                <FaCamera className="text-text-muted" />
+                Подтверждающие фото и документы
+              </h3>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
+                className="hidden"
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary">
+                  <FaCamera />
+                  Добавить файлы
+                </button>
+                {selectedFiles.length > 0 ? (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">
+                    Выбрано: {selectedFiles.length}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">Поддерживаются JPG, PNG, WEBP и PDF до 10 МБ</p>
+              {selectedFiles.length > 0 ? (
+                <ul className="mt-3 space-y-1 text-sm text-slate-300">
+                  {selectedFiles.map((file) => (
+                    <li key={`${file.name}-${file.size}`}>{file.name}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-6">
+              <p className="text-sm text-slate-500">
+                После сохранения операция привяжется к записи и станет доступной для выставления счета.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link to="/service-center/operations" className="btn-secondary">
+                  Отмена
+                </Link>
+                <button
+                  type="submit"
+                  disabled={createOperationMutation.isPending}
+                  className="btn-primary"
+                >
+                  {createOperationMutation.isPending ? 'Сохранение...' : 'Сохранить операцию'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
       </Section>
     </Page>
   )

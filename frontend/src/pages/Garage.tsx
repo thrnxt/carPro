@@ -1,13 +1,14 @@
 import type { AxiosError } from 'axios'
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
-  FaArrowRight,
   FaCarSide,
   FaEdit,
+  FaEllipsisH,
+  FaIdCard,
   FaPlus,
   FaSave,
   FaTachometerAlt,
@@ -24,6 +25,7 @@ import {
   PageHeader,
   Section,
   SkeletonCard,
+  cx,
 } from '../components/ui'
 import DrivingFrequencyModal from '../components/DrivingFrequencyModal'
 import MileageConfirmModal from '../components/MileageConfirmModal'
@@ -83,12 +85,23 @@ const createEmptyFormData = (): CarFormData => ({
 const sanitizeVin = (value: string) =>
   value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 17)
 
+function formatCarDate(value?: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU')
+}
+
 export default function Garage() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editingCar, setEditingCar] = useState<Car | null>(null)
   const [vinInput, setVinInput] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [actionMenuCarId, setActionMenuCarId] = useState<number | null>(null)
+  const actionMenuRef = useRef<HTMLDivElement | null>(null)
   // Модальные окна трекинга пробега
   const [frequencyModalCar, setFrequencyModalCar] = useState<Car | null>(null)
   const [mileageModalCar, setMileageModalCar] = useState<Car | null>(null)
@@ -116,6 +129,31 @@ export default function Garage() {
       setFrequencyModalCar(carNeedingSetup)
     }
   }, [cars, isLoading])
+
+  useEffect(() => {
+    if (actionMenuCarId == null) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setActionMenuCarId(null)
+        setConfirmDeleteId(null)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActionMenuCarId(null)
+        setConfirmDeleteId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [actionMenuCarId])
 
   const {
     register,
@@ -218,12 +256,15 @@ export default function Garage() {
     setShowForm(true)
     setVinInput('')
     setConfirmDeleteId(null)
+    setActionMenuCarId(null)
   }
 
   const handleCancel = () => {
     setShowForm(false)
     setEditingCar(null)
     setVinInput('')
+    setConfirmDeleteId(null)
+    setActionMenuCarId(null)
     reset(createEmptyFormData())
   }
 
@@ -232,6 +273,7 @@ export default function Garage() {
     setShowForm(true)
     setVinInput('')
     setConfirmDeleteId(null)
+    setActionMenuCarId(null)
     reset(createEmptyFormData())
   }
 
@@ -421,124 +463,174 @@ export default function Garage() {
 
       {cars.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {cars.map((car) => (
-            <div key={car.id} className="auto-card p-card flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="section-label">Автомобиль</p>
-                  <h3 className="mt-1 truncate text-h2 text-text-primary">
-                    {car.brand} {car.model}
-                  </h3>
-                  <p className="mt-0.5 text-body text-text-secondary">{car.year} г.в.</p>
-                </div>
-                <div className="metric-icon shrink-0">
-                  <FaCarSide />
-                </div>
-              </div>
+          {cars.map((car) => {
+            const isActionMenuOpen = actionMenuCarId === car.id
+            const isDeleteConfirmOpen = confirmDeleteId === car.id
+            const lastServiceDate = formatCarDate(car.lastServiceDate)
 
-              <div className="grid gap-2 rounded-md border border-border bg-surface-3 p-4 text-body">
-                <KeyValue
-                  label="Пробег"
-                  value={
-                    <span className="flex items-center gap-2">
-                      <span className={car.mileageIsEstimated ? 'text-warning' : 'text-text-primary'}>
-                        {car.mileageIsEstimated ? '~' : ''}
-                        {(car.displayMileage ?? car.mileage)?.toLocaleString('ru-RU')} км
-                      </span>
-                      {car.mileageIsEstimated && (
-                        <span className="text-caption text-text-muted">(расчётный)</span>
-                      )}
-                    </span>
-                  }
-                />
-                <KeyValue
-                  label="Гос. номер"
-                  value={
-                    car.licensePlate ? (
-                      <span className="font-mono text-info">{car.licensePlate}</span>
-                    ) : '—'
-                  }
-                />
-                {car.color && <KeyValue label="Цвет" value={car.color} />}
-                {car.lastServiceDate && (
-                  <KeyValue
-                    label="Последнее ТО"
-                    value={
-                      <span className="text-success">
-                        {new Date(car.lastServiceDate).toLocaleDateString('ru-RU')}
-                      </span>
-                    }
-                  />
-                )}
-              </div>
-
-              <div className="flex items-center justify-between gap-3 pt-1">
+            return (
+              <div key={car.id} className="auto-card flex h-full flex-col overflow-visible">
                 <Link
                   to={`/cars/${car.id}`}
-                  className="flex items-center gap-2 text-body font-medium text-text-secondary transition-colors hover:text-text-primary"
+                  className="group flex flex-1 flex-col gap-4 rounded-t-md p-card transition-colors hover:bg-white/[0.02]"
+                  aria-label={`Открыть паспорт ${car.brand} ${car.model}`}
                 >
-                  Открыть карточку
-                  <FaArrowRight className="text-xs" />
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="section-label">Автомобиль</p>
+                      <h3 className="mt-1 truncate text-h2 text-text-primary">
+                        {car.brand} {car.model}
+                      </h3>
+                      <p className="mt-0.5 text-body text-text-secondary">{car.year} г.в.</p>
+                    </div>
+                    <div className="metric-icon shrink-0">
+                      <FaCarSide />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 rounded-md border border-border bg-surface-3 p-4 text-body">
+                    <KeyValue
+                      className="min-h-7"
+                      label="Пробег"
+                      value={
+                        <span className={cx('whitespace-nowrap', car.mileageIsEstimated ? 'text-warning' : 'text-text-primary')}>
+                          {car.mileageIsEstimated ? '~' : ''}
+                          {(car.displayMileage ?? car.mileage)?.toLocaleString('ru-RU')} км
+                        </span>
+                      }
+                    />
+                    <KeyValue
+                      className="min-h-7"
+                      label="Гос. номер"
+                      value={
+                        car.licensePlate ? (
+                          <span className="whitespace-nowrap font-mono text-info">{car.licensePlate}</span>
+                        ) : (
+                          <span className="text-text-muted">—</span>
+                        )
+                      }
+                    />
+                    <KeyValue
+                      className="min-h-7"
+                      label="Цвет"
+                      value={
+                        car.color ? (
+                          <span className="whitespace-nowrap">{car.color}</span>
+                        ) : (
+                          <span className="text-text-muted">—</span>
+                        )
+                      }
+                    />
+                    <KeyValue
+                      className="min-h-7"
+                      label="Последнее ТО"
+                      value={
+                        lastServiceDate ? (
+                          <span className="whitespace-nowrap text-success">{lastServiceDate}</span>
+                        ) : (
+                          <span className="whitespace-nowrap text-text-muted">Нет данных</span>
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-auto flex items-center justify-between gap-3 pt-1">
+                    <span className="inline-flex h-9 items-center gap-2 rounded-sm border border-border px-3 text-sm font-medium text-text-primary transition-colors group-hover:border-accent/40 group-hover:text-accent">
+                      <FaIdCard className="text-xs" />
+                      Паспорт авто
+                    </span>
+                  </div>
                 </Link>
 
-                <div className="flex items-center gap-2">
-                  {/* Кнопка «Уточнить пробег» — видна всегда */}
+                <div className="mt-auto flex items-center gap-2 border-t border-border p-3">
                   <Button
                     variant="secondary"
-                    className="h-8 px-3 text-xs"
+                    className="h-9 flex-1 px-3 text-sm"
                     title="Уточнить пробег"
                     onClick={() => setMileageModalCar(car)}
                   >
                     <FaTachometerAlt className="text-xs" />
-                    Уточнить пробег
+                    Пробег
                   </Button>
 
-                  {confirmDeleteId === car.id ? (
-                    <>
-                      <span className="text-caption text-text-muted">Удалить?</span>
-                      <Button
-                        variant="secondary"
-                        className="h-8 px-3 text-sm text-danger"
-                        loading={deleteCarMutation.isPending}
-                        onClick={() => {
-                          deleteCarMutation.mutate(car.id)
-                          setConfirmDeleteId(null)
-                        }}
+                  <div
+                    ref={isActionMenuOpen ? actionMenuRef : undefined}
+                    className="relative shrink-0"
+                  >
+                    <Button
+                      variant="secondary"
+                      className="h-9 w-9 p-0"
+                      aria-haspopup="menu"
+                      aria-expanded={isActionMenuOpen}
+                      aria-label="Действия с автомобилем"
+                      title="Действия"
+                      onClick={() => {
+                        setConfirmDeleteId(null)
+                        setActionMenuCarId((currentId) => (currentId === car.id ? null : car.id))
+                      }}
+                    >
+                      <FaEllipsisH className="text-xs" />
+                    </Button>
+
+                    {isActionMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute bottom-[calc(100%+0.5rem)] right-0 z-30 w-56 overflow-hidden rounded-md border border-border bg-surface-2 shadow-xl"
                       >
-                        Да
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="h-8 px-3 text-sm"
-                        onClick={() => setConfirmDeleteId(null)}
-                      >
-                        Нет
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="secondary"
-                        className="h-8 w-8 p-0"
-                        title="Редактировать"
-                        onClick={() => handleEdit(car)}
-                      >
-                        <FaEdit className="text-xs" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="h-8 w-8 p-0 text-danger"
-                        title="Удалить"
-                        onClick={() => setConfirmDeleteId(car.id)}
-                      >
-                        <FaTrash className="text-xs" />
-                      </Button>
-                    </>
-                  )}
+                        {isDeleteConfirmOpen ? (
+                          <div className="space-y-3 p-3">
+                            <p className="text-sm font-medium text-text-primary">Удалить автомобиль?</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                variant="secondary"
+                                className="h-8 px-3 text-sm text-danger"
+                                loading={deleteCarMutation.isPending}
+                                onClick={() => {
+                                  deleteCarMutation.mutate(car.id)
+                                  setConfirmDeleteId(null)
+                                  setActionMenuCarId(null)
+                                }}
+                              >
+                                Удалить
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="h-8 px-3 text-sm"
+                                onClick={() => setConfirmDeleteId(null)}
+                              >
+                                Отмена
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-1.5">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+                              onClick={() => handleEdit(car)}
+                            >
+                              <FaEdit className="shrink-0 text-text-muted" />
+                              Редактировать
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+                              onClick={() => setConfirmDeleteId(car.id)}
+                            >
+                              <FaTrash className="shrink-0" />
+                              Удалить
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : !showForm ? (
         <EmptyState

@@ -293,73 +293,96 @@ export default function MaintenanceHistory() {
               const replacedPartsCount = record.replacedComponents?.length ?? 0
               const hasInvoice = Boolean(record.invoice?.pdfUrl)
               const detailsAvailable = hasExpandedDetails(record)
+              const statusMeta = operationStatusMeta(record.status)
+              const toggleRecord = () => {
+                if (!detailsAvailable) {
+                  return
+                }
+
+                setExpandedRecordKey((key) => (key === recordKey ? null : recordKey))
+              }
+              const compactRowClassName = cx(
+                'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 text-left transition-colors md:grid-cols-[minmax(0,15rem)_8.5rem_minmax(0,1fr)_8.5rem_2rem] md:gap-x-4 md:gap-y-0',
+                detailsAvailable && 'cursor-pointer hover:bg-surface-3'
+              )
+              const compactRowContent = (
+                <>
+                  <div className="min-w-0">
+                    <span className="block truncate text-body font-medium text-text-primary">
+                      {record.workType}
+                    </span>
+                  </div>
+
+                  <div className="justify-self-start">
+                    <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                  </div>
+
+                  <div className="col-span-2 flex min-w-0 items-center gap-x-2 overflow-hidden text-caption text-text-muted md:col-span-1">
+                    <span className="truncate">
+                      {formatServiceDate(record.serviceDate)}
+                      {mileageLabel ? ` · ${mileageLabel}` : ''}
+                      {record.serviceCenter?.name ? ` · ${record.serviceCenter.name}` : ''}
+                      {!id ? ` · ${record.car.brand} ${record.car.model}` : ''}
+                    </span>
+                    {attachmentCount > 0 && (
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        <FaCamera aria-hidden="true" />
+                        {attachmentCount}
+                      </span>
+                    )}
+                    {replacedPartsCount > 0 && (
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        <FaWrench aria-hidden="true" />
+                        {replacedPartsCount} дет.
+                      </span>
+                    )}
+                    {hasInvoice && (
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        <FaFilePdf aria-hidden="true" />
+                        PDF
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="col-start-1 row-start-3 justify-self-start md:col-start-auto md:row-start-auto md:justify-self-end">
+                    {costLabel && (
+                      <span className="whitespace-nowrap text-body font-semibold text-success">
+                        {costLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="col-start-2 row-start-3 flex h-7 w-7 items-center justify-center justify-self-end rounded text-text-muted md:col-start-auto md:row-start-auto">
+                    {detailsAvailable && (
+                      isExpanded ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />
+                    )}
+                  </div>
+                </>
+              )
 
               return (
                 <article key={recordKey} className="border-b border-border last:border-0">
                   {/* ── Compact row ── */}
-                  <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 hover:bg-surface-3 transition-colors">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-body font-medium text-text-primary truncate">
-                          {record.workType}
-                        </span>
-                        <Badge tone={operationStatusMeta(record.status).tone}>
-                          {operationStatusMeta(record.status).label}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-0.5 flex items-center gap-x-2 overflow-hidden text-caption text-text-muted">
-                        <span className="truncate">
-                          {formatServiceDate(record.serviceDate)}
-                          {mileageLabel ? ` · ${mileageLabel}` : ''}
-                          {record.serviceCenter?.name ? ` · ${record.serviceCenter.name}` : ''}
-                          {!id ? ` · ${record.car.brand} ${record.car.model}` : ''}
-                        </span>
-                        {attachmentCount > 0 && (
-                          <span className="inline-flex shrink-0 items-center gap-1">
-                            <FaCamera aria-hidden="true" />
-                            {attachmentCount}
-                          </span>
-                        )}
-                        {replacedPartsCount > 0 && (
-                          <span className="inline-flex shrink-0 items-center gap-1">
-                            <FaWrench aria-hidden="true" />
-                            {replacedPartsCount} дет.
-                          </span>
-                        )}
-                        {hasInvoice && (
-                          <span className="inline-flex shrink-0 items-center gap-1">
-                            <FaFilePdf aria-hidden="true" />
-                            PDF
-                          </span>
-                        )}
-                      </div>
+                  {detailsAvailable ? (
+                    <button
+                      type="button"
+                      onClick={toggleRecord}
+                      className={cx(compactRowClassName, 'appearance-none border-0 bg-transparent')}
+                      aria-expanded={isExpanded}
+                      aria-controls={`maintenance-record-${recordKey}`}
+                      title={isExpanded ? 'Скрыть' : 'Подробнее'}
+                    >
+                      {compactRowContent}
+                    </button>
+                  ) : (
+                    <div className={compactRowClassName}>
+                      {compactRowContent}
                     </div>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                      {costLabel && (
-                        <span className="text-body font-semibold text-success whitespace-nowrap">
-                          {costLabel}
-                        </span>
-                      )}
-                      {detailsAvailable && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedRecordKey((k) => (k === recordKey ? null : recordKey))
-                          }
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-3 hover:text-text-primary"
-                          title={isExpanded ? 'Скрыть' : 'Подробнее'}
-                        >
-                          {isExpanded ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  )}
 
                   {/* ── Expanded detail panel ── */}
                   {isExpanded && (
-                    <div className="border-t border-border bg-surface-1 px-4 pb-5 pt-4">
+                    <div id={`maintenance-record-${recordKey}`} className="border-t border-border bg-surface-1 px-4 pb-5 pt-4">
                       <div
                         className={cx(
                           'grid gap-4',

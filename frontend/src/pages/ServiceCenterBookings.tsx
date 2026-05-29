@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import {
   FaCalendarAlt,
   FaCar,
@@ -8,6 +9,7 @@ import {
   FaClock,
   FaPhoneAlt,
   FaTimes,
+  FaTools,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
 import { Badge, EmptyState, Page, PageHeader, Section, cx } from '../components/ui'
@@ -20,6 +22,7 @@ interface ServiceCenter {
 interface Booking {
   id: number
   bookingDateTime: string
+  createdAt?: string
   status: string
   description?: string
   contactPhone?: string
@@ -32,6 +35,13 @@ interface Booking {
       lastName?: string
       phoneNumber?: string
     }
+  }
+}
+
+interface ExistingOperationSummary {
+  id: number
+  booking?: {
+    id?: number
   }
 }
 
@@ -74,6 +84,18 @@ function formatBookingDateTime(value: string) {
   } catch {
     return value
   }
+}
+
+function getBookingSortTime(booking: Booking) {
+  if (booking.createdAt) {
+    const createdAt = new Date(booking.createdAt).getTime()
+    if (!Number.isNaN(createdAt)) {
+      return createdAt
+    }
+  }
+
+  const bookingDateTime = new Date(booking.bookingDateTime).getTime()
+  return Number.isNaN(bookingDateTime) ? 0 : bookingDateTime
 }
 
 function getTextPreview(value?: string, maxLength = 120) {
@@ -171,6 +193,15 @@ export default function ServiceCenterBookings() {
     enabled: !!serviceCenter?.id,
   })
 
+  const { data: operations = [], isLoading: operationsLoading } = useQuery<ExistingOperationSummary[]>({
+    queryKey: ['service-center-operations', 'my'],
+    queryFn: async () => {
+      const response = await apiClient.get('/maintenance-records/service-center/my')
+      return response.data
+    },
+    enabled: !!serviceCenter?.id,
+  })
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
       const response = await apiClient.patch(`/bookings/${bookingId}/status`, null, {
@@ -191,8 +222,18 @@ export default function ServiceCenterBookings() {
     () =>
       bookings
         .slice()
-        .sort((a, b) => new Date(a.bookingDateTime).getTime() - new Date(b.bookingDateTime).getTime()),
+        .sort((a, b) => getBookingSortTime(b) - getBookingSortTime(a)),
     [bookings]
+  )
+
+  const usedBookingIds = useMemo(
+    () =>
+      new Set(
+        operations
+          .map((operation) => operation.booking?.id)
+          .filter((bookingId): bookingId is number => typeof bookingId === 'number')
+      ),
+    [operations]
   )
 
   const filteredBookings = useMemo(() => {
@@ -203,7 +244,7 @@ export default function ServiceCenterBookings() {
     return sortedBookings.filter((booking) => booking.status === statusFilter)
   }, [sortedBookings, statusFilter])
 
-  if (serviceCenterLoading || bookingsLoading) {
+  if (serviceCenterLoading || bookingsLoading || operationsLoading) {
     return (
       <Page>
         <div className="p-10 text-center">
@@ -296,6 +337,20 @@ export default function ServiceCenterBookings() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                      {booking.status === 'COMPLETED' ? (
+                        usedBookingIds.has(booking.id) ? (
+                          <span className="auto-badge">Операция создана</span>
+                        ) : (
+                          <Link
+                            to={`/service-center/operations/new?bookingId=${booking.id}`}
+                            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:border-white/20 hover:bg-white/[0.08]"
+                          >
+                            <FaTools />
+                            Создать операцию
+                          </Link>
+                        )
+                      ) : null}
+
                       <span className={cx('hidden xl:inline-flex', STATUS_BADGE_CLASSES[currentStatus] || 'auto-badge')}>
                         {STATUS_LABELS[currentStatus] || booking.status}
                       </span>

@@ -2,9 +2,11 @@ package kz.car.maintenance.service;
 
 import kz.car.maintenance.dto.PagedResponse;
 import kz.car.maintenance.dto.ServiceOperationCreateRequest;
+import kz.car.maintenance.exception.BadRequestException;
 import kz.car.maintenance.exception.ForbiddenException;
 import kz.car.maintenance.exception.NotFoundException;
 import kz.car.maintenance.model.*;
+import kz.car.maintenance.repository.BookingRepository;
 import kz.car.maintenance.repository.CarRepository;
 import kz.car.maintenance.repository.MaintenanceRecordRepository;
 import kz.car.maintenance.repository.ServiceCenterRepository;
@@ -27,6 +29,7 @@ import java.util.Map;
 public class MaintenanceRecordService {
     
     private final MaintenanceRecordRepository maintenanceRecordRepository;
+    private final BookingRepository bookingRepository;
     private final CarRepository carRepository;
     private final ServiceCenterRepository serviceCenterRepository;
     private final CarComponentService carComponentService;
@@ -149,12 +152,47 @@ public class MaintenanceRecordService {
 
         ServiceCenter serviceCenter = serviceCenterRepository.findByUser(user)
                 .orElseThrow(() -> new NotFoundException("Service center profile not found"));
-        Car car = carRepository.findById(request.getCarId())
-                .orElseThrow(() -> new NotFoundException("Car not found"));
+        Booking booking = null;
+        Car car;
+
+        if (request.getBookingId() != null) {
+            booking = bookingRepository.findById(request.getBookingId())
+                    .orElseThrow(() -> new NotFoundException("Booking not found"));
+
+            if (booking.getServiceCenter() == null
+                    || !booking.getServiceCenter().getId().equals(serviceCenter.getId())) {
+                throw new ForbiddenException("You can create operations only for your service center bookings");
+            }
+
+            if (booking.getStatus() != Booking.BookingStatus.COMPLETED) {
+                throw new BadRequestException("Only completed bookings can be converted to service operations");
+            }
+
+            if (maintenanceRecordRepository.findByBooking(booking).isPresent()) {
+                throw new BadRequestException("Service operation already exists for this booking");
+            }
+
+            car = booking.getCar();
+            if (car == null) {
+                throw new BadRequestException("Booking has no linked car");
+            }
+
+            if (request.getCarId() != null && !request.getCarId().equals(car.getId())) {
+                throw new BadRequestException("Selected booking does not match the provided car");
+            }
+        } else {
+            if (request.getCarId() == null) {
+                throw new BadRequestException("Provide bookingId or carId");
+            }
+
+            car = carRepository.findById(request.getCarId())
+                    .orElseThrow(() -> new NotFoundException("Car not found"));
+        }
 
         MaintenanceRecord record = MaintenanceRecord.builder()
                 .car(car)
                 .serviceCenter(serviceCenter)
+                .booking(booking)
                 .workType(request.getWorkType())
                 .description(request.getDescription())
                 .serviceDate(request.getServiceDate())

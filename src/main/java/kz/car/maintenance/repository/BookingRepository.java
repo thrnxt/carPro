@@ -29,6 +29,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByServiceCenterOrderByBookingDateTimeAsc(ServiceCenter serviceCenter);
 
     @EntityGraph(attributePaths = {"car", "car.owner", "serviceCenter"})
+    List<Booking> findByServiceCenterOrderByCreatedAtDesc(ServiceCenter serviceCenter);
+
+    @EntityGraph(attributePaths = {"car", "car.owner", "serviceCenter"})
     List<Booking> findByCarOrderByBookingDateTimeDesc(Car car);
 
     @EntityGraph(attributePaths = {"car", "car.owner", "serviceCenter"})

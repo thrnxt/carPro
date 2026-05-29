@@ -12,7 +12,8 @@ import java.util.List;
 @Data
 public class ServiceOperationCreateRequest {
 
-    @NotNull
+    private Long bookingId;
+
     private Long carId;
 
     @NotBlank

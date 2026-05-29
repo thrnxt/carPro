@@ -36,36 +36,160 @@ type NavigationItem = {
   label: string
   icon: typeof FaHome
   description: string
+  group?: string
+  isActive?: (pathname: string) => boolean
 }
 
-const userNavItems: NavigationItem[] = [
-  { path: '/', label: 'Главная', icon: FaHome, description: 'Обзор аккаунта' },
-  { path: '/garage', label: 'Гараж', icon: FaCar, description: 'Автомобили и VIN' },
-  { path: '/service-centers', label: 'Сервисы', icon: FaWrench, description: 'Поиск партнеров' },
-  { path: '/bookings', label: 'Записи', icon: FaCalendar, description: 'Записи, история и календарь' },
-  { path: '/my-documents', label: 'Документы', icon: FaFileInvoiceDollar, description: 'Операции и счета' },
-  { path: '/maintenance-history', label: 'История ТО', icon: FaClipboardList, description: 'Архив выполненных работ' },
-  { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации' },
+type NavigationSection = {
+  label: string
+  items: NavigationItem[]
+}
+
+function isRouteActive(pathname: string, itemPath: string) {
+  if (itemPath === '/') {
+    return pathname === '/'
+  }
+
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`)
+}
+
+function isPathActive(pathname: string, item: NavigationItem) {
+  if (item.isActive) {
+    return item.isActive(pathname)
+  }
+
+  return isRouteActive(pathname, item.path)
+}
+
+const isGarageProductActive = (pathname: string) =>
+  pathname === '/garage' ||
+  pathname.startsWith('/cars/') ||
+  pathname === '/my-documents' ||
+  pathname.startsWith('/my-documents/') ||
+  pathname === '/maintenance-history' ||
+  pathname.startsWith('/maintenance-history/')
+
+const isGarageOverviewActive = (pathname: string) =>
+  pathname === '/garage' || (pathname.startsWith('/cars/') && !pathname.includes('/history'))
+
+const isMaintenanceHistoryActive = (pathname: string) =>
+  pathname === '/maintenance-history' ||
+  pathname.startsWith('/maintenance-history/') ||
+  (pathname.startsWith('/cars/') && pathname.includes('/history'))
+
+const isServiceProductActive = (pathname: string) =>
+  pathname === '/service-centers' ||
+  pathname.startsWith('/service-centers/') ||
+  pathname === '/bookings' ||
+  pathname.startsWith('/bookings/') ||
+  pathname === '/maintenance-calendar'
+
+const userPrimaryNavItems: NavigationItem[] = [
+  { path: '/', label: 'Главная', icon: FaHome, description: 'Обзор аккаунта', group: 'Кабинет' },
+  { path: '/chat', label: 'Чат', icon: FaComments, description: 'Коммуникации', group: 'Кабинет' },
+]
+
+const userBottomNavItems: NavigationItem[] = [
+  userPrimaryNavItems[0],
+  {
+    path: '/garage',
+    label: 'Гараж',
+    icon: FaCar,
+    description: 'Автомобили, документы и история ТО',
+    group: 'Гараж',
+    isActive: isGarageProductActive,
+  },
+  {
+    path: '/service-centers',
+    label: 'Сервис',
+    icon: FaWrench,
+    description: 'Подбор сервиса и записи',
+    group: 'Обслуживание',
+    isActive: isServiceProductActive,
+  },
+  userPrimaryNavItems[1],
+]
+
+const userGarageNavItems: NavigationItem[] = [
+  {
+    path: '/garage',
+    label: 'Автомобили',
+    icon: FaCar,
+    description: 'Автомобили и VIN',
+    group: 'Гараж',
+    isActive: isGarageOverviewActive,
+  },
+  {
+    path: '/my-documents',
+    label: 'Документы',
+    icon: FaFileInvoiceDollar,
+    description: 'Операции и счета',
+    group: 'Гараж',
+  },
+  {
+    path: '/maintenance-history',
+    label: 'История ТО',
+    icon: FaClipboardList,
+    description: 'Архив выполненных работ',
+    group: 'Гараж',
+    isActive: isMaintenanceHistoryActive,
+  },
+]
+
+const userServiceNavItems: NavigationItem[] = [
+  {
+    path: '/service-centers',
+    label: 'Найти сервис',
+    icon: FaWrench,
+    description: 'Подбор сервисного центра',
+    group: 'Обслуживание',
+  },
+  {
+    path: '/bookings',
+    label: 'Записи',
+    icon: FaCalendar,
+    description: 'Записи, история и календарь',
+    group: 'Обслуживание',
+  },
+]
+
+const userSidebarSections: NavigationSection[] = [
+  { label: 'Навигация', items: userPrimaryNavItems },
+  { label: 'Гараж', items: userGarageNavItems },
+  { label: 'Обслуживание', items: userServiceNavItems },
 ]
 
 const userTopNavItems: NavigationItem[] = [
-  { path: '/educational-content', label: 'Знания', icon: FaBookOpen, description: 'Гайды и квизы' },
-  { path: '/notifications', label: 'Уведомления', icon: FaBell, description: 'Напоминания и статус' },
+  { path: '/educational-content', label: 'Знания', icon: FaBookOpen, description: 'Гайды и квизы', group: 'Кабинет' },
+  { path: '/notifications', label: 'Уведомления', icon: FaBell, description: 'Напоминания и статус', group: 'Кабинет' },
 ]
 
 const serviceCenterNavItems: NavigationItem[] = [
-  { path: '/', label: 'Обзор', icon: FaChartBar, description: 'KPI и расписание' },
-  { path: '/service-center/bookings', label: 'Записи', icon: FaClipboardList, description: 'Поток клиентов' },
-  { path: '/service-center/clients', label: 'Клиенты', icon: FaUsers, description: 'База и статусы' },
-  { path: '/service-center/operations', label: 'Операции', icon: FaTools, description: 'Работы и фото' },
-  { path: '/service-center/invoices', label: 'Счета', icon: FaFileInvoiceDollar, description: 'Выставление счетов' },
-  { path: '/service-center/reviews', label: 'Отзывы', icon: FaStar, description: 'Рейтинг сервиса' },
-  { path: '/service-center/settings', label: 'Настройки', icon: FaCog, description: 'Профиль сервиса' },
+  { path: '/', label: 'Обзор', icon: FaChartBar, description: 'KPI и расписание', group: 'Сервис' },
+  { path: '/service-center/bookings', label: 'Записи', icon: FaClipboardList, description: 'Поток клиентов', group: 'Сервис' },
+  { path: '/service-center/clients', label: 'Клиенты', icon: FaUsers, description: 'База и статусы', group: 'Сервис' },
+  { path: '/service-center/operations', label: 'Операции', icon: FaTools, description: 'Работы и фото', group: 'Сервис' },
+  { path: '/service-center/invoices', label: 'Счета', icon: FaFileInvoiceDollar, description: 'Выставление счетов', group: 'Сервис' },
+  { path: '/service-center/reviews', label: 'Отзывы', icon: FaStar, description: 'Рейтинг сервиса', group: 'Сервис' },
+  { path: '/service-center/settings', label: 'Настройки', icon: FaCog, description: 'Профиль сервиса', group: 'Сервис' },
+]
+
+const serviceCenterSidebarSections: NavigationSection[] = [
+  { label: 'Навигация', items: serviceCenterNavItems },
+]
+
+const serviceCenterBottomNavItems = serviceCenterNavItems.slice(0, 4)
+
+const userSectionItems = [
+  ...userGarageNavItems,
+  ...userServiceNavItems,
+  ...userTopNavItems,
+  ...userPrimaryNavItems,
 ]
 
 const aliasTitles = [
-  { test: (pathname: string) => pathname.startsWith('/cars/'), title: 'Карточка автомобиля', group: 'Автопарк' },
-  { test: (pathname: string) => pathname.startsWith('/service-centers/'), title: 'Карточка сервиса', group: 'Сервисы' },
+  { test: (pathname: string) => pathname.startsWith('/cars/'), title: 'Карточка автомобиля', group: 'Гараж' },
+  { test: (pathname: string) => pathname.startsWith('/service-centers/'), title: 'Карточка сервиса', group: 'Обслуживание' },
   { test: (pathname: string) => pathname.startsWith('/quizzes/'), title: 'Квиз', group: 'Знания' },
 ]
 
@@ -79,14 +203,6 @@ const roleLabels: Record<string, string> = {
 type ServiceCenterProfileChrome = {
   name: string
   logoUrl?: string | null
-}
-
-function isPathActive(pathname: string, itemPath: string) {
-  if (itemPath === '/') {
-    return pathname === '/'
-  }
-
-  return pathname === itemPath || pathname.startsWith(`${itemPath}/`)
 }
 
 function getFallbackSection(pathname: string) {
@@ -116,7 +232,7 @@ function NavigationList({
   return (
     <nav className="space-y-2">
       {items.map((item) => {
-        const isActive = isPathActive(pathname, item.path)
+        const isActive = isPathActive(pathname, item)
         const badgeContent = getBadgeContent?.(item)
 
         return (
@@ -130,6 +246,34 @@ function NavigationList({
         )
       })}
     </nav>
+  )
+}
+
+function NavigationSections({
+  sections,
+  pathname,
+  onNavigate,
+  getBadgeContent,
+}: {
+  sections: NavigationSection[]
+  pathname: string
+  onNavigate?: () => void
+  getBadgeContent?: (item: NavigationItem) => string | null
+}) {
+  return (
+    <>
+      {sections.map((section) => (
+        <div key={section.label} className="space-y-3">
+          <div className="app-sidebar-label">{section.label}</div>
+          <NavigationList
+            items={section.items}
+            pathname={pathname}
+            onNavigate={onNavigate}
+            getBadgeContent={getBadgeContent}
+          />
+        </div>
+      ))}
+    </>
   )
 }
 
@@ -164,6 +308,56 @@ export function NavItem({
         </span>
       ) : null}
     </Link>
+  )
+}
+
+function BottomNavigation({
+  items,
+  pathname,
+  getBadgeContent,
+}: {
+  items: NavigationItem[]
+  pathname: string
+  getBadgeContent?: (item: NavigationItem) => string | null
+}) {
+  if (items.length === 0) {
+    return null
+  }
+
+  return (
+    <nav className="app-bottom-nav lg:hidden" aria-label="Основная навигация">
+      <div
+        className="app-bottom-nav-inner"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
+        {items.map((item) => {
+          const IconComponent = item.icon
+          const active = isPathActive(pathname, item)
+          const badgeContent = getBadgeContent?.(item)
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`app-bottom-nav-link ${active ? 'app-bottom-nav-link-active' : ''}`}
+              aria-current={active ? 'page' : undefined}
+              aria-label={item.label}
+              title={item.description}
+            >
+              <span className="app-bottom-nav-icon" aria-hidden="true">
+                <IconComponent />
+              </span>
+              <span className="app-bottom-nav-label">{item.label}</span>
+              {badgeContent ? (
+                <span className="app-bottom-nav-badge" aria-label={`${badgeContent} непрочитанных уведомлений`}>
+                  {badgeContent}
+                </span>
+              ) : null}
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
 
@@ -210,7 +404,8 @@ export default function Layout() {
   const userMenuRef = useRef<HTMLDivElement | null>(null)
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const isAdmin = user?.role === 'ADMIN'
-  const navItems = isServiceCenter ? serviceCenterNavItems : userNavItems
+  const navigationSections = isServiceCenter ? serviceCenterSidebarSections : userSidebarSections
+  const bottomNavItems = isServiceCenter ? serviceCenterBottomNavItems : userBottomNavItems
   const topNavItems = isServiceCenter ? [] : userTopNavItems
   const shouldShowNotificationsBadge = Boolean(user && topNavItems.some((item) => item.path === '/notifications'))
   const { data: serviceCenterProfile } = useQuery<ServiceCenterProfileChrome>({
@@ -286,12 +481,12 @@ export default function Layout() {
   const currentSection = useMemo(() => {
     const items = isServiceCenter
       ? serviceCenterNavItems
-      : [...userNavItems, ...userTopNavItems]
-    const activeItem = items.find((item) => isPathActive(location.pathname, item.path))
+      : userSectionItems
+    const activeItem = items.find((item) => isPathActive(location.pathname, item))
     if (activeItem) {
       return {
         title: activeItem.label,
-        group: isServiceCenter ? 'Сервис' : 'Кабинет',
+        group: activeItem.group || (isServiceCenter ? 'Сервис' : 'Кабинет'),
       }
     }
 
@@ -329,14 +524,11 @@ export default function Layout() {
           </Link>
 
           <div className="app-sidebar-body space-y-6">
-            <div className="space-y-3">
-              <div className="app-sidebar-label">Навигация</div>
-              <NavigationList
-                items={navItems}
-                pathname={location.pathname}
-                getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
-              />
-            </div>
+            <NavigationSections
+              sections={navigationSections}
+              pathname={location.pathname}
+              getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
+            />
 
             {isAdmin && (
               <div className="space-y-3">
@@ -391,7 +583,7 @@ export default function Layout() {
                     <TopNavButton
                       key={item.path}
                       item={item}
-                      active={isPathActive(location.pathname, item.path)}
+                      active={isPathActive(location.pathname, item)}
                       badgeContent={item.path === '/notifications' ? notificationsBadgeContent : null}
                     />
                   ))}
@@ -530,15 +722,12 @@ export default function Layout() {
             </div>
 
             <div className="space-y-6 overflow-y-auto pb-6">
-              <div className="space-y-3">
-                <div className="app-sidebar-label">Навигация</div>
-                <NavigationList
-                  items={navItems}
-                  pathname={location.pathname}
-                  onNavigate={() => setMobileMenuOpen(false)}
-                  getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
-                />
-              </div>
+              <NavigationSections
+                sections={navigationSections}
+                pathname={location.pathname}
+                onNavigate={() => setMobileMenuOpen(false)}
+                getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
+              />
 
               {isAdmin && (
                 <div className="space-y-3">
@@ -561,6 +750,12 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      <BottomNavigation
+        items={bottomNavItems}
+        pathname={location.pathname}
+        getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
+      />
 
       <ProfileEditorModal open={profileEditorOpen} onClose={() => setProfileEditorOpen(false)} />
     </div>

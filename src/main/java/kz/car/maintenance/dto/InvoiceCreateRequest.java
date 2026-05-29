@@ -2,7 +2,6 @@ package kz.car.maintenance.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,7 +17,6 @@ public class InvoiceCreateRequest {
 
     private Long clientId;
 
-    @NotNull
     @DecimalMin("0.0")
     private BigDecimal amount;
 

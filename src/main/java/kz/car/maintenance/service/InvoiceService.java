@@ -3,6 +3,7 @@ package kz.car.maintenance.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.car.maintenance.dto.InvoiceCreateRequest;
+import kz.car.maintenance.dto.InvoiceItemRequest;
 import kz.car.maintenance.dto.InvoiceResponse;
 import kz.car.maintenance.exception.BadRequestException;
 import kz.car.maintenance.exception.ForbiddenException;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +49,7 @@ public class InvoiceService {
         MaintenanceRecord maintenanceRecord = null;
         Car car;
         User client;
+        BigDecimal totalAmount = request.getAmount();
 
         if (request.getMaintenanceRecordId() != null) {
             maintenanceRecord = maintenanceRecordRepository.findById(request.getMaintenanceRecordId())
@@ -67,6 +70,12 @@ public class InvoiceService {
             }
 
             client = car.getOwner();
+
+            if (maintenanceRecord.getCost() != null) {
+                totalAmount = maintenanceRecord.getCost();
+            } else if (totalAmount == null) {
+                throw new BadRequestException("Selected operation has no cost. Add the cost to the operation before creating an invoice");
+            }
         } else {
             if (request.getCarId() == null || request.getClientId() == null) {
                 throw new BadRequestException("Provide maintenanceRecordId or both clientId and carId");
@@ -83,9 +92,13 @@ public class InvoiceService {
             ensureClientBelongsToServiceCenterScope(serviceCenter, client, car);
         }
 
+        if (totalAmount == null) {
+            throw new BadRequestException("Invoice amount is required");
+        }
+
         String itemsJson;
         try {
-            itemsJson = objectMapper.writeValueAsString(request.getItems());
+            itemsJson = objectMapper.writeValueAsString(buildInvoiceItems(request, maintenanceRecord, totalAmount));
         } catch (JsonProcessingException e) {
             throw new BadRequestException("Failed to serialize invoice items");
         }
@@ -97,7 +110,7 @@ public class InvoiceService {
                 .client(client)
                 .invoiceNumber(generateInvoiceNumber())
                 .issueDate(LocalDate.now())
-                .totalAmount(request.getAmount())
+                .totalAmount(totalAmount)
                 .taxAmount(request.getTaxAmount())
                 .currency(request.getCurrency() == null || request.getCurrency().isBlank() ? "KZT" : request.getCurrency())
                 .status(Invoice.InvoiceStatus.CREATED)
@@ -115,6 +128,23 @@ public class InvoiceService {
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    private List<InvoiceItemRequest> buildInvoiceItems(InvoiceCreateRequest request, MaintenanceRecord maintenanceRecord, BigDecimal totalAmount) {
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            return request.getItems();
+        }
+
+        if (maintenanceRecord == null) {
+            return List.of();
+        }
+
+        InvoiceItemRequest item = new InvoiceItemRequest();
+        item.setName(maintenanceRecord.getWorkType());
+        item.setDescription(maintenanceRecord.getDescription());
+        item.setQuantity(1);
+        item.setUnitPrice(totalAmount);
+        return List.of(item);
     }
 
     public List<InvoiceResponse> getMyInvoices(Long userId) {

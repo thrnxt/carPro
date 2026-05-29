@@ -1,6 +1,7 @@
 package kz.car.maintenance.repository;
 
 import kz.car.maintenance.model.Car;
+import kz.car.maintenance.model.Booking;
 import kz.car.maintenance.model.MaintenanceRecord;
 import kz.car.maintenance.model.ServiceCenter;
 import kz.car.maintenance.model.User;
@@ -13,17 +14,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRecord, Long> {
     List<MaintenanceRecord> findByCar(Car car);
     List<MaintenanceRecord> findByServiceCenter(ServiceCenter serviceCenter);
     List<MaintenanceRecord> findByCarOrderByServiceDateDesc(Car car);
+    Optional<MaintenanceRecord> findByBooking(Booking booking);
     @Query("""
             select distinct mr from MaintenanceRecord mr
             left join fetch mr.car c
             left join fetch c.owner
             left join fetch mr.serviceCenter
+            left join fetch mr.booking
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
@@ -38,6 +42,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.car c
             left join fetch c.owner
             left join fetch mr.serviceCenter
+            left join fetch mr.booking
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
@@ -52,6 +57,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.car c
             left join fetch c.owner
             left join fetch mr.serviceCenter
+            left join fetch mr.booking
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
@@ -70,6 +76,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.car c
             left join fetch c.owner
             left join fetch mr.serviceCenter
+            left join fetch mr.booking
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
@@ -160,6 +167,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.car c
             left join fetch c.owner
             left join fetch mr.serviceCenter
+            left join fetch mr.booking
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent

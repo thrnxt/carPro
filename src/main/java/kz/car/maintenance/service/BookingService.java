@@ -110,7 +110,7 @@ public class BookingService {
         User requester = userService.findById(requesterId);
         verifyServiceCenterAccess(requester, serviceCenter);
 
-        return bookingRepository.findByServiceCenterOrderByBookingDateTimeAsc(serviceCenter);
+        return bookingRepository.findByServiceCenterOrderByCreatedAtDesc(serviceCenter);
     }
     
     @Transactional
