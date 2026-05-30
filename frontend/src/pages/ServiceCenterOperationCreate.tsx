@@ -61,6 +61,7 @@ interface ReplacedPartFormRow {
   componentId: string
   partNumber: string
   manufacturer: string
+  files: File[]
 }
 
 interface CreateOperationPayload {
@@ -75,7 +76,13 @@ interface CreateOperationPayload {
     componentId: number
     partNumber: string | null
     manufacturer: string | null
+    files: File[]
   }>
+}
+
+interface UploadedOperationPhoto {
+  fileUrl: string
+  description: string
 }
 
 const OPERATION_SOURCE_STATUSES = new Set(['COMPLETED'])
@@ -210,6 +217,10 @@ export default function ServiceCenterOperationCreate() {
       cost: '',
     }))
     setReplacedParts([])
+    setSelectedFiles([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   useEffect(() => {
@@ -230,36 +241,78 @@ export default function ServiceCenterOperationCreate() {
   }, [availableBookings, requestedBookingId])
 
   const addReplacedPartRow = () => {
-    setReplacedParts((currentValue) => [...currentValue, { componentId: '', partNumber: '', manufacturer: '' }])
+    setReplacedParts((currentValue) => [
+      ...currentValue,
+      { componentId: '', partNumber: '', manufacturer: '', files: [] },
+    ])
   }
 
   const removeReplacedPartRow = (index: number) => {
     setReplacedParts((currentValue) => currentValue.filter((_, rowIndex) => rowIndex !== index))
   }
 
-  const updateReplacedPartRow = (index: number, field: keyof ReplacedPartFormRow, value: string) => {
+  const updateReplacedPartRow = (
+    index: number,
+    field: Exclude<keyof ReplacedPartFormRow, 'files'>,
+    value: string
+  ) => {
     setReplacedParts((currentValue) =>
       currentValue.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row))
     )
   }
 
+  const updateReplacedPartFiles = (index: number, files: File[]) => {
+    setReplacedParts((currentValue) =>
+      currentValue.map((row, rowIndex) => (rowIndex === index ? { ...row, files } : row))
+    )
+  }
+
+  const uploadOperationFile = async (file: File) => {
+    const uploadData = new FormData()
+    uploadData.append('file', file)
+    uploadData.append('subdirectory', 'maintenance')
+    const uploadResponse = await apiClient.post('/files/upload', uploadData)
+
+    return {
+      fileUrl: uploadResponse.data.url,
+      description: file.name,
+    }
+  }
+
   const createOperationMutation = useMutation({
     mutationFn: async (payload: CreateOperationPayload) => {
-      const uploadedPhotos: Array<{ fileUrl: string; description: string }> = []
+      const uploadedPhotos: UploadedOperationPhoto[] = []
 
       for (const file of selectedFiles) {
-        const uploadData = new FormData()
-        uploadData.append('file', file)
-        uploadData.append('subdirectory', 'maintenance')
-        const uploadResponse = await apiClient.post('/files/upload', uploadData)
-        uploadedPhotos.push({
-          fileUrl: uploadResponse.data.url,
-          description: file.name,
+        uploadedPhotos.push(await uploadOperationFile(file))
+      }
+
+      const { replacedParts, ...operationPayload } = payload
+      const uploadedReplacedParts: Array<{
+        componentId: number
+        partNumber: string | null
+        manufacturer: string | null
+        photos: UploadedOperationPhoto[]
+      }> = []
+
+      for (const part of replacedParts) {
+        const partPhotos: UploadedOperationPhoto[] = []
+
+        for (const file of part.files) {
+          partPhotos.push(await uploadOperationFile(file))
+        }
+
+        uploadedReplacedParts.push({
+          componentId: part.componentId,
+          partNumber: part.partNumber,
+          manufacturer: part.manufacturer,
+          photos: partPhotos,
         })
       }
 
       const response = await apiClient.post('/maintenance-records/service-center', {
-        ...payload,
+        ...operationPayload,
+        replacedParts: uploadedReplacedParts,
         photos: uploadedPhotos,
       })
       return response.data
@@ -300,8 +353,9 @@ export default function ServiceCenterOperationCreate() {
         componentId: row.componentId.trim(),
         partNumber: row.partNumber.trim(),
         manufacturer: row.manufacturer.trim(),
+        files: row.files,
       }))
-      .filter((row) => row.componentId || row.partNumber || row.manufacturer)
+      .filter((row) => row.componentId || row.partNumber || row.manufacturer || row.files.length > 0)
 
     if (preparedReplacedParts.some((row) => !row.componentId)) {
       toast.error('Укажите компонент для каждой добавленной замененной детали')
@@ -331,6 +385,7 @@ export default function ServiceCenterOperationCreate() {
         componentId: Number(row.componentId),
         partNumber: row.partNumber || null,
         manufacturer: row.manufacturer || null,
+        files: row.files,
       })),
     })
   }
@@ -518,62 +573,104 @@ export default function ServiceCenterOperationCreate() {
               ) : (
                 <div className="space-y-3">
                   {replacedParts.map((row, index) => (
-                    <div key={`replaced-part-${index}`} className="grid gap-3 md:grid-cols-4">
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-400">Компонент</label>
-                        {carComponents && carComponents.length > 0 ? (
-                          <select
-                            value={row.componentId}
-                            onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
-                            className="auto-select"
-                          >
-                            <option value="">Выберите компонент</option>
-                            {carComponents.map((component) => (
-                              <option key={component.id} value={component.id}>
-                                {component.name} ({component.status}, {component.wearLevel}%)
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
+                    <div
+                      key={`replaced-part-${index}`}
+                      className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
+                    >
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+                        <div>
+                          <label className="mb-1 block text-xs text-slate-400">Компонент</label>
+                          {carComponents && carComponents.length > 0 ? (
+                            <select
+                              value={row.componentId}
+                              onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
+                              className="auto-select"
+                            >
+                              <option value="">Выберите компонент</option>
+                              {carComponents.map((component) => (
+                                <option key={component.id} value={component.id}>
+                                  {component.name} ({component.status}, {component.wearLevel}%)
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              value={row.componentId}
+                              onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
+                              className="auto-input"
+                              placeholder="ID компонента"
+                            />
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs text-slate-400">Номер детали</label>
                           <input
-                            value={row.componentId}
-                            onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
+                            value={row.partNumber}
+                            onChange={(event) => updateReplacedPartRow(index, 'partNumber', event.target.value)}
                             className="auto-input"
-                            placeholder="ID компонента"
+                            placeholder="Part number"
                           />
-                        )}
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs text-slate-400">Производитель</label>
+                          <input
+                            value={row.manufacturer}
+                            onChange={(event) => updateReplacedPartRow(index, 'manufacturer', event.target.value)}
+                            className="auto-input"
+                            placeholder="OEM"
+                          />
+                        </div>
+
+                        <div className="flex items-end">
+                          <label className="btn-secondary cursor-pointer whitespace-nowrap text-sm">
+                            <FaCamera />
+                            {row.files.length > 0 ? `Фото: ${row.files.length}` : 'Фото детали'}
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/jpeg,image/png,image/webp"
+                              onClick={(event) => {
+                                event.currentTarget.value = ''
+                              }}
+                              onChange={(event) => updateReplacedPartFiles(index, Array.from(event.target.files || []))}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            className="btn-secondary text-danger text-sm"
+                            onClick={() => removeReplacedPartRow(index)}
+                          >
+                            <FaTimes />
+                            Удалить
+                          </button>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-400">Номер детали</label>
-                        <input
-                          value={row.partNumber}
-                          onChange={(event) => updateReplacedPartRow(index, 'partNumber', event.target.value)}
-                          className="auto-input"
-                          placeholder="Part number"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-400">Производитель</label>
-                        <input
-                          value={row.manufacturer}
-                          onChange={(event) => updateReplacedPartRow(index, 'manufacturer', event.target.value)}
-                          className="auto-input"
-                          placeholder="OEM"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
-                        <button
-                          type="button"
-                          className="btn-secondary text-danger text-sm"
-                          onClick={() => removeReplacedPartRow(index)}
-                        >
-                          <FaTimes />
-                          Удалить
-                        </button>
-                      </div>
+                      {row.files.length > 0 ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {row.files.map((file) => (
+                            <span
+                              key={`${file.name}-${file.size}-${file.lastModified}`}
+                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300"
+                            >
+                              {file.name}
+                            </span>
+                          ))}
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-slate-400 transition-colors hover:text-white"
+                            onClick={() => updateReplacedPartFiles(index, [])}
+                          >
+                            Очистить
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -583,7 +680,7 @@ export default function ServiceCenterOperationCreate() {
             <div className="border-t border-white/10 pt-6">
               <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
                 <FaCamera className="text-text-muted" />
-                Подтверждающие фото и документы
+                Общие фото и документы
               </h3>
               <input
                 ref={fileInputRef}

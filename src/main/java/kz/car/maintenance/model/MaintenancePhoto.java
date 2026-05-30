@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "maintenance_photos")
 @Data
-@EqualsAndHashCode(exclude = {"maintenanceRecord"})
+@EqualsAndHashCode(exclude = {"maintenanceRecord", "replacedComponent"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,6 +25,14 @@ public class MaintenancePhoto {
     @JoinColumn(name = "maintenance_record_id", nullable = false)
     @JsonIgnore
     private MaintenanceRecord maintenanceRecord;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "replaced_component_id")
+    @JsonIgnore
+    private ReplacedComponent replacedComponent;
+
+    @Column(name = "replaced_component_id", insertable = false, updatable = false)
+    private Long replacedComponentId;
     
     @Column(nullable = false)
     private String fileUrl; // URL фотографии

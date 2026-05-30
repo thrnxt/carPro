@@ -232,7 +232,21 @@ public class MaintenanceRecordService {
                         .replacementDate(request.getServiceDate())
                         .partNumber(partRequest.getPartNumber())
                         .manufacturer(partRequest.getManufacturer())
+                        .photos(new HashSet<>())
                         .build();
+
+                if (partRequest.getPhotos() != null && !partRequest.getPhotos().isEmpty()) {
+                    for (ServiceOperationCreateRequest.OperationPhotoRequest photo : partRequest.getPhotos()) {
+                        MaintenancePhoto maintenancePhoto = MaintenancePhoto.builder()
+                                .maintenanceRecord(record)
+                                .replacedComponent(replacedComponent)
+                                .fileUrl(photo.getFileUrl())
+                                .description(photo.getDescription())
+                                .build();
+                        replacedComponent.getPhotos().add(maintenancePhoto);
+                    }
+                }
+
                 record.getReplacedComponents().add(replacedComponent);
 
                 component.setLastReplacementDate(request.getServiceDate());

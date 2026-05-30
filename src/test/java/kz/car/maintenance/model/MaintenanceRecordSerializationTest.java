@@ -68,6 +68,16 @@ class MaintenanceRecordSerializationTest {
                 .manufacturer("OEM")
                 .build();
 
+        MaintenancePhoto partPhoto = MaintenancePhoto.builder()
+                .id(61L)
+                .maintenanceRecord(record)
+                .replacedComponent(replacedComponent)
+                .replacedComponentId(60L)
+                .fileUrl("/uploads/maintenance/part-photo.png")
+                .description("Part photo")
+                .build();
+        replacedComponent.setPhotos(Set.of(partPhoto));
+
         Invoice invoice = Invoice.builder()
                 .id(70L)
                 .maintenanceRecord(record)
@@ -89,6 +99,8 @@ class MaintenanceRecordSerializationTest {
         assertThat(json).contains("\"replacedComponents\"");
         assertThat(json).contains("\"invoice\"");
         assertThat(json).doesNotContain("maintenanceRecord");
+        assertThat(json).contains("part-photo.png");
+        assertThat(json).contains("\"replacedComponentId\":60");
         assertThat(json).contains("Шатуны");
         assertThat(json).contains("Фото ремонта");
         assertThat(json).contains("INV-001");

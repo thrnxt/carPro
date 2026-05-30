@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SteppePass · Документы</title>
+<style>
+  /* ============================================================
+     Design tokens
+     ============================================================ */
+  :root {
+    --bg:            #141618;
+    --surface-1:     #1b1e21;   /* toolbar / list container */
+    --surface-2:     #232730;   /* hover / inputs */
+    --surface-3:     #2c313a;
+    --border:        #2a2f35;
+    --border-strong: #3a414a;
+
+    --text:          #eaedf1;
+    --text-secondary:#98a2ad;
+    --text-muted:    #69727c;
+
+    --accent:        #4d9fff;
+    --accent-soft:   rgba(77, 159, 255, 0.14);
+
+    --success:       #30cf91;  --success-soft: rgba(48, 207, 145, 0.14);
+    --warning:       #f4b03c;  --warning-soft: rgba(244, 176, 60, 0.15);
+    --danger:        #ef5d5d;  --danger-soft:  rgba(239, 93, 93, 0.14);
+
+    --c-oil:    #f4b03c; --c-oil-soft:   rgba(244, 176, 60, 0.14);
+    --c-diag:   #4d9fff; --c-diag-soft:  rgba(77, 159, 255, 0.14);
+    --c-tire:   #2fd2c0; --c-tire-soft:  rgba(47, 210, 192, 0.14);
+    --c-doc:    #b18cff; --c-doc-soft:   rgba(177, 140, 255, 0.15);
+
+    --radius:    16px;
+    --radius-sm: 11px;
+    --ease:      cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background:
+      radial-gradient(800px 480px at 88% -8%, rgba(77,159,255,0.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 32px 18px 72px;
+  }
+
+  svg { display: block; flex-shrink: 0; }
+  button { font-family: inherit; }
+
+  .page { max-width: 880px; margin: 0 auto; }
+
+  /* ---- Page header ---- */
+  .page-head { margin-bottom: 22px; }
+  .page-title { font-size: 26px; font-weight: 720; letter-spacing: -0.02em; }
+  .page-sub { margin-top: 5px; font-size: 14px; color: var(--text-secondary); }
+
+  /* ============================================================
+     1. Filter toolbar
+     ============================================================ */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  /* pill tabs */
+  .tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .tab:hover { color: var(--text); }
+  .tab.is-active {
+    background: var(--surface-2);
+    color: var(--text);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .tab-count {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--surface-3);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .tab.is-active .tab-count { background: var(--accent-soft); color: var(--accent); }
+
+  /* right controls */
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .select-wrap { position: relative; }
+  .select-wrap > svg {
+    position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); pointer-events: none;
+  }
+  select.car-select {
+    appearance: none;
+    height: 38px;
+    padding: 0 34px 0 13px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease);
+  }
+  select.car-select:hover { border-color: var(--border-strong); }
+  select.car-select:focus { outline: none; border-color: var(--accent); }
+
+  .search {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search svg { position: absolute; left: 11px; color: var(--text-muted); }
+  .search input {
+    width: 168px;
+    height: 38px;
+    padding: 0 12px 0 34px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), width 0.2s var(--ease);
+  }
+  .search input::placeholder { color: var(--text-muted); }
+  .search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+  }
+  .icon-btn:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+
+  /* ============================================================
+     4. Summary strip
+     ============================================================ */
+  .summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 14px;
+    padding: 13px 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .summary-item {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 2px 18px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .summary-item + .summary-item::before {
+    content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 1px; height: 20px; background: var(--border-strong);
+  }
+  .summary-item b { color: var(--text); font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+
+  /* ============================================================
+     2 & 3. Document list
+     ============================================================ */
+  .doc-list {
+    margin-top: 14px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .doc-row {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background-color 0.15s var(--ease);
+  }
+  .doc-row + .doc-row { border-top: 1px solid var(--border); }
+  .doc-row:hover { background: var(--surface-2); }
+
+  .doc-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+  }
+  .doc-icon.oil  { background: var(--c-oil-soft);  color: var(--c-oil); }
+  .doc-icon.diag { background: var(--c-diag-soft); color: var(--c-diag); }
+  .doc-icon.tire { background: var(--c-tire-soft); color: var(--c-tire); }
+  .doc-icon.doc  { background: var(--c-doc-soft);  color: var(--c-doc); }
+
+  .doc-info { min-width: 0; }
+  .doc-title {
+    font-size: 15px; font-weight: 650; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .doc-meta {
+    margin-top: 3px;
+    font-size: 12px; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .doc-meta .sep { opacity: 0.5; margin: 0 5px; }
+  .doc-subnum {
+    margin-top: 3px;
+    font-size: 12px; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .doc-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .doc-amount-wrap { text-align: right; }
+  .doc-amount {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+
+  /* status badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 5px;
+    height: 22px; padding: 0 9px;
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge--success { color: var(--success); background: var(--success-soft); }
+  .badge--warning { color: var(--warning); background: var(--warning-soft); }
+  .badge--danger  { color: var(--danger);  background: var(--danger-soft); }
+
+  /* download (invoice) — appears on hover, always visible on mobile */
+  .dl-btn {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    display: grid; place-items: center;
+    border-radius: 9px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.15s var(--ease), transform 0.15s var(--ease), background-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .doc-row:hover .dl-btn { opacity: 1; transform: none; }
+  .dl-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: rgba(77,159,255,0.3); }
+
+  /* ============================================================
+     6. List footer
+     ============================================================ */
+  .list-footer {
+    padding: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .load-more {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 38px; padding: 0 18px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .load-more:hover { background: var(--surface-3); color: var(--text); }
+
+  /* ============================================================
+     5. Empty state
+     ============================================================ */
+  .empty {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 24px 52px;
+    margin-top: 14px;
+    background: var(--surface-1);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+  }
+  .empty.is-shown { display: flex; }
+  .empty-illu { color: var(--text-muted); opacity: 0.55; margin-bottom: 18px; }
+  .empty-title { font-size: 16px; font-weight: 650; color: var(--text); }
+  .empty-text { margin-top: 6px; font-size: 13.5px; color: var(--text-muted); max-width: 340px; }
+  .empty-reset {
+    margin-top: 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 40px; padding: 0 18px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    transition: background-color 0.15s var(--ease);
+  }
+  .empty-reset:hover { background: #3d8ef0; }
+
+  /* ---- panels ---- */
+  .panel { display: none; }
+  .panel.is-active { display: block; }
+
+  /* ============================================================
+     Responsive
+     ============================================================ */
+  @media (max-width: 680px) {
+    .toolbar { gap: 10px; }
+    .tabs { flex: 1; }
+    .tab { flex: 1; justify-content: center; padding: 0 10px; }
+    .controls { width: 100%; }
+    .select-wrap { flex: 1; }
+    select.car-select { width: 100%; }
+    .search { flex: 1; }
+    .search input { width: 100%; }
+
+    .summary { flex-direction: column; align-items: stretch; gap: 2px; padding: 8px 14px; }
+    .summary-item { padding: 8px 0; justify-content: space-between; }
+    .summary-item + .summary-item::before { left: 0; right: 0; top: 0; width: auto; height: 1px; transform: none; }
+
+    .doc-row { grid-template-columns: 40px 1fr auto; gap: 12px; }
+    .doc-amount { font-size: 15px; }
+    /* download always visible on mobile */
+    .dl-btn { opacity: 1; transform: none; width: 34px; height: 34px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Page header -->
+  <header class="page-head">
+    <h1 class="page-title">Документы</h1>
+    <p class="page-sub">Сервисные операции и счета по вашему гаражу — в одном месте.</p>
+  </header>
+
+  <!-- 1. Filter toolbar -->
+  <div class="toolbar">
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" data-tab="operations" role="tab" aria-selected="true">
+        Операции <span class="tab-count">2</span>
+      </button>
+      <button class="tab" data-tab="invoices" role="tab" aria-selected="false">
+        Счета <span class="tab-count">2</span>
+      </button>
+    </div>
+
+    <div class="controls">
+      <div class="select-wrap">
+        <select class="car-select" id="carSelect" aria-label="Фильтр по автомобилю">
+          <option value="">Все автомобили</option>
+          <option value="camry">Toyota Camry (A123BC02)</option>
+          <option value="k5">Kia K5 (B456CD02)</option>
+        </select>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="Поиск…" aria-label="Поиск" />
+      </div>
+
+      <button class="icon-btn" aria-label="Фильтры" title="Фильтры">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Panel: Операции ============ -->
+  <section class="panel is-active" data-panel="operations">
+
+    <!-- 4. Summary -->
+    <div class="summary">
+      <span class="summary-item">Всего операций <b>2</b></span>
+      <span class="summary-item">Общая сумма <b>210 000 ₸</b></span>
+      <span class="summary-item">Период <b>май 2026</b></span>
+    </div>
+
+    <!-- 2. Operations list -->
+    <div class="doc-list">
+      <div class="doc-row" data-car="camry" data-search="замена моторного масла фильтров алтын">
+        <span class="doc-icon oil">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5S5.5 10 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10 12 2.5 12 2.5z"/></svg>
+        </span>
+        <div class="doc-info">
+          <div class="doc-title">Замена моторного масла и фильтров</div>
+          <div class="doc-meta">14 мая 2026 <span class="sep">·</span> Toyota Camry <span class="sep">·</span> АвтоТехЦентр «Алтын»</div>
+        </div>
+        <div class="doc-right">
+          <div class="doc-amount-wrap">
+            <div class="doc-amount">24 500 ₸</div>
+            <span class="badge badge--success">Завершено</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="doc-row" data-car="camry" data-search="компьютерная диагностика двигателя bosch">
+        <span class="doc-icon diag">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2.5 6 4-13 2.5 7H21"/></svg>
+        </span>
+        <div class="doc-info">
+          <div class="doc-title">Компьютерная диагностика двигателя</div>
+          <div class="doc-meta">28 мая 2026 <span class="sep">·</span> Toyota Camry <span class="sep">·</span> СТО Bosch Service</div>
+        </div>
+        <div class="doc-right">
+          <div class="doc-amount-wrap">
+            <div class="doc-amount">185 500 ₸</div>
+            <span class="badge badge--warning">В процессе</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Empty state -->
+    <div class="empty">
+      <svg class="empty-illu" width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="14" height="17" rx="2"/>
+        <line x1="7" y1="9" x2="13" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/><line x1="7" y1="17" x2="10" y2="17"/>
+        <circle cx="17.5" cy="17.5" r="4"/><line x1="20.5" y1="20.5" x2="23" y2="23"/>
+      </svg>
+      <div class="empty-title">Нет операций по выбранному авто</div>
+      <div class="empty-text">Под текущий фильтр ничего не подошло. Попробуйте выбрать другой автомобиль или сбросить условия.</div>
+      <button class="empty-reset" data-reset>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Сбросить фильтр
+      </button>
+    </div>
+
+    <!-- 6. Footer -->
+    <div class="list-footer">Показаны все записи <span style="opacity:.5;margin:0 4px">·</span> <span class="count">2</span></div>
+  </section>
+
+  <!-- ============ Panel: Счета ============ -->
+  <section class="panel" data-panel="invoices">
+
+    <div class="summary">
+      <span class="summary-item">Всего счетов <b>2</b></span>
+      <span class="summary-item">К оплате <b>185 500 ₸</b></span>
+      <span class="summary-item">Оплачено <b>24 500 ₸</b></span>
+    </div>
+
+    <!-- 3. Invoices list -->
+    <div class="doc-list">
+      <div class="doc-row" data-car="camry" data-search="счёт замена масла inv 2026 0514">
+        <span class="doc-icon doc">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        </span>
+        <div class="doc-info">
+          <div class="doc-title">Счёт на оплату · Замена масла</div>
+          <div class="doc-subnum">INV-2026-0514 · 14 мая 2026 · Toyota Camry</div>
+        </div>
+        <div class="doc-right">
+          <div class="doc-amount-wrap">
+            <div class="doc-amount">24 500 ₸</div>
+            <span class="badge badge--success">Оплачен</span>
+          </div>
+          <button class="dl-btn" aria-label="Скачать PDF" title="Скачать PDF">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="doc-row" data-car="camry" data-search="счёт диагностика двигателя inv 2026 0528 bosch">
+        <span class="doc-icon doc">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        </span>
+        <div class="doc-info">
+          <div class="doc-title">Счёт на оплату · Диагностика двигателя</div>
+          <div class="doc-subnum">INV-2026-0528 · 28 мая 2026 · Toyota Camry</div>
+        </div>
+        <div class="doc-right">
+          <div class="doc-amount-wrap">
+            <div class="doc-amount">185 500 ₸</div>
+            <span class="badge badge--warning">Ожидает</span>
+          </div>
+          <button class="dl-btn" aria-label="Скачать PDF" title="Скачать PDF">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty">
+      <svg class="empty-illu" width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="14" height="17" rx="2"/>
+        <line x1="7" y1="9" x2="13" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/><line x1="7" y1="17" x2="10" y2="17"/>
+        <circle cx="17.5" cy="17.5" r="4"/><line x1="20.5" y1="20.5" x2="23" y2="23"/>
+      </svg>
+      <div class="empty-title">Нет счетов по выбранному авто</div>
+      <div class="empty-text">Под текущий фильтр ничего не подошло. Попробуйте выбрать другой автомобиль или сбросить условия.</div>
+      <button class="empty-reset" data-reset>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Сбросить фильтр
+      </button>
+    </div>
+
+    <div class="list-footer">Показаны все записи <span style="opacity:.5;margin:0 4px">·</span> <span class="count">2</span></div>
+  </section>
+
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  const carSelect = document.getElementById('carSelect');
+  const searchInput = document.getElementById('searchInput');
+
+  function activePanel() {
+    return document.querySelector('.panel.is-active');
+  }
+
+  function applyFilter() {
+    const panel = activePanel();
+    const car = carSelect.value;
+    const q = searchInput.value.trim().toLowerCase();
+    let visible = 0;
+
+    panel.querySelectorAll('.doc-row').forEach((row) => {
+      const matchCar = !car || row.dataset.car === car;
+      const matchQuery = !q || (row.dataset.search || '').includes(q);
+      const show = matchCar && matchQuery;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    const list = panel.querySelector('.doc-list');
+    const empty = panel.querySelector('.empty');
+    const footer = panel.querySelector('.list-footer');
+
+    list.style.display = visible ? '' : 'none';
+    footer.style.display = visible ? '' : 'none';
+    empty.classList.toggle('is-shown', visible === 0);
+    if (visible) footer.querySelector('.count').textContent = visible;
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panels.forEach((p) => {
+        p.classList.toggle('is-active', p.dataset.panel === tab.dataset.tab);
+      });
+      applyFilter();
+    });
+  });
+
+  carSelect.addEventListener('change', applyFilter);
+  searchInput.addEventListener('input', applyFilter);
+
+  document.querySelectorAll('[data-reset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      carSelect.value = '';
+      searchInput.value = '';
+      applyFilter();
+    });
+  });
+</script>
+</body>
+</html>

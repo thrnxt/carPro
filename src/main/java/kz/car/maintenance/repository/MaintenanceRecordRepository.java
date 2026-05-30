@@ -31,6 +31,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
+            left join fetch rc.photos
             left join fetch mr.invoice
             where mr.car = :car
             order by mr.serviceDate desc, mr.createdAt desc
@@ -46,6 +47,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
+            left join fetch rc.photos
             left join fetch mr.invoice
             where mr.serviceCenter = :serviceCenter
             order by mr.serviceDate desc, mr.createdAt desc
@@ -61,6 +63,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
+            left join fetch rc.photos
             left join fetch mr.invoice
             where mr.serviceCenter = :serviceCenter
               and c.owner = :owner
@@ -80,6 +83,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
+            left join fetch rc.photos
             left join fetch mr.invoice
             where mr.serviceCenter = :serviceCenter
               and c = :car
@@ -171,6 +175,7 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             left join fetch mr.photos
             left join fetch mr.replacedComponents rc
             left join fetch rc.carComponent
+            left join fetch rc.photos
             left join fetch mr.invoice
             where mr.id in :ids
             """)

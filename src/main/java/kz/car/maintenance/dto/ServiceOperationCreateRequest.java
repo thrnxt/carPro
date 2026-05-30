@@ -41,6 +41,9 @@ public class ServiceOperationCreateRequest {
         private Long componentId;
         private String partNumber;
         private String manufacturer;
+
+        @Valid
+        private List<OperationPhotoRequest> photos = new ArrayList<>();
     }
 
     @Data

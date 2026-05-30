@@ -1,15 +1,12 @@
 import { useState } from 'react'
-import { useParams, Link, useOutletContext } from 'react-router-dom'
+import { useParams, useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
-  FaCalendarAlt,
   FaCheckCircle,
-  FaClipboardList,
   FaExclamationTriangle,
   FaInfoCircle,
   FaTachometerAlt,
   FaTimesCircle,
-  FaWrench,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
 import { Button, KeyValue, Section, StatCard } from '../components/ui'
@@ -196,48 +193,6 @@ export default function CarDetails() {
           </div>
         </Section>
       </div>
-
-      {/* ── Quick links ── */}
-      <Section eyebrow="Быстрые действия" title="Что дальше?">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Link
-            to={`/cars/${id}/components`}
-            className="auto-card p-4 flex items-center gap-3 hover:border-accent transition-colors group"
-          >
-            <div className="metric-icon shrink-0">
-              <FaWrench />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">Состояние деталей</p>
-              <p className="text-xs text-text-muted mt-0.5">Износ узлов и компонентов</p>
-            </div>
-          </Link>
-          <Link
-            to={`/cars/${id}/history`}
-            className="auto-card p-4 flex items-center gap-3 hover:border-accent transition-colors group"
-          >
-            <div className="metric-icon shrink-0">
-              <FaClipboardList />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">История ТО</p>
-              <p className="text-xs text-text-muted mt-0.5">Все записи обслуживания</p>
-            </div>
-          </Link>
-          <Link
-            to={`/cars/${id}/calendar`}
-            className="auto-card p-4 flex items-center gap-3 hover:border-accent transition-colors group"
-          >
-            <div className="metric-icon shrink-0">
-              <FaCalendarAlt />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">Календарь ТО</p>
-              <p className="text-xs text-text-muted mt-0.5">Плановые работы</p>
-            </div>
-          </Link>
-        </div>
-      </Section>
 
       {/* ── Modals ── */}
       {showFrequencyModal && (

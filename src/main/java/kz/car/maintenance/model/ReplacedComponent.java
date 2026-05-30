@@ -9,11 +9,12 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Entity
 @Table(name = "replaced_components")
 @Data
-@EqualsAndHashCode(exclude = {"maintenanceRecord", "carComponent"})
+@EqualsAndHashCode(exclude = {"maintenanceRecord", "carComponent", "photos"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,4 +39,7 @@ public class ReplacedComponent {
     private String partNumber; // Номер детали
     private String manufacturer; // Производитель
     private String notes; // Примечания
+
+    @OneToMany(mappedBy = "replacedComponent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<MaintenancePhoto> photos;
 }

@@ -32,6 +32,7 @@ export type ServiceOperationCardData = {
     id: number
     fileUrl: string
     description?: string
+    replacedComponentId?: number | null
   }>
   replacedComponents?: Array<{
     id: number
@@ -41,6 +42,12 @@ export type ServiceOperationCardData = {
     }
     partNumber?: string
     manufacturer?: string
+    photos?: Array<{
+      id: number
+      fileUrl: string
+      description?: string
+      replacedComponentId?: number | null
+    }>
   }>
 }
 
@@ -110,6 +117,7 @@ export default function ServiceOperationCard({
 }) {
   const statusMeta = getStatusMeta(operation.status)
   const totalValue = operation.cost != null ? `${operation.cost.toLocaleString('ru-RU')} ₸` : 'Не указана'
+  const generalAttachments = (operation.photos ?? []).filter((photo) => !photo.replacedComponentId)
 
   return (
     <div
@@ -158,14 +166,36 @@ export default function ServiceOperationCard({
                 <FaTools className="text-sky-300" />
                 Использованные материалы и замены
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 space-y-3">
                 {operation.replacedComponents.map((item) => (
-                  <span
+                  <div
                     key={item.id}
-                    className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300"
+                    className="rounded-lg border border-white/10 bg-slate-950/35 p-3"
                   >
-                    {item.carComponent?.name || `Компонент #${item.carComponent?.id}`}
-                  </span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
+                        {item.carComponent?.name || `Компонент #${item.carComponent?.id}`}
+                      </span>
+                      {item.partNumber ? (
+                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
+                          {item.partNumber}
+                        </span>
+                      ) : null}
+                      {item.manufacturer ? (
+                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
+                          {item.manufacturer}
+                        </span>
+                      ) : null}
+                    </div>
+                    <OperationAttachments
+                      attachments={item.photos}
+                      compact
+                      inline
+                      showLabels={false}
+                      title="Фото детали"
+                      className="mt-3"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -190,7 +220,7 @@ export default function ServiceOperationCard({
           </div>
 
           <OperationAttachments
-            attachments={operation.photos}
+            attachments={generalAttachments}
             compact
             inline
             showLabels={false}
