@@ -183,25 +183,25 @@ function Toolbar({
       {/* right controls */}
       <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(14rem,18rem)] lg:w-auto">
         <div className="relative min-w-0">
-          <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-caption text-text-muted" />
+          <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-caption text-text-secondary" />
           <input
             type="text"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
             placeholder="Поиск…"
             aria-label="Поиск по документам"
-            className="auto-input h-9 w-full pl-9"
+            className="auto-input h-9 w-full pl-9 text-text-primary placeholder:text-text-secondary"
           />
         </div>
 
         {cars.length > 0 && (
           <div className="relative min-w-0">
-            <FaCar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-caption text-text-muted" />
+            <FaCar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-caption text-text-secondary" />
             <select
               value={selectedCarId}
               onChange={(e) => onCar(e.target.value)}
               aria-label="Фильтр по автомобилю"
-              className="auto-select h-9 w-full min-w-0 pl-9"
+              className="auto-select h-9 w-full min-w-0 py-1.5 pl-9 text-text-primary"
             >
               <option value="">Все автомобили</option>
               {cars.map((car) => (

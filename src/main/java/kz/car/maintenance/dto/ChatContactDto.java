@@ -9,6 +9,7 @@ public record ChatContactDto(
         String email,
         String phoneNumber,
         String avatarUrl,
-        User.UserRole role
+        User.UserRole role,
+        Long serviceCenterId
 ) {
 }

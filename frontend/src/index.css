@@ -785,6 +785,17 @@
     padding-right: var(--spacing-12);
   }
 
+  .auto-select,
+  .auto-select option,
+  .auto-select optgroup {
+    color: var(--color-text-primary);
+  }
+
+  .auto-select option,
+  .auto-select optgroup {
+    background: var(--color-surface-2);
+  }
+
   .auto-textarea {
     min-height: 112px;
     resize: vertical;

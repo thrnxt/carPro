@@ -51,6 +51,29 @@ export type ServiceOperationCardData = {
   }>
 }
 
+type OperationAttachment = NonNullable<ServiceOperationCardData['photos']>[number]
+
+const IMAGE_FILE_PATTERN = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)(?:[?#].*)?$/i
+
+function isImageAttachment(attachment: OperationAttachment) {
+  return (
+    IMAGE_FILE_PATTERN.test(attachment.fileUrl) ||
+    IMAGE_FILE_PATTERN.test(attachment.description || '')
+  )
+}
+
+function getAttachmentKey(attachment: OperationAttachment) {
+  return attachment.id != null ? `id:${attachment.id}` : `file:${attachment.fileUrl}`
+}
+
+function dedupeAttachments<T extends OperationAttachment>(attachments: T[]) {
+  const unique = new Map<string, T>()
+  attachments.forEach((attachment) => {
+    unique.set(getAttachmentKey(attachment), attachment)
+  })
+  return Array.from(unique.values())
+}
+
 function getStatusMeta(status?: string) {
   switch (status) {
     case 'COMPLETED':
@@ -117,7 +140,24 @@ export default function ServiceOperationCard({
 }) {
   const statusMeta = getStatusMeta(operation.status)
   const totalValue = operation.cost != null ? `${operation.cost.toLocaleString('ru-RU')} ₸` : 'Не указана'
-  const generalAttachments = (operation.photos ?? []).filter((photo) => !photo.replacedComponentId)
+  const recordPhotos = operation.photos ?? []
+  const resolvedComponents = (operation.replacedComponents ?? []).map((item) => {
+    const nestedPhotos = (item.photos ?? []).filter(isImageAttachment)
+    const linkedPhotos = recordPhotos.filter(
+      (photo) => photo.replacedComponentId === item.id && isImageAttachment(photo)
+    )
+
+    return {
+      ...item,
+      resolvedPhotos: dedupeAttachments([...nestedPhotos, ...linkedPhotos]),
+    }
+  })
+  const usedPartPhotoKeys = new Set(
+    resolvedComponents.flatMap((item) => item.resolvedPhotos.map(getAttachmentKey))
+  )
+  const generalAttachments = dedupeAttachments(
+    recordPhotos.filter((photo) => !usedPartPhotoKeys.has(getAttachmentKey(photo)))
+  )
 
   return (
     <div
@@ -160,14 +200,14 @@ export default function ServiceOperationCard({
             </div>
           )}
 
-          {operation.replacedComponents && operation.replacedComponents.length > 0 && (
+          {resolvedComponents.length > 0 && (
             <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
                 <FaTools className="text-sky-300" />
                 Использованные материалы и замены
               </div>
               <div className="mt-3 space-y-3">
-                {operation.replacedComponents.map((item) => (
+                {resolvedComponents.map((item) => (
                   <div
                     key={item.id}
                     className="rounded-lg border border-white/10 bg-slate-950/35 p-3"
@@ -188,7 +228,7 @@ export default function ServiceOperationCard({
                       ) : null}
                     </div>
                     <OperationAttachments
-                      attachments={item.photos}
+                      attachments={item.resolvedPhotos}
                       compact
                       inline
                       showLabels={false}

@@ -34,7 +34,10 @@ public class Message {
     
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content; // Текст сообщения
-    
+
+    @Column
+    private String attachmentUrl; // URL вложения (изображения), опционально
+
     @Column(nullable = false)
     private Boolean isRead;
     

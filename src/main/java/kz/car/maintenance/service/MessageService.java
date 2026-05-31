@@ -6,8 +6,10 @@ import kz.car.maintenance.exception.NotFoundException;
 import kz.car.maintenance.dto.ChatContactDto;
 import kz.car.maintenance.dto.PagedResponse;
 import kz.car.maintenance.model.Message;
+import kz.car.maintenance.model.ServiceCenter;
 import kz.car.maintenance.model.User;
 import kz.car.maintenance.repository.MessageRepository;
+import kz.car.maintenance.repository.ServiceCenterRepository;
 import kz.car.maintenance.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,39 +25,46 @@ public class MessageService {
     
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final ServiceCenterRepository serviceCenterRepository;
     private final NotificationService notificationService;
-    
+
     @Transactional
     public Message sendMessage(
             Long senderId,
             Long receiverId,
             String content,
             Message.MessageType type,
-            Long maintenanceRecordId) {
-        
+            Long maintenanceRecordId,
+            String attachmentUrl) {
+
         // Проверка: пользователь не может отправить сообщение самому себе
         if (senderId.equals(receiverId)) {
             throw new BadRequestException("Cannot send message to yourself");
         }
-        
+
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new NotFoundException("Sender not found"));
-        
+
         User receiver = userRepository.findById(receiverId)
                 .orElseThrow(() -> new NotFoundException("Receiver not found"));
-        
-        if (content == null || content.trim().isEmpty()) {
+
+        String safeContent = content != null ? content.trim() : "";
+        String safeAttachment = attachmentUrl != null && !attachmentUrl.trim().isEmpty() ? attachmentUrl.trim() : null;
+
+        // Сообщение должно содержать текст или вложение
+        if (safeContent.isEmpty() && safeAttachment == null) {
             throw new BadRequestException("Message content cannot be empty");
         }
-        
+
         Message message = Message.builder()
                 .sender(sender)
                 .receiver(receiver)
-                .content(content.trim())
+                .content(safeContent)
+                .attachmentUrl(safeAttachment)
                 .type(type != null ? type : Message.MessageType.CHAT)
                 .isRead(false)
                 .build();
-        
+
         message = messageRepository.save(message);
         
         // Создание уведомления о новом сообщении
@@ -139,6 +148,14 @@ public class MessageService {
     }
     
     @Transactional
+    public void deleteConversation(Long currentUserId, Long otherUserId) {
+        if (!userRepository.existsById(currentUserId)) {
+            throw new NotFoundException("User not found");
+        }
+        messageRepository.deleteConversationBetweenUsers(currentUserId, otherUserId);
+    }
+
+    @Transactional
     public void markAsRead(Long messageId, Long userId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new NotFoundException("Message not found"));
@@ -152,6 +169,13 @@ public class MessageService {
     }
 
     private ChatContactDto toChatContactDto(User user) {
+        Long serviceCenterId = null;
+        if (user.getRole() == User.UserRole.SERVICE_CENTER) {
+            serviceCenterId = serviceCenterRepository.findByUser(user)
+                    .map(ServiceCenter::getId)
+                    .orElse(null);
+        }
+
         return new ChatContactDto(
                 user.getId(),
                 user.getFirstName(),
@@ -159,7 +183,8 @@ public class MessageService {
                 user.getEmail(),
                 user.getPhoneNumber(),
                 user.getAvatarUrl(),
-                user.getRole()
+                user.getRole(),
+                serviceCenterId
         );
     }
 }

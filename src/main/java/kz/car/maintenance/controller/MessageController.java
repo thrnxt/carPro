@@ -30,7 +30,8 @@ public class MessageController {
                 request.getReceiverId(),
                 request.getContent(),
                 request.getType(),
-                null));
+                null,
+                request.getAttachmentUrl()));
     }
     
     @GetMapping("/conversation/{userId}")
@@ -59,6 +60,14 @@ public class MessageController {
     @GetMapping("/unread")
     public ResponseEntity<List<Message>> getUnreadMessages(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(messageService.getUnreadMessages(user.getId()));
+    }
+
+    @DeleteMapping("/conversation/{userId}")
+    public ResponseEntity<Void> deleteConversation(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long userId) {
+        messageService.deleteConversation(user.getId(), userId);
+        return ResponseEntity.noContent().build();
     }
     
     @PatchMapping("/{id}/read")

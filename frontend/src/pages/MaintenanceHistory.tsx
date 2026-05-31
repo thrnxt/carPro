@@ -93,6 +93,18 @@ function isImageAttachment(attachment: Attachment) {
   )
 }
 
+function getAttachmentKey(attachment: Attachment) {
+  return attachment.id != null ? `id:${attachment.id}` : `file:${attachment.fileUrl}`
+}
+
+function dedupeAttachments<T extends Attachment>(attachments: T[]) {
+  const unique = new Map<string, T>()
+  attachments.forEach((attachment) => {
+    unique.set(getAttachmentKey(attachment), attachment)
+  })
+  return Array.from(unique.values())
+}
+
 function attachmentLabel(attachment: Attachment) {
   if (attachment.description?.trim()) return attachment.description.trim()
   const name = attachment.fileUrl.split('/').pop()?.split('?')[0]?.split('#')[0]
@@ -293,13 +305,32 @@ function RecordCard({
   const costLabel = formatCost(record.cost)
 
   const parts = record.replacedComponents ?? []
-  const generalImages = (record.photos ?? []).filter(
-    (p) => !p.replacedComponentId && isImageAttachment(p)
+  const recordPhotos = record.photos ?? []
+  const resolvedParts = parts.map((part) => {
+    const nestedPhotos = (part.photos ?? []).filter(isImageAttachment)
+    const linkedPhotos = recordPhotos.filter(
+      (photo) => photo.replacedComponentId === part.id && isImageAttachment(photo)
+    )
+
+    return {
+      ...part,
+      resolvedPhotos: dedupeAttachments([...nestedPhotos, ...linkedPhotos]),
+    }
+  })
+  const usedPartPhotoKeys = new Set(
+    resolvedParts.flatMap((part) => part.resolvedPhotos.map(getAttachmentKey))
   )
-  const generalDocs = (record.photos ?? []).filter(
-    (p) => !p.replacedComponentId && !isImageAttachment(p)
+  const generalImages = dedupeAttachments(
+    recordPhotos.filter(
+      (photo) => isImageAttachment(photo) && !usedPartPhotoKeys.has(getAttachmentKey(photo))
+    )
   )
-  const partPhotoCount = parts.reduce((t, c) => t + (c.photos?.length ?? 0), 0)
+  const generalDocs = dedupeAttachments(
+    recordPhotos.filter(
+      (photo) => !isImageAttachment(photo) && !usedPartPhotoKeys.has(getAttachmentKey(photo))
+    )
+  )
+  const partPhotoCount = resolvedParts.reduce((t, c) => t + c.resolvedPhotos.length, 0)
   const photoCount = generalImages.length + partPhotoCount
   const hasInvoice = Boolean(record.invoice?.pdfUrl)
 
@@ -313,8 +344,8 @@ function RecordCard({
       hasInvoice
   )
 
-  const visibleParts = showAllParts ? parts : parts.slice(0, VISIBLE_PARTS)
-  const hiddenPartsCount = parts.length - VISIBLE_PARTS
+  const visibleParts = showAllParts ? resolvedParts : resolvedParts.slice(0, VISIBLE_PARTS)
+  const hiddenPartsCount = resolvedParts.length - VISIBLE_PARTS
 
   const metaItems: Array<{ icon: typeof FaCar; node: React.ReactNode }> = []
   if (record.serviceCenter?.name) {
@@ -408,7 +439,7 @@ function RecordCard({
               </SectionTitle>
               <div className="overflow-hidden rounded-lg border border-border">
                 {visibleParts.map((part) => {
-                  const photos = part.photos ?? []
+                  const photos = part.resolvedPhotos
                   return (
                     <div
                       key={part.id}

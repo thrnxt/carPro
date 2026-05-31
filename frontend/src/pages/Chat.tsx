@@ -3,20 +3,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   FaArrowLeft,
-  FaChevronLeft,
-  FaChevronRight,
-  FaComments,
+  FaCheck,
+  FaCheckDouble,
+  FaEllipsisV,
   FaPaperPlane,
+  FaPaperclip,
+  FaPhone,
+  FaRegBuilding,
+  FaRegTrashAlt,
   FaSearch,
   FaSpinner,
 } from 'react-icons/fa'
-import { format } from 'date-fns'
+import { format, isToday, isYesterday } from 'date-fns'
 import ru from 'date-fns/locale/ru'
 import toast from 'react-hot-toast'
 import apiClient from '../api/client'
 import { resolveFileUrl } from '../utils/resolveFileUrl'
 import { useAuthStore } from '../store/authStore'
-import { Badge, EmptyState, FilterBar, Page, PageHeader, Section, Surface, cx } from '../components/ui'
+import { EmptyState, Page, PageHeader, Skeleton, cx } from '../components/ui'
 
 type ChatContact = {
   id: number
@@ -26,13 +30,16 @@ type ChatContact = {
   phoneNumber?: string | null
   avatarUrl?: string | null
   role: 'USER' | 'SERVICE_CENTER' | 'ADMIN' | 'SUPPORT'
+  serviceCenterId?: number | null
 }
 
 type Message = {
   id: number
   content: string
+  attachmentUrl?: string | null
   createdAt: string
   isRead: boolean
+  type?: string
   sender: {
     id: number
     firstName: string
@@ -55,77 +62,97 @@ type PagedResponse<T> = {
   last: boolean
 }
 
-const roleLabels: Record<ChatContact['role'], string> = {
+const CONTACTS_PAGE_SIZE = 5 // бэкенд ограничивает размер страницы пятью
+
+const statusLabels: Record<ChatContact['role'], string> = {
   USER: 'Пользователь',
-  SERVICE_CENTER: 'Сервис',
+  SERVICE_CENTER: 'Сервисный центр',
   ADMIN: 'Администратор',
   SUPPORT: 'Поддержка',
-}
-
-const roleStyles: Record<
-  ChatContact['role'],
-  {
-    accentText: string
-    accentBorder: string
-    activeSurface: string
-    avatarRing: string
-    avatarFallback: string
-  }
-> = {
-  USER: {
-    accentText: 'text-sky-300',
-    accentBorder: 'border-l-sky-400/70',
-    activeSurface: 'border-sky-400/25 bg-sky-500/10',
-    avatarRing: 'ring-sky-400/30',
-    avatarFallback: 'bg-sky-500/12 text-sky-200 ring-1 ring-sky-400/30',
-  },
-  SERVICE_CENTER: {
-    accentText: 'text-emerald-300',
-    accentBorder: 'border-l-emerald-400/70',
-    activeSurface: 'border-emerald-400/25 bg-emerald-500/10',
-    avatarRing: 'ring-emerald-400/30',
-    avatarFallback: 'bg-emerald-500/12 text-emerald-200 ring-1 ring-emerald-400/30',
-  },
-  ADMIN: {
-    accentText: 'text-violet-300',
-    accentBorder: 'border-l-violet-400/70',
-    activeSurface: 'border-violet-400/25 bg-violet-500/10',
-    avatarRing: 'ring-violet-400/30',
-    avatarFallback: 'bg-violet-500/12 text-violet-200 ring-1 ring-violet-400/30',
-  },
-  SUPPORT: {
-    accentText: 'text-amber-300',
-    accentBorder: 'border-l-amber-400/70',
-    activeSurface: 'border-amber-400/25 bg-amber-500/10',
-    avatarRing: 'ring-amber-400/30',
-    avatarFallback: 'bg-amber-500/12 text-amber-200 ring-1 ring-amber-400/30',
-  },
 }
 
 function getFullName(contact?: Partial<ChatContact> | null) {
   if (!contact) {
     return 'Диалог'
   }
-
   const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
   return fullName || contact.email || 'Диалог'
 }
 
 function getInitials(contact?: Partial<ChatContact> | null) {
   const initials = `${contact?.firstName?.[0] || ''}${contact?.lastName?.[0] || ''}`.trim()
-  return initials || 'U'
+  return initials.toUpperCase() || 'U'
+}
+
+function avatarTone(role: ChatContact['role']) {
+  return role === 'SERVICE_CENTER' ? 'bg-success text-white' : 'bg-info text-white'
+}
+
+function capitalize(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+}
+
+// Краткое время для списка контактов: сегодня → 14:32, вчера → Вчера,
+// в течение недели → Пн, иначе → 31.05
+function formatListTime(iso: string) {
+  const date = new Date(iso)
+  if (isToday(date)) return format(date, 'HH:mm')
+  if (isYesterday(date)) return 'Вчера'
+  if (Date.now() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
+    return capitalize(format(date, 'EEEEEE', { locale: ru }))
+  }
+  return format(date, 'dd.MM')
+}
+
+function dayLabel(date: Date) {
+  if (isToday(date)) return 'Сегодня'
+  if (isYesterday(date)) return 'Вчера'
+  return format(date, 'd MMMM', { locale: ru })
+}
+
+function isSystemMessage(message: Message) {
+  return Boolean(message.type) && message.type !== 'CHAT'
+}
+
+type ContactAvatarProps = {
+  contact: ChatContact
+  size?: 'sm' | 'md' | 'lg'
+}
+
+function ContactAvatar({ contact, size = 'md' }: ContactAvatarProps) {
+  const dimension = size === 'lg' ? 'h-11 w-11 text-sm' : size === 'sm' ? 'h-7 w-7 text-[11px]' : 'h-10 w-10 text-xs'
+  const src = resolveFileUrl(contact.avatarUrl)
+
+  if (src) {
+    return <img src={src} alt={getFullName(contact)} className={cx('shrink-0 rounded-full object-cover', dimension)} />
+  }
+
+  return (
+    <div className={cx('flex shrink-0 items-center justify-center rounded-full font-semibold', dimension, avatarTone(contact.role))}>
+      {getInitials(contact)}
+    </div>
+  )
 }
 
 export default function Chat() {
   const { receiverId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
+
   const [message, setMessage] = useState('')
   const [page, setPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [contacts, setContacts] = useState<ChatContact[]>([])
   const [showContacts, setShowContacts] = useState(!receiverId)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const queryClient = useQueryClient()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const activeReceiverId = receiverId ? Number(receiverId) : null
 
@@ -137,7 +164,20 @@ export default function Chat() {
     if (!receiverId) {
       setShowContacts(true)
     }
+    setMenuOpen(false)
   }, [receiverId])
+
+  // Закрытие меню по клику снаружи
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   const { data: contactsPage, isLoading: isContactsLoading } = useQuery<PagedResponse<ChatContact>>({
     queryKey: ['messages', 'contacts', page, searchTerm],
@@ -145,7 +185,7 @@ export default function Chat() {
       const response = await apiClient.get('/messages/contacts', {
         params: {
           page,
-          size: 5,
+          size: CONTACTS_PAGE_SIZE,
           query: searchTerm.trim() || undefined,
         },
       })
@@ -154,7 +194,60 @@ export default function Chat() {
     refetchInterval: 15000,
   })
 
-  const contacts = contactsPage?.content ?? []
+  // Бесконечная лента: накапливаем страницы, сбрасывая на первой (новый поиск / refetch)
+  useEffect(() => {
+    if (!contactsPage) return
+    setContacts((prev) => {
+      if (contactsPage.page === 0) {
+        return contactsPage.content
+      }
+      const seen = new Set(prev.map((item) => item.id))
+      return [...prev, ...contactsPage.content.filter((item) => !seen.has(item.id))]
+    })
+  }, [contactsPage])
+
+  // IntersectionObserver — подгрузка следующей страницы при достижении конца списка
+  useEffect(() => {
+    const node = sentinelRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && contactsPage && !contactsPage.last && !isContactsLoading) {
+          setPage((current) => current + 1)
+        }
+      },
+      { rootMargin: '160px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [contactsPage, isContactsLoading])
+
+  const { data: unreadMessages = [] } = useQuery<Message[]>({
+    queryKey: ['messages', 'unread'],
+    queryFn: async () => {
+      const response = await apiClient.get('/messages/unread')
+      return response.data
+    },
+    refetchInterval: 12000,
+  })
+
+  // Непрочитанные сгруппированы по отправителю → бейджи и превью последнего сообщения
+  const unreadBySender = useMemo(() => {
+    const map = new Map<number, { count: number; last: Message }>()
+    for (const item of unreadMessages) {
+      const current = map.get(item.sender.id)
+      if (!current) {
+        map.set(item.sender.id, { count: 1, last: item })
+      } else {
+        current.count += 1
+        if (new Date(item.createdAt) > new Date(current.last.createdAt)) {
+          current.last = item
+        }
+      }
+    }
+    return map
+  }, [unreadMessages])
 
   const { data: selectedContact } = useQuery<ChatContact>({
     queryKey: ['messages', 'contact', activeReceiverId],
@@ -168,10 +261,7 @@ export default function Chat() {
   const { data: conversation = [], isLoading: isConversationLoading } = useQuery<Message[]>({
     queryKey: ['messages', 'conversation', activeReceiverId],
     queryFn: async () => {
-      if (!activeReceiverId) {
-        return []
-      }
-
+      if (!activeReceiverId) return []
       const response = await apiClient.get(`/messages/conversation/${activeReceiverId}`)
       return response.data
     },
@@ -180,14 +270,14 @@ export default function Chat() {
   })
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async (payload: { content: string; attachmentUrl?: string }) => {
       if (!activeReceiverId) {
         throw new Error('Receiver ID is required')
       }
-
       const response = await apiClient.post('/messages', {
         receiverId: activeReceiverId,
-        content,
+        content: payload.content,
+        attachmentUrl: payload.attachmentUrl,
         type: 'CHAT',
       })
       return response.data
@@ -195,9 +285,10 @@ export default function Chat() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', activeReceiverId] })
       queryClient.invalidateQueries({ queryKey: ['messages', 'contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['messages', 'unread'] })
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })
       setMessage('')
-      scrollToBottom()
+      resetTextareaHeight()
     },
     onError: (error: any) => {
       const errorMessage =
@@ -209,6 +300,66 @@ export default function Chat() {
     },
   })
 
+  const deleteConversationMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeReceiverId) {
+        throw new Error('Receiver ID is required')
+      }
+      await apiClient.delete(`/messages/conversation/${activeReceiverId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', 'conversation', activeReceiverId] })
+      queryClient.invalidateQueries({ queryKey: ['messages', 'contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['messages', 'unread'] })
+      setMenuOpen(false)
+      toast.success('Переписка очищена')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Не удалось очистить переписку')
+    },
+  })
+
+  // Загрузка изображения и отправка его сообщением
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = '' // позволяем повторно выбрать тот же файл
+    if (!file || !activeReceiverId) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Можно отправлять только изображения')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Файл слишком большой (максимум 10 МБ)')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const uploadData = new FormData()
+      uploadData.append('file', file)
+      uploadData.append('subdirectory', 'chat')
+      const uploadResponse = await apiClient.post('/files/upload', uploadData)
+      await sendMessageMutation.mutateAsync({ content: '', attachmentUrl: uploadResponse.data.url })
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Не удалось загрузить изображение')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleClearConversation = () => {
+    if (window.confirm('Очистить всю переписку? Это действие необратимо.')) {
+      deleteConversationMutation.mutate()
+    }
+  }
+
+  const handleOpenServiceProfile = () => {
+    if (selectedContact?.serviceCenterId) {
+      navigate(`/service-centers/${selectedContact.serviceCenterId}`)
+    }
+  }
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -217,23 +368,102 @@ export default function Chat() {
     scrollToBottom()
   }, [conversation])
 
-  const conversationTitle = useMemo(() => {
-    if (selectedContact) {
-      return getFullName(selectedContact)
+  // Открытие диалога помечает сообщения прочитанными на сервере — обновляем бейджи
+  useEffect(() => {
+    if (activeReceiverId && conversation.length > 0) {
+      queryClient.invalidateQueries({ queryKey: ['messages', 'unread'] })
     }
+  }, [activeReceiverId, conversation.length, queryClient])
 
-    const counterpart = conversation.find((entry) => entry.sender.id !== user?.id)?.sender
-    return counterpart ? getFullName(counterpart) : 'Диалог'
-  }, [conversation, selectedContact, user?.id])
+  // Сгруппированный по дате поток сообщений с флагами для аватара и хвоста пузыря
+  const renderedStream = useMemo(() => {
+    const sorted = [...conversation].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
 
-  const selectedRoleStyle = selectedContact ? roleStyles[selectedContact.role] : null
-  const selectedAvatarSrc = selectedContact ? resolveFileUrl(selectedContact.avatarUrl) : null
+    type Rendered =
+      | { kind: 'day'; key: string; label: string }
+      | { kind: 'system'; key: string; content: string }
+      | {
+          kind: 'message'
+          key: string
+          isOwn: boolean
+          content: string
+          attachmentUrl?: string | null
+          time: string
+          isRead: boolean
+          showAvatar: boolean
+        }
+
+    const items: Rendered[] = []
+    let lastDayKey = ''
+
+    sorted.forEach((entry, index) => {
+      const date = new Date(entry.createdAt)
+      const dayKey = format(date, 'yyyy-MM-dd')
+      if (dayKey !== lastDayKey) {
+        items.push({ kind: 'day', key: `day-${dayKey}`, label: dayLabel(date) })
+        lastDayKey = dayKey
+      }
+
+      if (isSystemMessage(entry)) {
+        items.push({
+          kind: 'system',
+          key: `msg-${entry.id}`,
+          content: `${entry.content} · ${dayLabel(date).toLowerCase()} ${format(date, 'HH:mm')}`,
+        })
+        return
+      }
+
+      const isOwn = entry.sender.id === user?.id
+      const next = sorted[index + 1]
+      const nextContinues =
+        next &&
+        next.sender.id === entry.sender.id &&
+        !isSystemMessage(next) &&
+        format(new Date(next.createdAt), 'yyyy-MM-dd') === dayKey
+
+      items.push({
+        kind: 'message',
+        key: `msg-${entry.id}`,
+        isOwn,
+        content: entry.content,
+        attachmentUrl: entry.attachmentUrl,
+        time: format(date, 'HH:mm'),
+        isRead: entry.isRead,
+        showAvatar: !isOwn && !nextContinues,
+      })
+    })
+
+    return items
+  }, [conversation, user?.id])
 
   const handleSend = (event: React.FormEvent) => {
     event.preventDefault()
-    if (message.trim()) {
-      sendMessageMutation.mutate(message.trim())
+    if (message.trim() && !sendMessageMutation.isPending) {
+      sendMessageMutation.mutate({ content: message.trim() })
     }
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      handleSend(event)
+    }
+  }
+
+  const resetTextareaHeight = () => {
+    const node = textareaRef.current
+    if (node) {
+      node.style.height = 'auto'
+    }
+  }
+
+  const handleInput = () => {
+    const node = textareaRef.current
+    if (!node) return
+    node.style.height = 'auto'
+    node.style.height = `${Math.min(node.scrollHeight, 96)}px` // ~4 строки
   }
 
   const openConversation = (contactId: number) => {
@@ -241,266 +471,421 @@ export default function Chat() {
     setShowContacts(false)
   }
 
+  const services = contacts.filter((contact) => contact.role === 'SERVICE_CENTER')
+  const people = contacts.filter((contact) => contact.role !== 'SERVICE_CENTER')
+  const canSend = Boolean(message.trim()) && !sendMessageMutation.isPending
+  const selectedPhone = selectedContact?.phoneNumber?.trim()
+
+  const messagePreview = (msg: Message) => msg.content?.trim() || (msg.attachmentUrl ? '📷 Фото' : '')
+
+  const renderContactRow = (contact: ChatContact) => {
+    const isActive = contact.id === activeReceiverId
+    const unread = unreadBySender.get(contact.id)
+
+    let preview = unread ? messagePreview(unread.last) : ''
+    let previewTime = unread ? formatListTime(unread.last.createdAt) : undefined
+
+    if (!preview && isActive && conversation.length > 0) {
+      const last = conversation[conversation.length - 1]
+      preview = messagePreview(last)
+      previewTime = formatListTime(last.createdAt)
+    }
+
+    return (
+      <button
+        key={contact.id}
+        type="button"
+        onClick={() => openConversation(contact.id)}
+        aria-current={isActive ? 'true' : undefined}
+        className={cx(
+          'flex w-full items-center gap-3 rounded-md border-l-[3px] px-3 py-2.5 text-left transition-colors duration-150',
+          isActive
+            ? 'border-l-accent bg-accent/20 ring-1 ring-inset ring-accent/30'
+            : 'border-l-transparent hover:bg-surface-3'
+        )}
+      >
+        <ContactAvatar contact={contact} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p
+              className={cx(
+                'truncate text-sm',
+                isActive ? 'font-semibold text-accent' : 'font-medium text-text-primary'
+              )}
+            >
+              {getFullName(contact)}
+            </p>
+            {previewTime ? <span className="shrink-0 text-[11px] text-text-muted">{previewTime}</span> : null}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            <p className="truncate text-xs text-text-secondary">{preview || 'Открыть диалог'}</p>
+            {unread && unread.count > 0 ? (
+              <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-success px-1.5 text-[11px] font-semibold text-white">
+                {unread.count}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </button>
+    )
+  }
+
   return (
     <Page>
       <PageHeader title="Чат" description="Переписка с сервисными центрами" />
 
-      <Section>
-        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <Surface className={cx('p-0 overflow-hidden', showContacts ? 'block' : 'hidden', 'xl:block')}>
-            <div className="border-b border-white/10 px-5 py-4">
+      <div className="auto-card h-[78vh] min-h-[34rem] overflow-hidden p-0">
+        <div className="grid h-full md:grid-cols-[320px_minmax(0,1fr)]">
+          {/* ── Левая колонка ─────────────────────────────────────────── */}
+          <aside
+            className={cx(
+              'h-full min-h-0 flex-col border-r border-border bg-surface-2',
+              showContacts ? 'flex' : 'hidden',
+              'md:flex'
+            )}
+          >
+            <div className="shrink-0 space-y-3 border-b border-border px-4 py-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">Контакты</p>
-                  <h2 className="mt-2 text-xl font-bold text-white">Пользователи</h2>
-                </div>
-                <Badge>{contactsPage?.totalElements ?? 0}</Badge>
+                <h2 className="text-[18px] font-bold text-text-primary">Сообщения</h2>
+                {unreadMessages.length > 0 ? (
+                  <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-success px-2 text-xs font-semibold text-white">
+                    {unreadMessages.length}
+                  </span>
+                ) : null}
               </div>
+              <label className="relative block">
+                <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted" />
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Поиск..."
+                  className="auto-input h-10 w-full py-0 pl-9"
+                />
+              </label>
             </div>
 
-            <div className="space-y-4 p-4">
-              <FilterBar className="space-y-3 p-0 bg-transparent border-0 shadow-none">
-                <label className="relative block">
-                  <FaSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400" />
-                  <input
-                    type="search"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Поиск пользователя"
-                    className="auto-input pl-11"
-                  />
-                </label>
-              </FilterBar>
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+              {isContactsLoading && contacts.length === 0 ? (
+                <div className="space-y-2 p-1">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-3 px-2 py-2">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-3 w-2/3" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : contacts.length === 0 ? (
+                <EmptyState
+                  icon={FaSearch}
+                  title="Никого не найдено"
+                  description="Измените поисковый запрос."
+                  className="m-2 border-0 bg-transparent p-6"
+                />
+              ) : (
+                <>
+                  {services.length > 0 ? (
+                    <div>
+                      <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                        Сервисные центры
+                      </p>
+                      <div className="space-y-0.5">{services.map(renderContactRow)}</div>
+                    </div>
+                  ) : null}
 
-              <div className="space-y-2">
-                {isContactsLoading ? (
-                  <div className="flex min-h-[16rem] items-center justify-center">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-info"></div>
+                  {services.length > 0 && people.length > 0 ? (
+                    <div className="my-2 border-t border-border" />
+                  ) : null}
+
+                  {people.length > 0 ? (
+                    <div>
+                      <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                        Контакты
+                      </p>
+                      <div className="space-y-0.5">{people.map(renderContactRow)}</div>
+                    </div>
+                  ) : null}
+
+                  <div ref={sentinelRef} className="h-px" />
+                </>
+              )}
+            </div>
+          </aside>
+
+          {/* ── Правая панель ─────────────────────────────────────────── */}
+          <section
+            className={cx(
+              'h-full min-h-0 flex-col bg-surface-1',
+              showContacts ? 'hidden' : 'flex',
+              'md:flex'
+            )}
+          >
+            {activeReceiverId && selectedContact ? (
+              <>
+                {/* Шапка диалога */}
+                <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowContacts(true)}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary md:hidden"
+                    aria-label="Назад к списку"
+                  >
+                    <FaArrowLeft />
+                  </button>
+
+                  <ContactAvatar contact={selectedContact} size="md" />
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-bold text-text-primary">{getFullName(selectedContact)}</p>
+                    <p className="truncate text-xs text-text-secondary">{statusLabels[selectedContact.role]}</p>
                   </div>
-                ) : contacts.length > 0 ? (
-                  contacts.map((contact) => {
-                    const isActive = contact.id === activeReceiverId
-                    const avatarSrc = resolveFileUrl(contact.avatarUrl)
-                    const roleStyle = roleStyles[contact.role]
 
-                    return (
-                      <button
-                        key={contact.id}
-                        type="button"
-                        onClick={() => openConversation(contact.id)}
-                        className={cx(
-                          'flex w-full items-center gap-3 rounded-lg border border-l-[3px] p-3 text-left transition-all',
-                          roleStyle.accentBorder,
-                          isActive
-                            ? roleStyle.activeSurface
-                            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
-                        )}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {selectedPhone ? (
+                      <a
+                        href={`tel:${selectedPhone}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+                        aria-label="Позвонить"
                       >
-                        {avatarSrc ? (
-                          <img
-                            src={avatarSrc}
-                            alt={getFullName(contact)}
-                            className={cx('h-11 w-11 shrink-0 rounded-2xl object-cover ring-1', roleStyle.avatarRing)}
-                          />
-                        ) : (
-                          <div className={cx('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-semibold', roleStyle.avatarFallback)}>
-                            {getInitials(contact)}
-                          </div>
+                        <FaPhone />
+                      </a>
+                    ) : null}
+                    <div className="relative" ref={menuRef}>
+                      <button
+                        type="button"
+                        onClick={() => setMenuOpen((open) => !open)}
+                        className={cx(
+                          'inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-surface-3 hover:text-text-primary',
+                          menuOpen ? 'bg-surface-3 text-text-primary' : 'text-text-secondary'
                         )}
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-col items-start gap-1.5">
-                            <p className={cx('text-caption font-semibold', roleStyle.accentText)}>
-                              {roleLabels[contact.role]}
-                            </p>
-                            <p className="w-full truncate text-sm font-semibold text-white">{getFullName(contact)}</p>
-                          </div>
-                          <p className="mt-1 truncate text-xs text-slate-400">{contact.email}</p>
-                        </div>
+                        aria-label="Меню"
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
+                      >
+                        <FaEllipsisV />
                       </button>
-                    )
-                  })
-                ) : (
-                  <EmptyState
-                    icon={FaComments}
-                    title="Пользователи не найдены"
-                    description="Измените строку поиска или попробуйте другую страницу."
-                    className="p-6"
-                  />
-                )}
-              </div>
 
-              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-white/10 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                  disabled={!contactsPage || contactsPage.first}
-                  className="btn-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Предыдущая страница"
-                >
-                  <FaChevronLeft />
-                </button>
-
-                <div className="text-center text-sm tabular-nums text-slate-400 whitespace-nowrap">
-                  {contactsPage ? `Стр. ${contactsPage.page + 1} / ${Math.max(contactsPage.totalPages, 1)}` : 'Стр. 1 / 1'}
+                      {menuOpen ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-11 z-20 w-56 overflow-hidden rounded-md border border-border bg-surface-2 py-1 shadow-panel"
+                        >
+                          {selectedContact.serviceCenterId ? (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={handleOpenServiceProfile}
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-text-primary transition-colors hover:bg-surface-3"
+                            >
+                              <FaRegBuilding className="text-text-secondary" />
+                              Профиль сервиса
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={handleClearConversation}
+                            disabled={deleteConversationMutation.isPending}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+                          >
+                            <FaRegTrashAlt />
+                            Очистить переписку
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={!contactsPage || contactsPage.last}
-                  className="btn-secondary h-11 w-11 px-0 py-0 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Следующая страница"
-                >
-                  <FaChevronRight />
-                </button>
-              </div>
-            </div>
-          </Surface>
-
-          <div className={cx(showContacts ? 'hidden' : 'flex', 'min-h-[28rem] sm:min-h-[40rem] xl:flex')}>
-            <div className="w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950/35">
-              <div className="flex h-full min-h-[28rem] sm:min-h-[40rem] flex-col">
-                <div className="border-b border-white/10 px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowContacts(true)}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white xl:hidden"
-                      aria-label="Показать контакты"
-                    >
-                      <FaArrowLeft />
-                    </button>
-
-                    {selectedContact ? (
-                      selectedAvatarSrc ? (
-                        <img
-                          src={selectedAvatarSrc}
-                          alt={getFullName(selectedContact)}
-                          className={cx('h-11 w-11 rounded-2xl object-cover ring-1', selectedRoleStyle?.avatarRing)}
-                        />
-                      ) : (
-                        <div
-                          className={cx(
-                            'flex h-11 w-11 items-center justify-center rounded-2xl font-semibold',
-                            selectedRoleStyle?.avatarFallback
-                          )}
-                        >
-                          {getInitials(selectedContact)}
-                        </div>
-                      )
-                    ) : null}
-
-                    <div className="min-w-0 flex-1">
-                      {selectedContact ? (
-                        <p
-                          className={cx(
-                            'text-caption font-semibold',
-                            roleStyles[selectedContact.role].accentText
-                          )}
-                        >
-                          {roleLabels[selectedContact.role]}
-                        </p>
-                      ) : null}
-                      <h2 className="truncate text-xl font-bold text-white">{conversationTitle}</h2>
-                      <p className="mt-1 truncate text-sm text-slate-400">
-                        {selectedContact ? selectedContact.email : 'Выберите пользователя'}
+                {/* Лента сообщений */}
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-4">
+                  {isConversationLoading && conversation.length === 0 ? (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-b-info" />
+                    </div>
+                  ) : renderedStream.length === 0 ? (
+                    <div className="flex h-full items-center justify-center px-6 text-center">
+                      <p className="text-sm text-text-secondary">
+                        Сообщений пока нет. Напишите первым, чтобы начать переписку.
                       </p>
                     </div>
-                  </div>
-                </div>
+                  ) : (
+                    renderedStream.map((item) => {
+                      if (item.kind === 'day') {
+                        return (
+                          <div key={item.key} className="flex justify-center py-2">
+                            <span className="rounded-full bg-surface-3 px-3 py-1 text-[11px] font-medium text-text-secondary">
+                              {item.label}
+                            </span>
+                          </div>
+                        )
+                      }
 
-                {activeReceiverId ? (
-                  <>
-                    <div className="flex-1 space-y-4 overflow-y-auto p-5">
-                      {isConversationLoading ? (
-                        <div className="flex h-full min-h-[26rem] items-center justify-center">
-                          <div className="text-center">
-                            <div className="inline-block h-9 w-9 animate-spin rounded-full border-b-2 border-info"></div>
-                            <p className="mt-3 text-sm text-slate-400">Загрузка переписки...</p>
+                      if (item.kind === 'system') {
+                        return (
+                          <p key={item.key} className="mx-auto max-w-md py-1 text-center text-xs italic text-text-muted">
+                            {item.content}
+                          </p>
+                        )
+                      }
+
+                      if (item.isOwn) {
+                        return (
+                          <div key={item.key} className="flex flex-col items-end pt-1">
+                            <div
+                              className={cx(
+                                'max-w-[78%] overflow-hidden rounded-[16px] rounded-tr-[4px] bg-[#0F6E56] text-sm leading-snug text-white',
+                                item.attachmentUrl ? 'p-1' : 'px-3.5 py-2'
+                              )}
+                            >
+                              <MessageAttachment url={item.attachmentUrl} />
+                              {item.content ? (
+                                <p className={cx('whitespace-pre-wrap break-words', item.attachmentUrl && 'px-2.5 pb-1 pt-2')}>
+                                  {item.content}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="mt-1 flex items-center gap-1 px-1 text-[10px] text-text-muted">
+                              {item.time}
+                              {item.isRead ? (
+                                <FaCheckDouble className="text-success" />
+                              ) : (
+                                <FaCheck className="text-text-muted" />
+                              )}
+                            </span>
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div key={item.key} className="flex items-end gap-2 pt-1">
+                          {item.showAvatar ? (
+                            <ContactAvatar contact={selectedContact} size="sm" />
+                          ) : (
+                            <div className="w-7 shrink-0" />
+                          )}
+                          <div className="flex max-w-[78%] flex-col items-start">
+                            <div
+                              className={cx(
+                                'overflow-hidden rounded-[16px] rounded-tl-[4px] bg-surface-3 text-sm leading-snug text-text-primary',
+                                item.attachmentUrl ? 'p-1' : 'px-3.5 py-2'
+                              )}
+                            >
+                              <MessageAttachment url={item.attachmentUrl} />
+                              {item.content ? (
+                                <p className={cx('whitespace-pre-wrap break-words', item.attachmentUrl && 'px-2.5 pb-1 pt-2')}>
+                                  {item.content}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="mt-1 px-1 text-[10px] text-text-muted">{item.time}</span>
                           </div>
                         </div>
-                      ) : conversation.length > 0 ? (
-                        conversation.map((entry) => {
-                          const isOwn = entry.sender.id === user?.id
+                      )
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
 
-                          return (
-                            <div key={entry.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                              <div
-                                className={`max-w-xl rounded-lg border px-4 py-3 ${
-                                  isOwn
-                                    ? 'border-border bg-surface-3 text-white'
-                                    : 'border-white/10 bg-white/5 text-white'
-                                }`}
-                              >
-                                {!isOwn && (
-                                  <div className="mb-1 text-xs font-semibold text-slate-400">
-                                    {entry.sender.firstName} {entry.sender.lastName}
-                                  </div>
-                                )}
-                                <p className="text-sm leading-6">{entry.content}</p>
-                                <div className={`mt-2 text-xs ${isOwn ? 'text-text-secondary' : 'text-slate-400'}`}>
-                                  {format(new Date(entry.createdAt), 'HH:mm', { locale: ru })}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })
-                      ) : (
-                        <EmptyState
-                          icon={FaComments}
-                          title="Сообщений пока нет"
-                          description="Начните переписку первым сообщением."
-                          className="mx-auto my-6 w-full max-w-3xl"
-                        />
-                      )}
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    <form onSubmit={handleSend} className="border-t border-white/10 bg-white/5 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row">
-                        <input
-                          type="text"
-                          value={message}
-                          onChange={(event) => setMessage(event.target.value)}
-                          placeholder="Введите сообщение..."
-                          className="auto-input flex-1"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!message.trim() || sendMessageMutation.isPending}
-                          className="btn-primary justify-center sm:min-w-[11rem]"
-                        >
-                          {sendMessageMutation.isPending ? (
-                            <>
-                              <FaSpinner className="animate-spin" />
-                              Отправка...
-                            </>
-                          ) : (
-                            <>
-                              <FaPaperPlane />
-                              Отправить
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  </>
-                ) : (
-                  <div className="flex flex-1 items-center justify-center p-6">
-                    <EmptyState
-                      icon={FaComments}
-                      title="Выберите пользователя"
-                      description="Откройте контакт слева, чтобы начать переписку."
-                      className="w-full max-w-3xl"
+                {/* Поле ввода */}
+                <form onSubmit={handleSend} className="shrink-0 border-t border-border px-3 py-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileSelected}
+                    className="hidden"
+                  />
+                  <div className="flex items-end gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 transition-colors focus-within:border-accent">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading || sendMessageMutation.isPending}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50"
+                      aria-label="Прикрепить изображение"
+                    >
+                      {isUploading ? <FaSpinner className="animate-spin" /> : <FaPaperclip />}
+                    </button>
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      value={message}
+                      onChange={(event) => setMessage(event.target.value)}
+                      onInput={handleInput}
+                      onKeyDown={handleKeyDown}
+                      placeholder={isUploading ? 'Загрузка изображения...' : 'Написать сообщение...'}
+                      className="max-h-24 flex-1 resize-none self-center bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
                     />
+                    <button
+                      type="submit"
+                      disabled={!canSend}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success text-white transition-all hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Отправить"
+                    >
+                      <FaPaperPlane className="text-sm" />
+                    </button>
                   </div>
-                )}
+                </form>
+              </>
+            ) : (
+              /* Empty state — диалог не выбран */
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <ChatEmptyIllustration />
+                <h3 className="mt-6 text-[18px] font-bold text-text-primary">Начните переписку</h3>
+                <p className="mt-2 max-w-sm text-sm text-text-secondary">
+                  Выберите сервисный центр, чтобы задать вопрос или уточнить детали записи
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/service-centers')}
+                  className="btn-primary mt-6"
+                >
+                  Найти сервис
+                </button>
               </div>
-            </div>
-          </div>
+            )}
+          </section>
         </div>
-      </Section>
+      </div>
     </Page>
+  )
+}
+
+function MessageAttachment({ url }: { url?: string | null }) {
+  if (!url) return null
+  const src = resolveFileUrl(url) || undefined
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="block">
+      <img
+        src={src}
+        alt="Вложение"
+        loading="lazy"
+        className="max-h-72 w-auto max-w-full rounded-[12px] object-cover"
+      />
+    </a>
+  )
+}
+
+function ChatEmptyIllustration() {
+  return (
+    <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path
+        d="M20 18h56a8 8 0 0 1 8 8v34a8 8 0 0 1-8 8H40L26 80V68h-6a8 8 0 0 1-8-8V26a8 8 0 0 1 8-8Z"
+        fill="var(--color-surface-3)"
+        stroke="var(--color-border)"
+        strokeWidth="2"
+      />
+      <path
+        d="M34 50v-6l3-8a3 3 0 0 1 2.8-2h16.4a3 3 0 0 1 2.8 2l3 8v6a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2H40v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2Z"
+        fill="var(--color-success)"
+        opacity="0.9"
+      />
+      <path d="M37 44h22l-2.2-6a1 1 0 0 0-.95-.7H40.15a1 1 0 0 0-.95.7L37 44Z" fill="var(--color-surface-2)" />
+      <circle cx="39" cy="47" r="2" fill="var(--color-surface-2)" />
+      <circle cx="57" cy="47" r="2" fill="var(--color-surface-2)" />
+    </svg>
   )
 }
