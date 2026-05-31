@@ -2,6 +2,7 @@ package kz.car.maintenance.service;
 
 import kz.car.maintenance.dto.CarCreateRequest;
 import kz.car.maintenance.dto.CarDto;
+import kz.car.maintenance.dto.CarVinRequest;
 import kz.car.maintenance.dto.DrivingFrequencyRequest;
 import kz.car.maintenance.dto.MileageUpdateRequest;
 import kz.car.maintenance.exception.BadRequestException;
@@ -51,21 +52,24 @@ public class CarService {
                 .licensePlate(normalizedLicensePlate)
                 .color(normalizeText(request.getColor()))
                 .mileage(request.getMileage())
-                .drivingStyle(request.getDrivingStyle() != null ? 
+                .drivingStyle(request.getDrivingStyle() != null ?
                         request.getDrivingStyle() : Car.DrivingStyle.MODERATE)
+                .powertrainType(request.getPowertrainType())
+                .transmissionType(request.getTransmissionType())
+                .drivetrainType(request.getDrivetrainType())
                 .build();
-        
+
         car = carRepository.save(car);
-        
-        // Инициализация стандартных компонентов автомобиля
+
+        // Инициализация деталей в зависимости от типа авто
         carComponentService.initializeDefaultComponents(car);
         
         return toDto(car);
     }
 
     @Transactional
-    public CarDto createCarByVin(Long userId, String vin) {
-        VehicleCatalog vehicleCatalog = vehicleCatalogService.findEntityByVin(vin);
+    public CarDto createCarByVin(Long userId, CarVinRequest vinRequest) {
+        VehicleCatalog vehicleCatalog = vehicleCatalogService.findEntityByVin(vinRequest.getVin());
 
         CarCreateRequest request = new CarCreateRequest();
         request.setBrand(vehicleCatalog.getBrand());
@@ -76,6 +80,10 @@ public class CarService {
         request.setColor(vehicleCatalog.getColor());
         request.setMileage(vehicleCatalog.getMileage());
         request.setDrivingStyle(Car.DrivingStyle.MODERATE);
+        // Тип авто из модалки (VIN-каталог его не содержит)
+        request.setPowertrainType(vinRequest.getPowertrainType());
+        request.setTransmissionType(vinRequest.getTransmissionType());
+        request.setDrivetrainType(vinRequest.getDrivetrainType());
 
         return createCar(userId, request);
     }
@@ -122,7 +130,16 @@ public class CarService {
         if (request.getDrivingStyle() != null) {
             car.setDrivingStyle(request.getDrivingStyle());
         }
-        
+        if (request.getPowertrainType() != null) {
+            car.setPowertrainType(request.getPowertrainType());
+        }
+        if (request.getTransmissionType() != null) {
+            car.setTransmissionType(request.getTransmissionType());
+        }
+        if (request.getDrivetrainType() != null) {
+            car.setDrivetrainType(request.getDrivetrainType());
+        }
+
         car = carRepository.save(car);
         
         // Если пробег изменился, обновляем износ компонентов
@@ -225,6 +242,9 @@ public class CarService {
                 .confirmedMileageAt(car.getConfirmedMileageAt())
                 .needsDrivingFrequencySetup(needsSetup)
                 .drivingStyle(car.getDrivingStyle())
+                .powertrainType(car.getPowertrainType())
+                .transmissionType(car.getTransmissionType())
+                .drivetrainType(car.getDrivetrainType())
                 .lastServiceDate(car.getLastServiceDate())
                 .imageUrl(car.getImageUrl())
                 .ownerId(car.getOwner().getId())

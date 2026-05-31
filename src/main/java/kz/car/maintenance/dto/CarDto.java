@@ -22,6 +22,9 @@ public class CarDto {
     private String licensePlate;
     private String color;
     private Car.DrivingStyle drivingStyle;
+    private Car.PowertrainType powertrainType;
+    private Car.TransmissionType transmissionType;
+    private Car.DrivetrainType drivetrainType;
     private LocalDate lastServiceDate;
     private String imageUrl;
     private Long ownerId;

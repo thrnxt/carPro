@@ -41,7 +41,7 @@ public class CarController {
     public ResponseEntity<CarDto> createCarByVin(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody CarVinRequest request) {
-        return ResponseEntity.ok(carService.createCarByVin(user.getId(), request.getVin()));
+        return ResponseEntity.ok(carService.createCarByVin(user.getId(), request));
     }
     
     @GetMapping

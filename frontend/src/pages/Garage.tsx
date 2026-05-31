@@ -29,6 +29,7 @@ import {
 } from '../components/ui'
 import DrivingFrequencyModal from '../components/DrivingFrequencyModal'
 import MileageConfirmModal from '../components/MileageConfirmModal'
+import VehicleTypeModal, { type VehicleType } from '../components/VehicleTypeModal'
 
 type DrivingFrequency = 'RARELY' | 'NORMAL' | 'ACTIVE'
 
@@ -48,6 +49,9 @@ type Car = {
   confirmedMileageAt?: string | null
   needsDrivingFrequencySetup?: boolean
   lastServiceDate?: string | null
+  powertrainType?: VehicleType['powertrainType'] | null
+  transmissionType?: VehicleType['transmissionType'] | null
+  drivetrainType?: VehicleType['drivetrainType'] | null
 }
 
 type CarFormData = {
@@ -105,6 +109,7 @@ export default function Garage() {
   // Модальные окна трекинга пробега
   const [frequencyModalCar, setFrequencyModalCar] = useState<Car | null>(null)
   const [mileageModalCar, setMileageModalCar] = useState<Car | null>(null)
+  const [typeModalOpen, setTypeModalOpen] = useState(false)
 
   const currentVin = sanitizeVin(vinInput)
   const isCurrentVinComplete = currentVin.length === 17
@@ -189,14 +194,15 @@ export default function Garage() {
   })
   const catalogCar = lookupCarQuery.data?.vin === currentVin ? lookupCarQuery.data : null
 
-  const addCarMutation = useMutation<Car, AxiosError<ApiErrorResponse>, string>({
-    mutationFn: async (vin) => {
-      const response = await apiClient.post('/cars/by-vin', { vin })
+  const addCarMutation = useMutation<Car, AxiosError<ApiErrorResponse>, { vin: string } & VehicleType>({
+    mutationFn: async (body) => {
+      const response = await apiClient.post('/cars/by-vin', body)
       return response.data as Car
     },
     onSuccess: (newCar) => {
       queryClient.invalidateQueries({ queryKey: ['cars'] })
       toast.success('Автомобиль добавлен')
+      setTypeModalOpen(false)
       handleCancel()
       // Показываем модал «Как часто вы ездите?» если бэкенд просит
       if (newCar.needsDrivingFrequencySetup) {
@@ -248,7 +254,13 @@ export default function Garage() {
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!catalogCar || catalogCar.vin !== currentVin) return
-    addCarMutation.mutate(currentVin)
+    // Перед созданием спрашиваем тип авто — от него зависит набор деталей
+    setTypeModalOpen(true)
+  }
+
+  const handleConfirmVehicleType = (vehicleType: VehicleType) => {
+    if (!catalogCar || catalogCar.vin !== currentVin) return
+    addCarMutation.mutate({ vin: currentVin, ...vehicleType })
   }
 
   const handleEdit = (car: Car) => {
@@ -662,6 +674,16 @@ export default function Garage() {
           carLabel={`${mileageModalCar.brand} ${mileageModalCar.model} ${mileageModalCar.year}`}
           estimatedMileage={mileageModalCar.displayMileage ?? mileageModalCar.mileage}
           onClose={() => setMileageModalCar(null)}
+        />
+      )}
+
+      {/* Модал выбора типа авто при добавлении */}
+      {typeModalOpen && catalogCar && (
+        <VehicleTypeModal
+          carLabel={`${catalogCar.brand} ${catalogCar.model} ${catalogCar.year}`}
+          loading={addCarMutation.isPending}
+          onConfirm={handleConfirmVehicleType}
+          onClose={() => setTypeModalOpen(false)}
         />
       )}
     </Page>

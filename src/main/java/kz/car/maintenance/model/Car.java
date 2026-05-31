@@ -72,6 +72,15 @@ public class Car {
     @Enumerated(EnumType.STRING)
     private DrivingStyle drivingStyle; // Стиль вождения (влияет на износ деталей)
 
+    @Enumerated(EnumType.STRING)
+    private PowertrainType powertrainType; // Тип силовой установки (определяет набор деталей)
+
+    @Enumerated(EnumType.STRING)
+    private TransmissionType transmissionType; // Тип КПП
+
+    @Enumerated(EnumType.STRING)
+    private DrivetrainType drivetrainType; // Тип привода
+
     private LocalDate lastServiceDate; // Дата последнего ТО
 
     private String imageUrl; // Фото автомобиля
@@ -123,6 +132,27 @@ public class Car {
         CALM,      // Спокойный
         MODERATE,  // Умеренный
         AGGRESSIVE // Агрессивный
+    }
+
+    /** Тип силовой установки — определяет набор отслеживаемых деталей. */
+    public enum PowertrainType {
+        PETROL,    // Бензин
+        DIESEL,    // Дизель
+        HYBRID,    // Гибрид (ДВС + электро)
+        ELECTRIC   // Электро
+    }
+
+    /** Тип коробки передач (CVT/робот относим к AUTOMATIC). */
+    public enum TransmissionType {
+        MANUAL,    // Механика
+        AUTOMATIC  // Автомат
+    }
+
+    /** Тип привода. */
+    public enum DrivetrainType {
+        FWD, // Передний
+        RWD, // Задний
+        AWD  // Полный
     }
 
     /**

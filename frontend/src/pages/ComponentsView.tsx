@@ -84,6 +84,8 @@ const categoryIcons: Record<string, typeof FaWrench> = {
   'Рулевое управление': FaCar,
   'Трансмиссия': FaBolt,
   'Электрика': FaPlug,
+  'Электропривод': FaBolt,
+  'Салон': FaCarSide,
   'Кузов': FaCarSide,
   'Колеса': FaCircle,
 }
