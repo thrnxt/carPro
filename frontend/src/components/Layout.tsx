@@ -180,6 +180,20 @@ const serviceCenterSidebarSections: NavigationSection[] = [
 
 const serviceCenterBottomNavItems = serviceCenterNavItems.slice(0, 4)
 
+const adminNavItems: NavigationItem[] = [
+  {
+    path: '/admin',
+    label: 'Админ-панель',
+    icon: FaShieldAlt,
+    description: 'Модерация и контроль',
+    group: 'Контроль',
+  },
+]
+
+const adminSidebarSections: NavigationSection[] = [
+  { label: 'Управление', items: adminNavItems },
+]
+
 const userSectionItems = [
   ...userGarageNavItems,
   ...userServiceNavItems,
@@ -474,9 +488,14 @@ export default function Layout() {
   const userMenuRef = useRef<HTMLDivElement | null>(null)
   const isServiceCenter = user?.role === 'SERVICE_CENTER'
   const isAdmin = user?.role === 'ADMIN'
-  const navigationSections = isServiceCenter ? serviceCenterSidebarSections : userSidebarSections
-  const bottomNavItems = isServiceCenter ? serviceCenterBottomNavItems : userBottomNavItems
-  const topNavItems = isServiceCenter ? [] : userTopNavItems
+  const navigationSections = isAdmin
+    ? adminSidebarSections
+    : isServiceCenter
+      ? serviceCenterSidebarSections
+      : userSidebarSections
+  const bottomNavItems = isAdmin ? [] : isServiceCenter ? serviceCenterBottomNavItems : userBottomNavItems
+  const topNavItems = isAdmin || isServiceCenter ? [] : userTopNavItems
+  const homePath = isAdmin ? '/admin' : '/'
   const shouldShowNotificationsBadge = Boolean(user && topNavItems.some((item) => item.path === '/notifications'))
   const { data: serviceCenterProfile } = useQuery<ServiceCenterProfileChrome>({
     queryKey: ['service-center', 'my'],
@@ -517,6 +536,12 @@ export default function Layout() {
   }, [location.pathname])
 
   useEffect(() => {
+    if (isAdmin && location.pathname !== '/admin') {
+      navigate('/admin', { replace: true })
+    }
+  }, [isAdmin, location.pathname, navigate])
+
+  useEffect(() => {
     if (!userMenuOpen) {
       return
     }
@@ -549,6 +574,13 @@ export default function Layout() {
   }, [mobileMenuOpen, profileEditorOpen])
 
   const currentSection = useMemo(() => {
+    if (isAdmin) {
+      return {
+        title: 'Администрирование',
+        group: 'Контроль',
+      }
+    }
+
     const items = isServiceCenter
       ? serviceCenterNavItems
       : userSectionItems
@@ -616,7 +648,7 @@ export default function Layout() {
     <div className="app-shell">
       <aside className="app-sidebar hidden lg:block">
         <div className="app-sidebar-panel">
-          <Link to="/" className="app-brand">
+          <Link to={homePath} className="app-brand">
             <div className="app-brand-mark">
               <FaCarSide className="text-xl" />
             </div>
@@ -633,7 +665,7 @@ export default function Layout() {
               getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
             />
 
-            {isAdmin && (
+            {false && (
               <div className="space-y-3">
                 <div className="app-sidebar-label">Управление</div>
                 <NavigationList
@@ -796,7 +828,7 @@ export default function Layout() {
 
           <div className="relative h-full w-[88vw] max-w-sm border-r border-border bg-surface-2 p-4">
             <div className="flex items-center justify-between pb-4">
-              <Link to="/" className="app-brand">
+              <Link to={homePath} className="app-brand">
                 <div className="app-brand-mark">
                   <FaCarSide className="text-xl" />
                 </div>
@@ -824,7 +856,7 @@ export default function Layout() {
                 getBadgeContent={(item) => (item.path === '/notifications' ? notificationsBadgeContent : null)}
               />
 
-              {isAdmin && (
+              {false && (
                 <div className="space-y-3">
                   <div className="app-sidebar-label">Управление</div>
                   <NavigationList

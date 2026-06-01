@@ -43,4 +43,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     boolean existsByServiceCenterAndCar(ServiceCenter serviceCenter, Car car);
     boolean existsByServiceCenterAndCarOwner(ServiceCenter serviceCenter, User owner);
+
+    @org.springframework.data.jpa.repository.Query(value = """
+            select count(*)
+            from bookings b
+            where b.booking_date_time >= :dateFromDateTime
+              and b.booking_date_time < :dateToExclusive
+            """, nativeQuery = true)
+    long countAllWithin(
+            @org.springframework.data.repository.query.Param("dateFromDateTime") LocalDateTime dateFromDateTime,
+            @org.springframework.data.repository.query.Param("dateToExclusive") LocalDateTime dateToExclusive
+    );
 }

@@ -5,6 +5,7 @@ import kz.car.maintenance.model.Booking;
 import kz.car.maintenance.model.MaintenanceRecord;
 import kz.car.maintenance.model.ServiceCenter;
 import kz.car.maintenance.model.User;
+import kz.car.maintenance.repository.projection.admin.AdminLabeledCountView;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -180,4 +181,52 @@ public interface MaintenanceRecordRepository extends JpaRepository<MaintenanceRe
             where mr.id in :ids
             """)
     List<MaintenanceRecord> findDetailedByIdIn(@Param("ids") List<Long> ids);
+
+    @Query(value = """
+            select count(*)
+            from maintenance_records mr
+            where mr.status = 'COMPLETED'
+              and mr.service_date >= :dateFrom
+              and mr.service_date <= :dateTo
+            """, nativeQuery = true)
+    long countCompletedWithin(
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query(value = """
+            select
+                c.brand as label,
+                null as secondaryLabel,
+                count(mr.id) as count
+            from maintenance_records mr
+            join cars c on c.id = mr.car_id
+            where mr.status = 'COMPLETED'
+              and mr.service_date >= :dateFrom
+              and mr.service_date <= :dateTo
+            group by c.brand
+            order by count(mr.id) desc, c.brand asc
+            """, nativeQuery = true)
+    List<AdminLabeledCountView> findTopServicedBrands(
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query(value = """
+            select
+                coalesce(nullif(sc.region, ''), 'Не указан') as label,
+                null as secondaryLabel,
+                count(mr.id) as count
+            from maintenance_records mr
+            join service_centers sc on sc.id = mr.service_center_id
+            where mr.status = 'COMPLETED'
+              and mr.service_date >= :dateFrom
+              and mr.service_date <= :dateTo
+            group by coalesce(nullif(sc.region, ''), 'Не указан')
+            order by count(mr.id) desc, label asc
+            """, nativeQuery = true)
+    List<AdminLabeledCountView> findRegionActivity(
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
 }

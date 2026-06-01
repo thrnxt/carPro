@@ -664,7 +664,7 @@ export default function ServiceCenterClients() {
                   )
 
                   const phone = (
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <div className="flex items-center gap-2 text-sm text-text-secondary lg:justify-center">
                       <FaPhoneAlt className="text-xs text-text-muted" />
                       <span className="truncate">{client.phoneNumber || 'Не указан'}</span>
                     </div>
@@ -672,7 +672,7 @@ export default function ServiceCenterClients() {
 
                   const activity = (
                     <div className="min-w-0">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 lg:justify-center">
                         <span className="client-chip">
                           <FaClipboardList />
                           Визиты: {client.totalVisits}
@@ -682,7 +682,7 @@ export default function ServiceCenterClients() {
                           Авто: {client.carsCount}
                         </span>
                       </div>
-                      <p className="mt-1.5 flex items-center gap-1.5 text-caption text-text-muted">
+                      <p className="mt-1.5 flex items-center gap-1.5 text-caption text-text-muted lg:justify-center">
                         <FaRegClock />
                         Последний визит: {formatDate(client.lastServiceDate)}
                       </p>

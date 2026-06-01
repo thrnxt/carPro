@@ -53,6 +53,16 @@ function RoleRoute({
   return <>{children}</>
 }
 
+function HomeRoute() {
+  const { user } = useAuthStore()
+
+  if (user?.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />
+  }
+
+  return <Dashboard />
+}
+
 function App() {
   const { token, isAuthenticated, setUser } = useAuthStore()
 
@@ -83,7 +93,7 @@ function App() {
               </PrivateRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<HomeRoute />} />
             <Route path="garage" element={<Garage />} />
             <Route path="cars/:id" element={<CarLayout />}>
               <Route index element={<CarDetails />} />

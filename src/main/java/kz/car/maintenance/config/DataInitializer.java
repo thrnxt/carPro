@@ -10,6 +10,7 @@ import kz.car.maintenance.repository.UserRepository;
 import kz.car.maintenance.repository.VehicleCatalogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +30,60 @@ public class DataInitializer {
     private final VehicleCatalogRepository vehicleCatalogRepository;
     private final EducationalContentRepository educationalContentRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${app.bootstrap-admin.email:admin@carpro.local}")
+    private String bootstrapAdminEmail;
+
+    @Value("${app.bootstrap-admin.password:Admin123!}")
+    private String bootstrapAdminPassword;
+
+    @Value("${app.bootstrap-admin.first-name:System}")
+    private String bootstrapAdminFirstName;
+
+    @Value("${app.bootstrap-admin.last-name:Administrator}")
+    private String bootstrapAdminLastName;
+
+    @Bean
+    @Transactional
+    public CommandLineRunner initAdminUser() {
+        return args -> {
+            User adminUser = userRepository.findByEmail(bootstrapAdminEmail)
+                    .orElseGet(() -> User.builder()
+                            .email(bootstrapAdminEmail)
+                            .password(passwordEncoder.encode(bootstrapAdminPassword))
+                            .firstName(bootstrapAdminFirstName)
+                            .lastName(bootstrapAdminLastName)
+                            .role(User.UserRole.ADMIN)
+                            .status(User.UserStatus.ACTIVE)
+                            .build());
+
+            boolean shouldSave = adminUser.getId() == null;
+
+            if (adminUser.getRole() != User.UserRole.ADMIN) {
+                adminUser.setRole(User.UserRole.ADMIN);
+                shouldSave = true;
+            }
+
+            if (adminUser.getStatus() != User.UserStatus.ACTIVE) {
+                adminUser.setStatus(User.UserStatus.ACTIVE);
+                shouldSave = true;
+            }
+
+            if (adminUser.getFirstName() == null || adminUser.getFirstName().isBlank()) {
+                adminUser.setFirstName(bootstrapAdminFirstName);
+                shouldSave = true;
+            }
+
+            if (adminUser.getLastName() == null || adminUser.getLastName().isBlank()) {
+                adminUser.setLastName(bootstrapAdminLastName);
+                shouldSave = true;
+            }
+
+            if (shouldSave) {
+                userRepository.save(adminUser);
+            }
+        };
+    }
     
     @Bean
     @Transactional

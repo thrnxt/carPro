@@ -54,6 +54,10 @@ public class ServiceCenterService {
     public List<ServiceCenter> getServiceCentersByStatus(ServiceCenter.ServiceCenterStatus status) {
         return serviceCenterRepository.findByStatus(status);
     }
+
+    public List<ServiceCenter> getServiceCentersForAdmin(String query, ServiceCenter.ServiceCenterStatus status) {
+        return serviceCenterRepository.findAllForAdmin(toPattern(query), status);
+    }
     
     public ServiceCenter getServiceCenterById(Long id) {
         return serviceCenterRepository.findById(id)
@@ -102,5 +106,12 @@ public class ServiceCenterService {
     
     public List<ServiceCenter> getAllActiveServiceCenters() {
         return serviceCenterRepository.findByStatus(ServiceCenter.ServiceCenterStatus.ACTIVE);
+    }
+
+    private String toPattern(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return "%" + query.trim().toLowerCase() + "%";
     }
 }
