@@ -535,7 +535,7 @@ export default function Chat() {
       <PageHeader title="Чат" description="Переписка с сервисными центрами" />
 
       <div className="auto-card h-[78vh] min-h-[34rem] overflow-hidden p-0">
-        <div className="grid h-full md:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="grid h-full grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]">
           {/* ── Левая колонка ─────────────────────────────────────────── */}
           <aside
             className={cx(
@@ -618,7 +618,7 @@ export default function Chat() {
           {/* ── Правая панель ─────────────────────────────────────────── */}
           <section
             className={cx(
-              'h-full min-h-0 flex-col bg-surface-1',
+              'h-full min-h-0 min-w-0 flex-col bg-surface-1',
               showContacts ? 'hidden' : 'flex',
               'md:flex'
             )}

@@ -81,14 +81,14 @@ export default function ServiceCenters() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Сервисные центры</h1>
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold text-white mb-2 sm:text-4xl">Сервисные центры</h1>
           <p className="text-slate-400">Найдите надежный сервис для вашего автомобиля</p>
         </div>
         <button
           onClick={() => navigate('/service-centers/map')}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex shrink-0 items-center justify-center gap-2"
         >
           <FaMapMarkerAlt />
           Показать на карте

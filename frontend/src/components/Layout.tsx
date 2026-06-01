@@ -411,21 +411,23 @@ function BreadcrumbTrail({ items }: { items: Crumb[] }) {
 
   return (
     <ol className="flex items-center gap-2 text-sm">
-      {/* Мобильный вид: ссылка на родителя + текущая страница */}
-      {parent?.to ? (
-        <li className="flex min-w-0 items-center gap-1 sm:hidden">
-          <Link
-            to={parent.to}
-            className="flex shrink-0 items-center gap-1 text-text-muted transition-colors hover:text-text-primary"
-          >
-            <FaChevronLeft className="text-[10px]" />
-            <span className="max-w-[32vw] truncate">{parent.label}</span>
-          </Link>
-          <FaChevronRight className="shrink-0 text-[10px] text-text-muted" aria-hidden="true" />
-        </li>
-      ) : null}
-      <li className="min-w-0 truncate font-medium text-text-primary sm:hidden" aria-current="page">
-        {current.label}
+      {/* Мобильный вид: ссылка на родителя + текущая страница в одном ряду */}
+      <li className="flex min-w-0 flex-1 items-center gap-1.5 sm:hidden">
+        {parent?.to ? (
+          <>
+            <Link
+              to={parent.to}
+              className="flex min-w-0 max-w-[42%] shrink items-center gap-1 text-text-muted transition-colors hover:text-text-primary"
+            >
+              <FaChevronLeft className="shrink-0 text-[10px]" />
+              <span className="truncate">{parent.label}</span>
+            </Link>
+            <FaChevronRight className="shrink-0 text-[10px] text-text-muted" aria-hidden="true" />
+          </>
+        ) : null}
+        <span className="min-w-0 flex-1 truncate font-medium text-text-primary" aria-current="page">
+          {current.label}
+        </span>
       </li>
 
       {/* Десктоп: полная цепочка */}

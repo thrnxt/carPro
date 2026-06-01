@@ -3,7 +3,7 @@ spring:
     name: car-maintenance-platform
   
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:car_maintenance_db}?user=${DB_USERNAME:postgres}&password=${DB_PASSWORD:3dOIYio1}}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:car_maintenance_db}?user=${DB_USERNAME:postgres}&password=${DB_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
   
   jpa:

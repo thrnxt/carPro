@@ -355,7 +355,56 @@ export default function ServiceCenterOperations() {
               </form>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5">
+            {/* Мобильный вид: карточки вместо таблицы */}
+            <div className="space-y-3 lg:hidden">
+              {operationsPage.content.map((operation) => {
+                const status = operation.status as Exclude<OperationStatusFilter, ''> | undefined
+
+                return (
+                  <div
+                    key={operation.id}
+                    className="rounded-lg border border-white/10 bg-white/5 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white">{operation.workType}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          #{operation.id} · {formatOperationDate(operation.serviceDate)}
+                        </p>
+                      </div>
+                      {status ? <span className={STATUS_BADGE_CLASSES[status]}>{STATUS_LABELS[status]}</span> : null}
+                    </div>
+
+                    <dl className="mt-3 space-y-1.5 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-slate-500">Клиент</dt>
+                        <dd className="min-w-0 truncate text-right text-slate-300">{getOwnerName(operation)}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-slate-500">Автомобиль</dt>
+                        <dd className="min-w-0 truncate text-right text-slate-300">{getCarTitle(operation)}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-slate-500">Сумма</dt>
+                        <dd className="text-right font-medium text-emerald-300">{getTotalLabel(operation.cost)}</dd>
+                      </div>
+                    </dl>
+
+                    <button
+                      type="button"
+                      onClick={() => setOpenedOperationId(operation.id)}
+                      className="btn-secondary mt-3 w-full justify-center py-2 text-sm"
+                    >
+                      <FaExternalLinkAlt />
+                      Открыть
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Десктоп: таблица */}
+            <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-white/5 lg:block">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>

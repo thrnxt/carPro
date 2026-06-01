@@ -44,6 +44,10 @@ buildNumber.properties
 .classpath
 .project
 
+# AI assistant / agent config
+.claude/
+.jetbrains/
+
 # OS
 .DS_Store
 Thumbs.db

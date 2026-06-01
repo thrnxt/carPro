@@ -474,7 +474,7 @@ export default function Garage() {
       )}
 
       {cars.length > 0 ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {cars.map((car) => {
             const isActionMenuOpen = actionMenuCarId === car.id
             const isDeleteConfirmOpen = confirmDeleteId === car.id

@@ -97,7 +97,7 @@ export default function AdminPanel() {
                     <p className="text-slate-400 text-sm">Аккаунт: {serviceCenter.user?.email || '—'}</p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       className="btn-secondary text-sm"
                       onClick={() => moderationMutation.mutate({ id: serviceCenter.id, status: 'ACTIVE' })}
@@ -126,7 +126,50 @@ export default function AdminPanel() {
 
       <div className="auto-card p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Пользователи</h2>
-        <div className="overflow-x-auto">
+
+        {/* Мобильный вид: карточки вместо таблицы */}
+        <div className="space-y-3 lg:hidden">
+          {(users || []).map((user) => (
+            <div key={user.id} className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-white">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="truncate text-sm text-slate-400">{user.email}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">ID #{user.id}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span
+                    className={`auto-badge ${
+                      user.role === 'ADMIN'
+                        ? 'auto-badge-danger'
+                        : user.role === 'SERVICE_CENTER'
+                          ? 'auto-badge-info'
+                          : 'auto-badge'
+                    }`}
+                  >
+                    {user.role}
+                  </span>
+                  <span
+                    className={`auto-badge ${
+                      user.status === 'ACTIVE'
+                        ? 'auto-badge-success'
+                        : user.status === 'BLOCKED'
+                          ? 'auto-badge-danger'
+                          : 'auto-badge-warning'
+                    }`}
+                  >
+                    {user.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Десктоп: таблица */}
+        <div className="hidden overflow-x-auto lg:block">
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-800">
               <tr>
