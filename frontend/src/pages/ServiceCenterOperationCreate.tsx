@@ -7,14 +7,16 @@ import {
   FaCalendarAlt,
   FaCamera,
   FaCar,
+  FaChevronDown,
   FaPhoneAlt,
   FaPlus,
+  FaSearch,
   FaTimes,
   FaTools,
   FaUser,
 } from 'react-icons/fa'
 import apiClient from '../api/client'
-import { EmptyState, Page, PageHeader, Section } from '../components/ui'
+import { EmptyState, Page, PageHeader, Section, cx } from '../components/ui'
 
 interface ServiceCenterProfile {
   id: number
@@ -120,6 +122,145 @@ function getBookingCarTitle(booking: Booking) {
 
 function getBookingPhone(booking: Booking) {
   return booking.contactPhone?.trim() || booking.car?.owner?.phoneNumber?.trim() || 'Не указан'
+}
+
+const COMPONENT_STATUS_LABELS: Record<string, string> = {
+  NORMAL: 'Норма',
+  WARNING: 'Требует внимания',
+  CRITICAL: 'Критический износ',
+}
+
+function componentStatusLabel(status?: string) {
+  return (status && COMPONENT_STATUS_LABELS[status]) || status || '—'
+}
+
+// Поисковый селектор компонента: фильтрует список деталей авто по названию/категории/статусу.
+function ComponentPicker({
+  components,
+  value,
+  onChange,
+  disabledIds,
+}: {
+  components: ComponentSummary[]
+  value: string
+  onChange: (componentId: string) => void
+  disabledIds?: Set<string>
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const selected = components.find((component) => String(component.id) === value) || null
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const handlePointerDown = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
+
+  const normalizedQuery = query.trim().toLowerCase()
+  const filtered = normalizedQuery
+    ? components.filter((component) =>
+        `${component.name} ${componentStatusLabel(component.status)} ${component.status}`
+          .toLowerCase()
+          .includes(normalizedQuery)
+      )
+    : components
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="auto-select flex w-full items-center justify-between gap-2 text-left"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={cx('truncate', !selected && 'text-text-muted')}>
+          {selected ? `${selected.name} · износ ${selected.wearLevel}%` : 'Выберите компонент'}
+        </span>
+        <FaChevronDown className={cx('shrink-0 text-xs text-text-muted transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open ? (
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-md border border-border bg-surface-2 shadow-xl">
+          <div className="border-b border-border p-2">
+            <div className="relative">
+              <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Поиск: масло АКПП, колодки…"
+                className="auto-input h-9 w-full py-0 pl-9"
+                aria-label="Поиск компонента"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto py-1" role="listbox">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-3 text-sm text-text-muted">Ничего не найдено</p>
+            ) : (
+              filtered.map((component) => {
+                const id = String(component.id)
+                const isSelected = id === value
+                const isDisabled = !isSelected && Boolean(disabledIds?.has(id))
+
+                return (
+                  <button
+                    key={component.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    disabled={isDisabled}
+                    onClick={() => {
+                      onChange(id)
+                      setOpen(false)
+                      setQuery('')
+                    }}
+                    className={cx(
+                      'flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors',
+                      isSelected
+                        ? 'bg-surface-3'
+                        : 'hover:bg-surface-3',
+                      isDisabled && 'cursor-not-allowed opacity-40'
+                    )}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-text-primary">{component.name}</span>
+                      <span className="block truncate text-xs text-text-muted">
+                        {componentStatusLabel(component.status)} · износ {component.wearLevel}%
+                      </span>
+                    </span>
+                    {isDisabled ? (
+                      <span className="shrink-0 text-xs text-text-muted">уже добавлен</span>
+                    ) : null}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export default function ServiceCenterOperationCreate() {
@@ -581,18 +722,19 @@ export default function ServiceCenterOperationCreate() {
                         <div>
                           <label className="mb-1 block text-xs text-slate-400">Компонент</label>
                           {carComponents && carComponents.length > 0 ? (
-                            <select
+                            <ComponentPicker
+                              components={carComponents}
                               value={row.componentId}
-                              onChange={(event) => updateReplacedPartRow(index, 'componentId', event.target.value)}
-                              className="auto-select"
-                            >
-                              <option value="">Выберите компонент</option>
-                              {carComponents.map((component) => (
-                                <option key={component.id} value={component.id}>
-                                  {component.name} ({component.status}, {component.wearLevel}%)
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(componentId) => updateReplacedPartRow(index, 'componentId', componentId)}
+                              disabledIds={
+                                new Set(
+                                  replacedParts
+                                    .filter((_, rowIndex) => rowIndex !== index)
+                                    .map((other) => other.componentId)
+                                    .filter(Boolean)
+                                )
+                              }
+                            />
                           ) : (
                             <input
                               value={row.componentId}
